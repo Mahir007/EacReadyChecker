@@ -11,8 +11,7 @@ Status: early development.
 Debian 13 / Ubuntu packages:
 
 ```sh
-sudo apt install cmake ninja-build extra-cmake-modules qt6-base-dev qt6-wayland qt6-svg-plugins \
-  libkf6coreaddons-dev libkf6iconthemes-dev breeze-icon-theme
+sudo apt install cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins
 cmake -S . -B build -G Ninja
 cmake --build build
 ctest --test-dir build
