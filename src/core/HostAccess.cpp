@@ -208,7 +208,7 @@ HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Pri
 {
     const bool usePkexec = privilege == Privilege::Admin && m_sysroot.isEmpty();
     // For one exact file (the TPM event log), run plain `cat` as root: least privilege, and the
-    // polkit dialog shows exactly which file is being read.
+    // polkit dialog shows which file is being read.
     const bool useCat = usePkexec && requests.size() == 1 && requests[0].kind == HostRequest::Kind::Read && !requests[0].isGlob();
 
     QStringList command = m_prefix;

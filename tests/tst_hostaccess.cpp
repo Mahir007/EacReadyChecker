@@ -223,10 +223,11 @@ private Q_SLOTS:
         QCOMPARE(s.file(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s).status, Status::NotRead);
     }
 
-    // Stands in for the host: checks it was asked to run pkexec, then runs the rest unprivileged.
+    // Stands in for the host: checks it was asked to run pkexec with a shell (never a coreutils
+    // binary directly, see HostAccess::readShell), then runs the rest unprivileged.
     static QStringList fakePkexecHost()
     {
-        return {u"/bin/sh"_s, u"-c"_s, u"[ \"$1\" = pkexec ] || exit 99; shift; exec \"$@\""_s, u"fake-host"_s};
+        return {u"/bin/sh"_s, u"-c"_s, u"[ \"$1\" = pkexec ] && [ \"$2\" = /bin/sh ] || exit 99; shift; exec \"$@\""_s, u"fake-host"_s};
     }
 
     void adminSingleFileUsesCat()
