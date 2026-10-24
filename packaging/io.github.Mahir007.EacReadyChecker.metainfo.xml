@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>io.github.Mahir007.EacReadyChecker</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>EACheck</name>
+  <summary>Check if your PC is ready for EAC</summary>
+  <developer id="io.github.mahir007">
+    <name>Mahir007</name>
+  </developer>
+
+  <description>
+    <p>
+      EACheck checks whether this PC meets the system requirements Epic published for
+      Easy Anti-Cheat Linux v2, and reports pass or fail for each one:
+    </p>
+    <ul>
+      <li>Signed kernel and kernel modules</li>
+      <li>TPM 2.0</li>
+      <li>Secure Boot</li>
+      <li>Measured boot</li>
+      <li>IOMMU</li>
+      <li>Kernel lockdown in integrity mode</li>
+      <li>Kexec disabled</li>
+      <li>BPF LSM</li>
+    </ul>
+    <p>
+      EACheck only reads system state and never changes it. One check reads the TPM event log,
+      which needs an admin password. Results reflect what can be seen locally: Easy Anti-Cheat
+      does its own verification when a game starts.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.Mahir007.EacReadyChecker.desktop</launchable>
+  <provides>
+    <binary>eac-ready-checker</binary>
+  </provides>
+
+  <url type="homepage">https://github.com/Mahir007/EacReadyChecker</url>
+  <url type="bugtracker">https://github.com/Mahir007/EacReadyChecker/issues</url>
+  <url type="vcs-browser">https://github.com/Mahir007/EacReadyChecker</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-24">
+      <description>
+        <p>Development snapshot: app skeleton, no checks implemented yet.</p>
+      </description>
+    </release>
+  </releases>
+</component>

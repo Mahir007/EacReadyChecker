@@ -1,0 +1,30 @@
+# Build and install locally (from the repo root):
+#   flatpak-builder --user --install --force-clean build-flatpak packaging/flatpak/io.github.Mahir007.EacReadyChecker.yml
+#   flatpak run io.github.Mahir007.EacReadyChecker [--json] [--elevate]
+id: io.github.Mahir007.EacReadyChecker
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+command: eac-ready-checker
+finish-args:
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  # Read-only host diagnostics: the sandbox can't see /sys/firmware, /sys/kernel/security or
+  # /sys/kernel/iommu_groups, so files are read through `flatpak-spawn --host`, and the TPM event
+  # log through `flatpak-spawn --host pkexec`.
+  - --talk-name=org.freedesktop.Flatpak
+modules:
+  - name: eac-ready-checker
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_TESTING=OFF
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - .flatpak-builder
+          - build
+          - build-flatpak
