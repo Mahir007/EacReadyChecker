@@ -3,6 +3,7 @@
 #include "core/HostAccess.h"
 
 #include <QElapsedTimer>
+#include <QFileInfo>
 #include <QTest>
 #include <QThread>
 
@@ -262,6 +263,37 @@ private Q_SLOTS:
         QCOMPARE(result.privilegedState, PrivilegedState::Granted);
         QVERIFY(s.file(u"/proc/self/status"_s).data.contains("Name:\tbase64"));
         QCOMPARE(s.file(u"/nonexistent/file"_s).status, Status::Missing);
+    }
+
+    // uutils (e.g. Arch with uutils as coreutils) is one multi-call binary. Run both host reads
+    // with its tools first on PATH, and pkexec emulated the way polkit 127+ runs a program: the
+    // symlink-resolved path, with the original argv[0]. Set EACHECK_UUTILS_BIN to a directory of
+    // plain-named uutils links; Homebrew's uutils-coreutils is found by default.
+    void uutilsHost()
+    {
+        QString uubin = qEnvironmentVariable("EACHECK_UUTILS_BIN");
+        if (uubin.isEmpty()) {
+            uubin = u"/home/linuxbrew/.linuxbrew/opt/uutils-coreutils/libexec/uubin"_s;
+        }
+        if (!QFileInfo::exists(uubin + u"/cat"_s) || !QFileInfo::exists(u"/bin/bash"_s)) {
+            QSKIP("uutils not found (set EACHECK_UUTILS_BIN)");
+        }
+        const QString path = u"PATH="_s + uubin + u":/usr/bin:/bin"_s;
+
+        // User read: the batch script's base64 is uutils.
+        HostSnapshot user;
+        const HostAccess userHost(Transport::Shell, {u"/usr/bin/env"_s, path}, m_root.path());
+        QVERIFY(userHost.read({HostRequest::read(u"/sys/binary"_s)}, Privilege::User, user).ok);
+        QCOMPARE(user.file(u"/sys/binary"_s).data, m_binary);
+
+        // Admin read of one file. /bin/<tool> stands for uutils when uutils has that tool.
+        const QString fakePkexec = u"[ \"$1\" = pkexec ] || exit 99; p=$2; shift 2; q=$p; [ -e \"$UUBIN/${p##*/}\" ] && q=$UUBIN/${p##*/}; "
+                                   "exec -a \"$p\" \"$(readlink -f \"$q\")\" \"$@\""_s;
+        HostSnapshot admin;
+        const HostAccess adminHost(Transport::Shell, {u"/usr/bin/env"_s, path, u"UUBIN="_s + uubin, u"/bin/bash"_s, u"-c"_s, fakePkexec, u"fake-host"_s});
+        const HostAccess::Result result = adminHost.read({HostRequest::read(m_root.path() + u"/sys/binary"_s)}, Privilege::Admin, admin);
+        QVERIFY2(result.ok, qPrintable(result.error));
+        QCOMPARE(admin.file(m_root.path() + u"/sys/binary"_s).data, m_binary);
     }
 
     void cancelPendingAdminRead()
