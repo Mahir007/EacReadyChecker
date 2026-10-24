@@ -22,10 +22,11 @@ CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
     const HostEntry lockdown = snapshot.file(HostPaths::Lockdown);
 
     if (lockdown.status == HostEntry::Status::Missing) {
-        // The lsm file shows securityfs is there, so the kernel has no lockdown support.
+        // The lsm file shows securityfs is there, so the lockdown LSM isn't running: either it
+        // isn't built in, or an lsm= on the command line leaves it out.
         if (snapshot.file(HostPaths::Lsm).ok()) {
             result.status = CheckStatus::Fail;
-            result.detail = u"This kernel doesn't support lockdown"_s;
+            result.detail = u"The lockdown LSM isn't active"_s;
         } else {
             result.status = CheckStatus::Unknown;
             result.detail = u"securityfs isn't mounted at /sys/kernel/security"_s;

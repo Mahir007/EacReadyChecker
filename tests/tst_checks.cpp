@@ -113,7 +113,7 @@ private Q_SLOTS:
                                                    << u"fail"_s << u"confidentiality"_s;
         QTest::newRow("lockdown: none") << lockdown << Files{{HostPaths::Lockdown, "[none] integrity confidentiality\n"}} << QString() << u"fail"_s
                                         << u"off"_s;
-        QTest::newRow("lockdown: unsupported") << lockdown << Files{{HostPaths::Lsm, lsm}} << QString() << u"fail"_s << u"doesn't support"_s;
+        QTest::newRow("lockdown: LSM not active") << lockdown << Files{{HostPaths::Lsm, lsm}} << QString() << u"fail"_s << u"lockdown LSM isn't active"_s;
         QTest::newRow("lockdown: no securityfs") << lockdown << Files{} << QString() << u"unknown"_s << u"securityfs"_s;
         QTest::newRow("lockdown: garbage") << lockdown << Files{{HostPaths::Lockdown, "integrity\n"}} << QString() << u"unknown"_s << u"Unexpected"_s;
 
