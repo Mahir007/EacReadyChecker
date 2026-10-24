@@ -53,8 +53,7 @@ copy /proc/sys/kernel/kexec_load_disabled
 
 copy /sys/firmware/efi/efivars/SecureBoot-$efi_global
 copy /sys/firmware/efi/efivars/SetupMode-$efi_global
-copy /sys/firmware/efi/efivars/MokListRT-$shim_lock
-copy /sys/firmware/efi/mok-variables/MokListRT
+copy "/sys/firmware/efi/efivars/MokListRT*-$shim_lock"
 [ -d "$src/sys/firmware/efi" ] && mkdir -p "$out/sys/firmware/efi"
 
 copy /sys/kernel/security/lsm

@@ -46,8 +46,7 @@ QList<HostRequest> KernelSigningCheck::requests() const
 {
     return {
         HostRequest::read(HostPaths::Tainted),
-        HostRequest::read(HostPaths::MokListRtEfivar),
-        HostRequest::read(HostPaths::MokListRtMokVar),
+        HostRequest::read(HostPaths::MokListRt),
     };
 }
 
