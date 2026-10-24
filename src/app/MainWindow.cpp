@@ -119,8 +119,14 @@ void MainWindow::runChecks(bool elevate)
 void MainWindow::onStarted()
 {
     m_banner->setRunning(m_elevating);
-    for (CheckRow *row : std::as_const(m_rows)) {
-        row->setPending();
+    // "Run full check" only re-checks the rows that need admin. The others keep their results
+    // behind the password dialog, so it's clear what the password is for.
+    const bool keepResults = m_elevating && m_report.privilegedState != PrivilegedState::Granted && !m_report.results.isEmpty();
+    for (qsizetype i = 0; i < m_rows.size(); ++i) {
+        const bool needsAdmin = i < m_report.results.size() && m_report.results[i].status == CheckStatus::NeedsAdmin;
+        if (!keepResults || needsAdmin) {
+            m_rows[i]->setPending();
+        }
     }
     m_runFull->setEnabled(false);
     m_refresh->setEnabled(false);

@@ -92,8 +92,15 @@ private Q_SLOTS:
         QTRY_VERIFY(subDetail->isVisible() && subDetail->height() > 0);
         screenshot(window, u"mainwindow"_s);
 
-        // A fixture sysroot grants admin reads without pkexec.
+        // A fixture sysroot grants admin reads without pkexec. While it runs, only the rows that
+        // need admin go back to "Checking…".
+        const auto detail = [&rows](int row) {
+            return rows[row]->findChild<QLabel *>(u"detail"_s)->text();
+        };
+        const QString tpmDetail = detail(1);
         runFull->click();
+        QCOMPARE(detail(0), u"Checking…"_s); // kernel signing
+        QCOMPARE(detail(1), tpmDetail);
         QTRY_VERIFY(refresh->isEnabled());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
