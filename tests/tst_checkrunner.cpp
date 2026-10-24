@@ -70,7 +70,8 @@ private Q_SLOTS:
         m_root.write(u"/zero"_s, "0\n");
         m_root.write(u"/proc/sys/kernel/kexec_load_disabled"_s, "1\n");
         m_root.write(u"/sys/kernel/security/lsm"_s, "capability,bpf");
-        m_root.write(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s, QByteArray(64, '\0'));
+        m_root.write(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s, QByteArray(1024, '\0'));
+        m_root.write(u"/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"_s, QByteArray("\x06\x00\x00\x00\x01", 5));
     }
 
     void fillsIdAndTitle()
@@ -107,7 +108,7 @@ private Q_SLOTS:
         QCOMPARE(elevated.results[0].status, CheckStatus::Pass);
     }
 
-    void placeholderChecks()
+    void allChecksInOrder()
     {
         const HostAccess host(HostAccess::Transport::Direct, {}, m_root.path());
         const CheckList checks = createAllChecks();
@@ -118,24 +119,33 @@ private Q_SLOTS:
         for (qsizetype i = 0; i < ids.size(); ++i) {
             QCOMPARE(report.results[i].id, ids[i]);
         }
-        QCOMPARE(report.results[0].status, CheckStatus::NeedsAdmin); // event log
-        QCOMPARE(report.results[1].status, CheckStatus::Unknown);
+    }
+
+    void rawValues()
+    {
+        const HostAccess host(HostAccess::Transport::Direct, {}, m_root.path());
+        const CheckList checks = createAllChecks();
+        const Report report = CheckRunner::run(host, checks, false);
         QCOMPARE(report.results[6].raw.value(u"/proc/sys/kernel/kexec_load_disabled"_s).toString(), u"1"_s);
         QCOMPARE(report.results[7].raw.value(u"/sys/kernel/security/lsm"_s).toString(), u"capability,bpf"_s);
         QCOMPARE(report.results[1].raw.value(u"/sys/class/tpm/tpm0/tpm_version_major"_s).toString(), u"<missing>"_s);
         QCOMPARE(report.results[4].raw.value(u"/sys/class/iommu/*"_s).toArray().size(), 0);
+        QCOMPARE(report.results[0].raw.value(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s).toString(), u"<not read>"_s);
 
+        // Large binaries are summarised, small ones (EFI variables) shown as hex.
         const Report elevated = CheckRunner::run(host, checks, true);
         const QJsonObject log = elevated.results[0].raw.value(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s).toObject();
-        QCOMPARE(log.value(u"size"_s).toInt(), 64);
+        QCOMPARE(log.value(u"size"_s).toInt(), 1024);
         QCOMPARE(log.value(u"sha256"_s).toString().size(), 64);
+        QCOMPARE(elevated.results[2].raw.value(u"/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"_s).toObject().value(u"hex"_s).toString(),
+                 u"0600000001"_s);
     }
 
     void reportJson()
     {
         const HostAccess host(HostAccess::Transport::Direct, {}, m_root.path());
         const QJsonObject json = CheckRunner::run(host, createAllChecks(), false).toJson();
-        QCOMPARE(json.value(u"verdict"_s).toString(), u"incomplete"_s);
+        QCOMPARE(json.value(u"verdict"_s).toString(), u"not-ready"_s); // no TPM in this sysroot
         QCOMPARE(json.value(u"app"_s).toObject().value(u"id"_s).toString(), u"io.github.Mahir007.EacReadyChecker"_s);
         QCOMPARE(json.value(u"host"_s).toObject().value(u"sysroot"_s).toString(), m_root.path());
         QCOMPARE(json.value(u"host"_s).toObject().value(u"privilegedRead"_s).toString(), u"not-requested"_s);

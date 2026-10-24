@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "CheckHelpers.h"
+#include "Checks.h"
+#include "parsers/KernelCmdline.h"
+
+#include <QRegularExpression>
+
+using namespace Qt::StringLiterals;
+
+QList<HostRequest> LockdownCheck::requests() const
+{
+    return {
+        HostRequest::read(HostPaths::Lockdown),
+        HostRequest::read(HostPaths::Lsm),
+        HostRequest::read(HostPaths::Cmdline),
+    };
+}
+
+CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
+{
+    CheckResult result;
+    const HostEntry lockdown = snapshot.file(HostPaths::Lockdown);
+
+    if (lockdown.status == HostEntry::Status::Missing) {
+        // The lsm file shows securityfs is there, so the kernel has no lockdown support.
+        if (snapshot.file(HostPaths::Lsm).ok()) {
+            result.status = CheckStatus::Fail;
+            result.detail = u"This kernel doesn't support lockdown"_s;
+        } else {
+            result.status = CheckStatus::Unknown;
+            result.detail = u"securityfs isn't mounted at /sys/kernel/security"_s;
+        }
+        return result;
+    }
+    if (!lockdown.ok()) {
+        result.status = CheckStatus::Unknown;
+        result.detail = CheckHelpers::unreadable(lockdown);
+        return result;
+    }
+
+    // e.g. "none [integrity] confidentiality"
+    static const QRegularExpression active(u"\\[(\\w+)\\]"_s);
+    const QRegularExpressionMatch match = active.match(QString::fromUtf8(lockdown.trimmed()));
+    if (!match.hasMatch()) {
+        result.status = CheckStatus::Unknown;
+        result.detail = u"Unexpected lockdown state “%1”"_s.arg(QString::fromUtf8(lockdown.trimmed()));
+        return result;
+    }
+
+    const QString mode = match.captured(1);
+    if (mode == u"integrity") {
+        result.status = CheckStatus::Pass;
+        result.detail = u"Lockdown mode: integrity"_s;
+        // How it was enabled doesn't matter, but say so when we can tell.
+        const HostEntry cmdline = snapshot.file(HostPaths::Cmdline);
+        if (cmdline.ok() && KernelCmdline::parse(cmdline.data).values(u"lockdown").contains(u"integrity"_s)) {
+            result.detail += u" · set via cmdline"_s;
+        }
+    } else if (mode == u"confidentiality") {
+        result.status = CheckStatus::Fail;
+        result.detail = u"Lockdown mode: confidentiality (integrity required)"_s;
+    } else if (mode == u"none") {
+        result.status = CheckStatus::Fail;
+        result.detail = u"Lockdown is off"_s;
+    } else {
+        result.status = CheckStatus::Fail;
+        result.detail = u"Lockdown mode: %1 (integrity required)"_s.arg(mode);
+    }
+    return result;
+}

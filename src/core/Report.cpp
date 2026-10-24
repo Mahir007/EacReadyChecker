@@ -15,6 +15,7 @@ using namespace Qt::StringLiterals;
 namespace
 {
 constexpr qsizetype kMaxInlineText = 4096;
+constexpr qsizetype kMaxInlineHex = 256;
 
 bool isPrintableText(const QByteArray &data)
 {
@@ -42,6 +43,9 @@ QJsonValue rawValue(const HostEntry &entry)
         if (entry.data.size() <= kMaxInlineText && isPrintableText(entry.data)) {
             return QString::fromUtf8(entry.data.trimmed());
         }
+        if (entry.data.size() <= kMaxInlineHex) {
+            return QJsonObject{{u"hex"_s, QString::fromLatin1(entry.data.toHex())}};
+        }
         return QJsonObject{
             {u"size"_s, entry.data.size()},
             {u"sha256"_s, QString::fromLatin1(QCryptographicHash::hash(entry.data, QCryptographicHash::Sha256).toHex())},
@@ -58,6 +62,30 @@ QJsonValue rawValue(const HostEntry &entry)
         break;
     }
     return u"<not read>"_s;
+}
+
+QJsonObject rawValues(const HostSnapshot &snapshot, const QList<HostRequest> &requests)
+{
+    QJsonObject raw;
+    for (const HostRequest &request : requests) {
+        const QList<HostEntry> entries = snapshot.matches(request);
+        if (request.kind == HostRequest::Kind::List) {
+            QJsonArray paths;
+            for (const HostEntry &entry : entries) {
+                if (entry.status != HostEntry::Status::Missing) {
+                    paths.append(entry.path);
+                }
+            }
+            raw.insert(request.pattern, paths);
+        } else if (entries.isEmpty()) {
+            raw.insert(request.pattern, request.isGlob() ? u"<no matches>"_s : rawValue(snapshot.file(request.pattern)).toString());
+        } else {
+            for (const HostEntry &entry : entries) {
+                raw.insert(entry.path, rawValue(entry));
+            }
+        }
+    }
+    return raw;
 }
 
 QJsonObject Report::toJson() const

@@ -6,7 +6,15 @@ add_library(eacheck_core STATIC
     core/HostSnapshot.cpp
     core/Report.cpp
     checks/AllChecks.cpp
+    checks/BpfLsmCheck.cpp
+    checks/IommuCheck.cpp
+    checks/KernelSigningCheck.cpp
+    checks/KexecCheck.cpp
+    checks/LockdownCheck.cpp
     checks/PlaceholderCheck.cpp
+    checks/SecureBootCheck.cpp
+    checks/TpmCheck.cpp
+    parsers/KernelCmdline.cpp
 )
 target_include_directories(eacheck_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

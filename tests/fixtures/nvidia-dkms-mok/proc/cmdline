@@ -1,0 +1,1 @@
+BOOT_IMAGE=/vmlinuz-6.12.48 root=/dev/nvme0n1p2 ro iommu=pt nvidia-drm.modeset=1

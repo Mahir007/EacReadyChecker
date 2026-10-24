@@ -1,0 +1,14 @@
+{
+    "description": "Fedora desktop configured to meet every requirement that can be checked without admin access.",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}

@@ -66,6 +66,13 @@ Report CheckRunner::run(const HostAccess &host, const CheckList &checks, bool el
 
     for (const auto &check : checks) {
         CheckResult result = check->evaluate(snapshot);
+        // Record what the check saw. Values the check set itself take precedence.
+        const QJsonObject raw = rawValues(snapshot, check->requests() + check->privilegedRequests());
+        for (auto it = raw.begin(); it != raw.end(); ++it) {
+            if (!result.raw.contains(it.key())) {
+                result.raw.insert(it.key(), it.value());
+            }
+        }
         result.id = check->id();
         result.title = check->title();
         report.results.append(std::move(result));

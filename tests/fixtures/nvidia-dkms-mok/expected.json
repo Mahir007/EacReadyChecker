@@ -1,0 +1,14 @@
+{
+    "description": "Desktop with signed out-of-tree proprietary modules (taint P+O), IOMMU passthrough and lockdown off.",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "fail",
+        "lockdown": "fail",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}

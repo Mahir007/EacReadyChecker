@@ -29,5 +29,10 @@ struct Report {
 // Short "as of" date for the published requirements the checks follow.
 QString requirementsAsOf();
 
-// Raw value for a host entry: trimmed text for small text files, otherwise size + sha256.
+// Raw value for a host entry: trimmed text for small text files, hex for small binaries (e.g. EFI
+// variables), otherwise size + sha256.
 QJsonValue rawValue(const HostEntry &entry);
+
+// Raw values for everything a check requested, keyed by path (or by pattern for List requests and
+// globs without matches).
+QJsonObject rawValues(const HostSnapshot &snapshot, const QList<HostRequest> &requests);

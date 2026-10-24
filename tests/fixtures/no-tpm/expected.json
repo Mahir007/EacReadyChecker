@@ -1,0 +1,14 @@
+{
+    "description": "Legacy BIOS boot (no UEFI) and no TPM.",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "fail",
+        "secure-boot": "fail",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}

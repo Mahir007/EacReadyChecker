@@ -19,6 +19,21 @@ Verdict overallVerdict(const QList<CheckResult> &results)
     return Verdict::Ready;
 }
 
+CheckStatus combineStatus(const QList<SubCheckResult> &subChecks)
+{
+    const auto has = [&subChecks](CheckStatus s) {
+        return std::any_of(subChecks.begin(), subChecks.end(), [s](const SubCheckResult &r) {
+            return r.status == s;
+        });
+    };
+    for (CheckStatus s : {CheckStatus::Fail, CheckStatus::NeedsAdmin, CheckStatus::Unknown, CheckStatus::Pass}) {
+        if (has(s)) {
+            return s;
+        }
+    }
+    return subChecks.isEmpty() ? CheckStatus::Unknown : CheckStatus::NotRequired;
+}
+
 QString statusKey(CheckStatus status)
 {
     switch (status) {

@@ -1,0 +1,14 @@
+{
+    "description": "Lockdown in confidentiality mode, which the requirement does not allow, plus an unsigned module loaded (taint E).",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}

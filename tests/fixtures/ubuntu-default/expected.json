@@ -1,0 +1,14 @@
+{
+    "description": "Ubuntu laptop with defaults: automatic lockdown under Secure Boot, kexec allowed, no BPF LSM.",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "fail"
+    }
+}

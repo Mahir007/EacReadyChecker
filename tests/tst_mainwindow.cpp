@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "TestSysroot.h"
 #include "app/CheckRow.h"
 #include "app/MainWindow.h"
 
 #include <QIcon>
+#include <QLabel>
 #include <QPushButton>
 #include <QStandardPaths>
+#include <QToolButton>
 #include <QTest>
 
 using namespace Qt::StringLiterals;
@@ -16,7 +17,7 @@ class TestMainWindow : public QObject
     Q_OBJECT
 
 private:
-    TestSysroot m_root;
+    const QString m_fixture = QStringLiteral(EACHECK_FIXTURES_DIR) + u"/ubuntu-default"_s;
 
     static QPushButton *button(const QWidget &window, const QString &text)
     {
@@ -44,12 +45,11 @@ private Q_SLOTS:
         QIcon::setThemeSearchPaths(QIcon::themeSearchPaths()
                                    + QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, u"icons"_s, QStandardPaths::LocateDirectory));
         QIcon::setThemeName(u"breeze"_s);
-        m_root.write(u"/sys/kernel/security/lsm"_s, "capability,bpf");
     }
 
     void runAndElevate()
     {
-        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_root.path()));
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
 
@@ -61,8 +61,16 @@ private Q_SLOTS:
 
         window.runChecks(false);
         QTRY_VERIFY(refresh->isEnabled());
-        // Placeholder checks that need the event log show Needs admin, so the button appears.
+        // Checks that need the event log show Needs admin, so the button appears.
         QVERIFY(runFull->isVisible());
+
+        // Expand the IOMMU row's sub-checks.
+        const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
+        QToolButton *expander = rows[4]->findChild<QToolButton *>();
+        QVERIFY(expander && expander->isVisible());
+        expander->click();
+        const QLabel *subDetail = rows[4]->findChildren<QLabel *>().constLast();
+        QTRY_VERIFY(subDetail->isVisible() && subDetail->height() > 0);
         screenshot(window, u"mainwindow"_s);
 
         // A fixture sysroot grants admin reads without pkexec.

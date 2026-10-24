@@ -36,6 +36,11 @@ struct CheckResult {
 
 Verdict overallVerdict(const QList<CheckResult> &results);
 
+// Status of a check from its sub-checks: Fail > NeedsAdmin > Unknown > Pass. NotRequired counts as
+// passing; if every sub-check is NotRequired, so is the check. NeedsAdmin outranks Unknown because
+// granting access is the one thing the user can do about it.
+CheckStatus combineStatus(const QList<SubCheckResult> &subChecks);
+
 QString statusKey(CheckStatus status);   // stable machine-readable name, e.g. "needs-admin"
 QString statusLabel(CheckStatus status); // UI text, e.g. "Needs admin"
 QString verdictKey(Verdict verdict);

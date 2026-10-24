@@ -1,0 +1,14 @@
+{
+    "description": "Handheld (chassis type 11) without Secure Boot, no IOMMU, no lockdown support and kexec not built in.",
+    "synthetic": true,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "needs-admin",
+        "iommu": "not-required",
+        "lockdown": "fail",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}
