@@ -97,11 +97,19 @@ private Q_SLOTS:
         const auto detail = [&rows](int row) {
             return rows[row]->findChild<QLabel *>(u"detail"_s)->text();
         };
+        // An expanded row that's waiting hides its old sub-checks, then shows the new ones.
+        QToolButton *kernelExpander = rows[0]->findChild<QToolButton *>();
+        kernelExpander->click();
+        QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         const QString tpmDetail = detail(1);
         runFull->click();
         QCOMPARE(detail(0), u"Checking…"_s); // kernel signing
+        QVERIFY(!kernelExpander->isVisible());
+        QCOMPARE(rows[0]->findChildren<QLabel *>().size(), 3); // icon, title, detail: no sub-checks
         QCOMPARE(detail(1), tpmDetail);
         QTRY_VERIFY(refresh->isEnabled());
+        QVERIFY(kernelExpander->isVisible());
+        QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
     }

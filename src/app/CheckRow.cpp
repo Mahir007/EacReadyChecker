@@ -81,6 +81,19 @@ void CheckRow::setPending()
 {
     m_icon->setPixmap(themeIcon({u"view-refresh"_s}).pixmap(iconSize(this)));
     m_detail->setText(u"Checking…"_s);
+    // Drop the old sub-checks rather than show stale results under "Checking…". The row stays
+    // expanded (or not) for when the result arrives.
+    clearSubChecks();
+    m_expander->hide();
+    m_subChecks->hide();
+}
+
+void CheckRow::clearSubChecks()
+{
+    while (QLayoutItem *item = m_subLayout->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
 }
 
 void CheckRow::setResult(const CheckResult &result)
@@ -90,10 +103,7 @@ void CheckRow::setResult(const CheckResult &result)
     m_icon->setAccessibleName(statusLabel(result.status));
     m_detail->setText(result.detail.isEmpty() ? statusLabel(result.status) : result.detail);
 
-    while (QLayoutItem *item = m_subLayout->takeAt(0)) {
-        delete item->widget();
-        delete item;
-    }
+    clearSubChecks();
     const int size = iconSize(this) * 2 / 3;
     for (const SubCheckResult &sub : result.subChecks) {
         auto *row = new QWidget(m_subChecks);

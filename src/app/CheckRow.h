@@ -22,6 +22,7 @@ public:
 
 private:
     void setExpanded(bool expanded);
+    void clearSubChecks();
 
     QToolButton *m_expander;
     QLabel *m_icon;
