@@ -283,14 +283,13 @@ HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Pri
         }
 
         if (usePkexec && exited) {
-            // pkexec(1): 126 = the user dismissed the dialog, 127 = not authorised or an error,
-            // which includes having no authentication agent to ask.
-            if (exitCode == 126) {
+            // pkexec(1): 126 = the user dismissed the dialog, 127 = not authorised or an error.
+            // Plasma's agent reports Cancel as "Not authorized" (127), like a wrong password.
+            // Other 127s include having no authentication agent, or sh not finding cat.
+            if (exitCode == 126 || (exitCode == 127 && stderrText.contains(u"Not authorized"_s))) {
                 result.privilegedState = PrivilegedState::Cancelled;
             } else if (exitCode == 127 && stderrText.contains(u"authentication agent", Qt::CaseInsensitive)) {
                 result.privilegedState = PrivilegedState::NoAgent;
-            } else if (exitCode == 127) {
-                result.privilegedState = PrivilegedState::Cancelled;
             } else {
                 result.privilegedState = PrivilegedState::Failed;
             }
