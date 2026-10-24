@@ -208,6 +208,7 @@ private Q_SLOTS:
         QTest::newRow("dismissed") << u"exit 126"_s << PrivilegedState::Cancelled;
         QTest::newRow("not authorised") << u"echo 'Error executing command as another user: Not authorized' >&2; exit 127"_s << PrivilegedState::Cancelled;
         QTest::newRow("no agent") << u"echo 'Error creating textual authentication agent: no tty' >&2; exit 127"_s << PrivilegedState::NoAgent;
+        QTest::newRow("other 127") << u"echo 'sh: 1: exec: cat: not found' >&2; exit 127"_s << PrivilegedState::Failed;
         QTest::newRow("other error") << u"exit 1"_s << PrivilegedState::Failed;
     }
     void pkexecExitCodes()

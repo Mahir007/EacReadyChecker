@@ -216,7 +216,10 @@ HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Pri
         command << u"pkexec"_s;
     }
     if (useCat) {
-        command << u"/bin/cat"_s << u"--"_s << requests[0].pattern;
+        // cat is started by sh, not by pkexec directly. pkexec (polkit 127+) executes the
+        // symlink-resolved path, and uutils' multi-call binary then sees `uu-coreutils` instead of
+        // `cat` and fails. A shell runs cat by its own name.
+        command << u"/bin/sh"_s << u"-c"_s << u"exec cat -- \"$1\""_s << u"sh"_s << requests[0].pattern;
     } else {
         // The script goes in on stdin so the command line (and any polkit prompt) stays short.
         command << u"/bin/sh"_s << u"-s"_s << u"--"_s << m_sysroot;
