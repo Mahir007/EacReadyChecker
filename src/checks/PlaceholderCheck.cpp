@@ -16,7 +16,7 @@ CheckResult PlaceholderCheck::evaluate(const HostSnapshot &snapshot) const
     CheckResult result;
     if (!m_privilegedRequests.isEmpty() && snapshot.privilegedState != PrivilegedState::Granted) {
         result.status = CheckStatus::NeedsAdmin;
-        result.detail = u"Not implemented yet · needs admin access"_s;
+        result.detail = u"Needs admin access to read the TPM event log"_s;
     } else {
         result.status = CheckStatus::Unknown;
         result.detail = u"Not implemented yet"_s;
