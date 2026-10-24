@@ -1,0 +1,14 @@
+{
+    "description": "Fedora 44 KDE in a VMware Workstation VM with a virtual TPM 2.0 and Secure Boot on. No virtual IOMMU, kexec allowed (Fedora's default). Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "fail",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}
