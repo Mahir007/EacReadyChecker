@@ -1,36 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/MainWindow.h"
 #include "cli/CliMain.h"
-#include "eacheck_version.h"
-
-#include <KAboutData>
-#include <KIconTheme>
+#include "core/AppInfo.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QIcon>
 
 #include <memory>
 
 using namespace Qt::StringLiterals;
-
-namespace
-{
-KAboutData aboutData()
-{
-    KAboutData about(u"eac-ready-checker"_s,
-                     u"EACheck"_s,
-                     QStringLiteral(EACHECK_VERSION_STRING),
-                     u"Checks whether this PC meets the Easy Anti-Cheat Linux v2 requirements"_s,
-                     KAboutLicense::GPL_V3,
-                     u"© 2026 Mahir007"_s);
-    about.setLicense(KAboutLicense::GPL_V3, KAboutLicense::OrLaterVersions);
-    about.addAuthor(u"Mahir007"_s);
-    about.setHomepage(u"https://github.com/Mahir007/EacReadyChecker"_s);
-    about.setBugAddress("https://github.com/Mahir007/EacReadyChecker/issues");
-    about.setDesktopFileName(QStringLiteral(EACHECK_APP_ID));
-    return about;
-}
-} // namespace
 
 int main(int argc, char **argv)
 {
@@ -44,23 +23,28 @@ int main(int argc, char **argv)
         if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             qputenv("QT_QPA_PLATFORM", "wayland");
         }
-        KIconTheme::initTheme();
         app = std::make_unique<QApplication>(argc, argv);
-        QApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral(EACHECK_APP_ID)));
+        QGuiApplication::setApplicationDisplayName(AppInfo::displayName());
+        // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
+        QGuiApplication::setDesktopFileName(AppInfo::id());
+        // Look in Breeze for icons the current theme lacks (e.g. Adwaita on GNOME). Icons.h
+        // falls back to bundled icons if Breeze isn't installed either.
+        QIcon::setFallbackThemeName(u"breeze"_s);
+        QApplication::setWindowIcon(QIcon::fromTheme(AppInfo::id(), QIcon(u":/icons/%1.svg"_s.arg(AppInfo::id()))));
     }
-
-    KAboutData about = aboutData();
-    KAboutData::setApplicationData(about);
+    QCoreApplication::setApplicationName(AppInfo::binaryName());
+    QCoreApplication::setApplicationVersion(AppInfo::version());
 
     QCommandLineParser parser;
     const QCommandLineOption jsonOption(u"json"_s, u"Print the results as JSON and exit."_s);
     const QCommandLineOption textOption(u"text"_s, u"Print the results as plain text and exit."_s);
     const QCommandLineOption elevateOption(u"elevate"_s, u"Also run the checks that need admin access (asks for a password once)."_s);
     const QCommandLineOption sysrootOption(u"sysroot"_s, u"Read host files below <dir> instead of / (for fixtures and testing)."_s, u"dir"_s);
+    parser.setApplicationDescription(AppInfo::description());
+    parser.addHelpOption();
+    parser.addVersionOption();
     parser.addOptions({jsonOption, textOption, elevateOption, sysrootOption});
-    about.setupCommandLine(&parser);
     parser.process(*app);
-    about.processCommandLine(&parser);
 
     const HostAccess host = HostAccess::forCurrentEnvironment(parser.value(sysrootOption));
     const bool elevate = parser.isSet(elevateOption);

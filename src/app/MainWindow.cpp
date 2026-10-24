@@ -5,8 +5,7 @@
 #include "Icons.h"
 #include "SummaryBanner.h"
 #include "checks/AllChecks.h"
-
-#include <KAboutData>
+#include "core/AppInfo.h"
 
 #include <QClipboard>
 #include <QFrame>
@@ -153,13 +152,12 @@ void MainWindow::copyReport(bool json)
 
 void MainWindow::showAbout()
 {
-    const KAboutData about = KAboutData::applicationData();
     QMessageBox::about(this,
-                       u"About %1"_s.arg(about.displayName()),
-                       u"<h3>%1 %2</h3><p>%3</p><p>%4</p><p><a href=\"%5\">%5</a></p><p>License: %6</p>"_s.arg(about.displayName(),
-                                                                                                         about.version(),
-                                                                                                         about.shortDescription(),
-                                                                                                         about.copyrightStatement(),
-                                                                                                         about.homepage(),
-                                                                                                         about.licenses().value(0).name(KAboutLicense::FullName)));
+                       u"About %1"_s.arg(AppInfo::displayName()),
+                       u"<h3>%1 %2</h3><p>%3</p><p>%4</p><p><a href=\"%5\">%5</a></p><p>License: %6</p>"_s.arg(AppInfo::displayName(),
+                                                                                                         AppInfo::version(),
+                                                                                                         AppInfo::description(),
+                                                                                                         AppInfo::copyright(),
+                                                                                                         AppInfo::homepage(),
+                                                                                                         AppInfo::license()));
 }

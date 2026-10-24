@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/CheckRow.h"
+#include "app/Icons.h"
 #include "app/MainWindow.h"
 
 #include <QIcon>
@@ -45,6 +46,24 @@ private Q_SLOTS:
         QIcon::setThemeSearchPaths(QIcon::themeSearchPaths()
                                    + QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, u"icons"_s, QStandardPaths::LocateDirectory));
         QIcon::setThemeName(u"breeze"_s);
+    }
+
+    void bundledIconsWithoutTheme()
+    {
+        // No theme has our icons (e.g. Adwaita without Breeze installed): use the bundled ones.
+        const QString theme = QIcon::themeName();
+        const QString fallback = QIcon::fallbackThemeName();
+        QIcon::setThemeName(u"no-such-theme"_s);
+        QIcon::setFallbackThemeName(u"no-such-theme"_s);
+        for (CheckStatus status : {CheckStatus::Pass, CheckStatus::Fail, CheckStatus::NotRequired, CheckStatus::NeedsAdmin, CheckStatus::Unknown}) {
+            QVERIFY2(!statusIcon(status).pixmap(16).isNull(), qPrintable(statusKey(status)));
+        }
+        for (Verdict verdict : {Verdict::Ready, Verdict::NotReady, Verdict::Incomplete}) {
+            QVERIFY2(!verdictIcon(verdict).pixmap(48).isNull(), qPrintable(verdictKey(verdict)));
+        }
+        QVERIFY(!QIcon(u":/icons/io.github.Mahir007.EacReadyChecker.svg"_s).pixmap(48).isNull());
+        QIcon::setThemeName(theme);
+        QIcon::setFallbackThemeName(fallback);
     }
 
     void runAndElevate()

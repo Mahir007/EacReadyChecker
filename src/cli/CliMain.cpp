@@ -11,7 +11,7 @@
 
 bool isCliInvocation(int argc, char **argv)
 {
-    static constexpr const char *kCliFlags[] = {"--json", "--text", "-h", "--help", "--help-all", "-v", "--version", "--author", "--license"};
+    static constexpr const char *kCliFlags[] = {"--json", "--text", "-h", "--help", "--help-all", "-v", "--version"};
     for (int i = 1; i < argc; ++i) {
         for (const char *flag : kCliFlags) {
             if (std::strcmp(argv[i], flag) == 0) {
