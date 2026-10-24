@@ -38,15 +38,19 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     , m_subChecks(new QWidget(this))
     , m_subLayout(new QVBoxLayout(m_subChecks))
 {
+    // Not checkable: Breeze draws a checked tool button as pressed, which boxes the arrow.
     m_expander->setAutoRaise(true);
-    m_expander->setCheckable(true);
     m_expander->setArrowType(Qt::RightArrow);
     m_expander->setAccessibleName(u"Show details"_s);
     // Keep the arrow's column when hidden so titles line up across rows.
     QSizePolicy policy = m_expander->sizePolicy();
     policy.setRetainSizeWhenHidden(true);
     m_expander->setSizePolicy(policy);
-    connect(m_expander, &QToolButton::toggled, this, &CheckRow::setExpanded);
+    connect(m_expander, &QToolButton::clicked, this, [this] {
+        setExpanded(!m_expanded);
+    });
+
+    m_detail->setObjectName(u"detail"_s);
 
     QFont titleFont = m_title->font();
     titleFont.setBold(true);
@@ -105,14 +109,12 @@ void CheckRow::setResult(const CheckResult &result)
         m_subLayout->addWidget(row);
     }
     m_expander->setVisible(!result.subChecks.isEmpty());
-    if (result.subChecks.isEmpty()) {
-        m_expander->setChecked(false);
-    }
-    setExpanded(m_expander->isChecked());
+    setExpanded(m_expanded && !result.subChecks.isEmpty());
 }
 
 void CheckRow::setExpanded(bool expanded)
 {
+    m_expanded = expanded;
     m_expander->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
     m_expander->setAccessibleName(expanded ? u"Hide details"_s : u"Show details"_s);
     m_subChecks->setVisible(expanded && m_subLayout->count() > 0);

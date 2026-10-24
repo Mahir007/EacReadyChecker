@@ -29,4 +29,5 @@ private:
     QLabel *m_detail;
     QWidget *m_subChecks;
     QVBoxLayout *m_subLayout;
+    bool m_expanded = false;
 };
