@@ -22,13 +22,18 @@ ctest --test-dir build
 
 ## Build (Flatpak)
 
+Needs `flatpak`, `flatpak-builder` and `git` (Debian/Ubuntu also need `elfutils`).
+
 ```sh
-flatpak install --user flathub org.kde.Platform//6.11 org.kde.Sdk//6.11
-flatpak-builder --user --install --force-clean build-flatpak packaging/flatpak/io.github.Mahir007.EacReadyChecker.yml
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+git clone https://github.com/Mahir007/EacReadyChecker.git
+cd EacReadyChecker
+flatpak-builder --user --install-deps-from=flathub --install --force-clean \
+  build-flatpak packaging/flatpak/io.github.Mahir007.EacReadyChecker.yml
 flatpak run io.github.Mahir007.EacReadyChecker
 ```
 
-`flatpak-builder` needs `elfutils` installed on the host.
+`--install-deps-from=flathub` installs the KDE runtime and SDK (about 1 GB) on the first build.
 
 ## License
 
