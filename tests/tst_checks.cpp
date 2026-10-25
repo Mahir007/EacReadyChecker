@@ -82,7 +82,13 @@ private Q_SLOTS:
         {
             Files files = withIommu({});
             files.insert(u"/sys/kernel/iommu_groups/1/type"_s, "identity\n");
-            QTest::newRow("iommu: identity group") << iommu << files << QString() << u"fail"_s << u"1 of 2 groups use passthrough"_s;
+            // One device in identity mode (e.g. an AMD APU's integrated GPU) isn't system-wide passthrough.
+            QTest::newRow("iommu: one identity group") << iommu << files << QString() << u"pass"_s << u"no passthrough"_s;
+            QTest::newRow("iommu: one identity group, sub-check") << iommu << files << u"No passthrough (group types)"_s << u"pass"_s
+                                                                 << u"1 of 2 groups translate DMA; group 1 uses identity"_s;
+            files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "identity\n");
+            QTest::newRow("iommu: all groups identity") << iommu << files << QString() << u"fail"_s << u"All 2 groups use passthrough"_s;
+            files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "DMA-FQ\n");
             files.insert(u"/sys/kernel/iommu_groups/1/type"_s, "blocked\n");
             QTest::newRow("iommu: unexpected type") << iommu << files << QString() << u"fail"_s << u"Unexpected group types: 1 (blocked)"_s;
             files.remove(u"/sys/kernel/iommu_groups/1/type"_s);

@@ -69,12 +69,21 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
             other.append(u"%1 (%2)"_s.arg(group, QString::fromUtf8(type)));
         }
     }
-    if (!identity.isEmpty()) {
-        return {title, CheckStatus::Fail, u"%1 of %2 groups use passthrough (identity)"_s.arg(identity.size()).arg(types.size())};
+    // Only system-wide passthrough fails. The kernel puts single devices in
+    // identity mode for its own reasons, e.g. the AMD IOMMU driver does it for every APU's
+    // integrated GPU, so some identity groups alongside translated ones are fine.
+    if (identity.size() == types.size()) {
+        return {title, CheckStatus::Fail, u"All %1 groups use passthrough (identity)"_s.arg(types.size())};
     }
     // Only DMA and DMA-FQ are known to translate DMA, so anything else doesn't count as passing.
     if (!other.isEmpty()) {
         return {title, CheckStatus::Fail, u"Unexpected group types: %1"_s.arg(other.join(u", "_s))};
+    }
+    if (!identity.isEmpty()) {
+        const QString which = identity.size() == 1 ? u"group %1 uses"_s.arg(identity[0]) : u"groups %1 use"_s.arg(identity.join(u", "_s));
+        return {title,
+                CheckStatus::Pass,
+                u"%1 of %2 groups translate DMA; %3 identity (a single device, not system-wide)"_s.arg(types.size() - identity.size()).arg(types.size()).arg(which)};
     }
     return {title, CheckStatus::Pass, u"All %1 groups translate DMA"_s.arg(types.size())};
 }
