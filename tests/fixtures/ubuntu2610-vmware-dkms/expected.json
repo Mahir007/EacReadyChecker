@@ -10,5 +10,15 @@
         "lockdown": "pass",
         "kexec": "fail",
         "bpf-lsm": "pass"
+    },
+    "checksElevated": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "pass",
+        "measured-boot": "pass",
+        "iommu": "fail",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
     }
 }

@@ -1,11 +1,21 @@
 {
-    "description": "Fedora desktop configured to meet every requirement that can be checked without admin access.",
+    "description": "Fedora desktop configured to meet every requirement. The event log and PCR values are the fedora44-vmware capture's, which has the same MokListRT.",
     "synthetic": true,
     "checks": {
         "kernel-signing": "needs-admin",
         "tpm": "pass",
         "secure-boot": "needs-admin",
         "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    },
+    "checksElevated": {
+        "kernel-signing": "pass",
+        "tpm": "pass",
+        "secure-boot": "pass",
+        "measured-boot": "pass",
         "iommu": "pass",
         "lockdown": "pass",
         "kexec": "pass",

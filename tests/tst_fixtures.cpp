@@ -11,8 +11,9 @@
 
 using namespace Qt::StringLiterals;
 
-// Every tree in tests/fixtures/ must produce the statuses in its expected.json, through both
-// transports and after a round-trip through tools/capture-fixture.sh.
+// Every tree in tests/fixtures/ must produce the statuses in its expected.json, without and with
+// admin access ("checks" and "checksElevated"), through both transports and after a round-trip
+// through tools/capture-fixture.sh.
 class TestFixtures : public QObject
 {
     Q_OBJECT
@@ -27,9 +28,9 @@ private:
         return QJsonDocument::fromJson(file.readAll()).object();
     }
 
-    static Report run(HostAccess::Transport transport, const QString &sysroot)
+    static Report run(HostAccess::Transport transport, const QString &sysroot, bool elevate)
     {
-        return CheckRunner::run(HostAccess(transport, {}, sysroot), createAllChecks(), false);
+        return CheckRunner::run(HostAccess(transport, {}, sysroot), createAllChecks(), elevate);
     }
 
     static void compareStatuses(const Report &report, const QJsonObject &expectedChecks)
@@ -58,17 +59,19 @@ private Q_SLOTS:
     {
         QFETCH(QString, fixture);
         const QString sysroot = QStringLiteral(EACHECK_FIXTURES_DIR) + u'/' + fixture;
-        const QJsonObject checks = expected(fixture).value(u"checks"_s).toObject();
-        QVERIFY(!checks.isEmpty());
+        for (bool elevate : {false, true}) {
+            const QJsonObject checks = expected(fixture).value(elevate ? u"checksElevated"_s : u"checks"_s).toObject();
+            QVERIFY(!checks.isEmpty());
 
-        const Report direct = run(HostAccess::Transport::Direct, sysroot);
-        compareStatuses(direct, checks);
+            const Report direct = run(HostAccess::Transport::Direct, sysroot, elevate);
+            compareStatuses(direct, checks);
 
-        const Report shell = run(HostAccess::Transport::Shell, sysroot);
-        for (qsizetype i = 0; i < direct.results.size(); ++i) {
-            QCOMPARE(shell.results[i].status, direct.results[i].status);
-            QCOMPARE(shell.results[i].detail, direct.results[i].detail);
-            QCOMPARE(shell.results[i].raw, direct.results[i].raw);
+            const Report shell = run(HostAccess::Transport::Shell, sysroot, elevate);
+            for (qsizetype i = 0; i < direct.results.size(); ++i) {
+                QCOMPARE(shell.results[i].status, direct.results[i].status);
+                QCOMPARE(shell.results[i].detail, direct.results[i].detail);
+                QCOMPARE(shell.results[i].raw, direct.results[i].raw);
+            }
         }
     }
 
@@ -87,11 +90,13 @@ private Q_SLOTS:
         QVERIFY(script.waitForFinished());
         QCOMPARE(script.exitCode(), 0);
 
-        const Report original = run(HostAccess::Transport::Direct, sysroot);
-        const Report captured = run(HostAccess::Transport::Direct, capture.path() + u"/tree"_s);
-        for (qsizetype i = 0; i < original.results.size(); ++i) {
-            QCOMPARE(captured.results[i].status, original.results[i].status);
-            QCOMPARE(captured.results[i].raw, original.results[i].raw);
+        for (bool elevate : {false, true}) {
+            const Report original = run(HostAccess::Transport::Direct, sysroot, elevate);
+            const Report captured = run(HostAccess::Transport::Direct, capture.path() + u"/tree"_s, elevate);
+            for (qsizetype i = 0; i < original.results.size(); ++i) {
+                QCOMPARE(captured.results[i].status, original.results[i].status);
+                QCOMPARE(captured.results[i].raw, original.results[i].raw);
+            }
         }
     }
 };
