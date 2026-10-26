@@ -1,10 +1,12 @@
 # Core logic: host access, checks, reports. No widgets, so the CLI and tests can use it headless.
 add_library(eacheck_core STATIC
+    core/Certificate.cpp
     core/CheckResult.cpp
     core/CheckRunner.cpp
     core/HostAccess.cpp
     core/HostSnapshot.cpp
     core/Report.cpp
+    core/WellKnownKeys.cpp
     checks/AllChecks.cpp
     checks/BpfLsmCheck.cpp
     checks/IommuCheck.cpp
@@ -26,7 +28,12 @@ target_compile_definitions(eacheck_core PUBLIC
 )
 target_link_libraries(eacheck_core
     PUBLIC Qt6::Core Qt6::Concurrent
-    PRIVATE eacheck_settings
+    PRIVATE Qt6::Network eacheck_settings
+)
+qt_add_resources(eacheck_core "data"
+    PREFIX "/data"
+    BASE data
+    FILES data/well-known-keys.json
 )
 
 # Widgets, split out so tests can drive the window offscreen.
