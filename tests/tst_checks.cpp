@@ -340,6 +340,26 @@ private Q_SLOTS:
             << u"Canonical"_s;
         QTest::newRow("authorities: malformed") << sb << withEventLog({{7, EfiVariableAuthority, "short"}}) << usedToBoot << u"unknown"_s
                                                 << u"Couldn't parse a Secure Boot authority"_s;
+        {
+            // A GPU's option ROM, verified by a key that isn't well-known, before the boot chain.
+            QList<Event> events{TcgTestData::authority(u"db"_s, unknown), {2, EfiBootServicesDriver, "gop.efi"}};
+            events += grub;
+            QTest::newRow("authorities: option rom") << sb << withEventLog(events) << usedToBoot << u"pass"_s
+                                                     << u"driver key not judged: CN=EACheck test MOK"_s;
+            QTest::newRow("authorities: option rom, signing") << signing << withEventLog(events) << kernelSigned << u"pass"_s << u"Canonical"_s;
+            QTest::newRow("authorities: option rom only") << sb << withEventLog(events.mid(0, 2)) << usedToBoot << u"fail"_s
+                                                          << u"no Secure Boot verification"_s;
+            // A well-known driver key adds nothing to the detail.
+            events[0] = TcgTestData::authority(u"db"_s, known);
+            QTest::newRow("authorities: well-known option rom") << sb << withEventLog(events) << usedToBoot << u"pass"_s
+                                                                << u"Master Certificate Authority"_s;
+        }
+        {
+            // The next image after the authority is an application, so it verified the boot chain
+            // even though a driver comes later.
+            const QList<Event> events{TcgTestData::authority(u"db"_s, unknown), {4, EfiBootServicesApplication, "shimx64.efi"}, {2, EfiBootServicesDriver, "x.efi"}};
+            QTest::newRow("authorities: driver after application") << sb << withEventLog(events) << usedToBoot << u"fail"_s << u"Unknown key"_s;
+        }
         QTest::newRow("authorities: no log") << sb << Files{} << usedToBoot << u"unknown"_s << u"No TPM event log"_s;
         QTest::newRow("authorities: legacy log") << signing << Files{{HostPaths::EventLog, legacy}} << kernelSigned << u"unknown"_s
                                                  << u"crypto-agile"_s;

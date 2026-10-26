@@ -24,6 +24,7 @@ enum EventType : quint32 {
     EfiVariableDriverConfig = 0x80000001,
     EfiBootServicesApplication = 0x80000003,
     EfiBootServicesDriver = 0x80000004,
+    EfiRuntimeServicesDriver = 0x80000005,
     EfiHcrtmEvent = 0x80000010,
     EfiVariableAuthority = 0x800000e0,
 };

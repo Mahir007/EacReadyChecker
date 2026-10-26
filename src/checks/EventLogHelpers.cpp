@@ -24,6 +24,24 @@ std::optional<QByteArray> authorityCertificate(const QByteArray &data)
     }
     return std::nullopt;
 }
+
+// Firmware logs an authority just before it measures the image it verified. If the next image
+// is a driver (e.g. a GPU's option ROM), the key verified firmware, not the boot chain.
+bool verifiedDriver(const QList<TcgEventLog::Event> &events, qsizetype authority)
+{
+    for (qsizetype i = authority + 1; i < events.size(); ++i) {
+        switch (events[i].type) {
+        case TcgEventLog::EfiBootServicesDriver:
+        case TcgEventLog::EfiRuntimeServicesDriver:
+            return true;
+        case TcgEventLog::EfiBootServicesApplication:
+            return false;
+        default:
+            break;
+        }
+    }
+    return false;
+}
 } // namespace
 
 namespace EventLogHelpers
@@ -60,10 +78,13 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
         return {title, loaded.status == CheckStatus::Fail ? CheckStatus::Unknown : loaded.status, loaded.detail};
     }
 
+    const QList<TcgEventLog::Event> &events = loaded.log->events;
     QStringList vendors;
     QStringList unknown;
+    QStringList unknownDrivers;
     int certificates = 0;
-    for (const TcgEventLog::Event &event : loaded.log->events) {
+    for (qsizetype i = 0; i < events.size(); ++i) {
+        const TcgEventLog::Event &event = events[i];
         if (event.pcr != 7 || event.type != TcgEventLog::EfiVariableAuthority) {
             continue;
         }
@@ -78,20 +99,31 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
             raw.append(entry);
             continue;
         }
-        ++certificates;
         const QByteArray sha256 = Certificate::sha256(*der);
         const QString subject = Certificate::subject(*der);
+        const QString name = subject.isEmpty() ? u"certificate %1"_s.arg(Certificate::fingerprint(sha256)) : subject;
+        const WellKnownKey *known = WellKnownKeys::builtIn().findFingerprint(sha256);
+        const bool driver = verifiedDriver(events, i);
         entry.insert(u"sha256"_s, Certificate::fingerprint(sha256));
         entry.insert(u"subject"_s, subject);
-        if (const WellKnownKey *known = WellKnownKeys::builtIn().findFingerprint(sha256)) {
+        entry.insert(u"verified"_s, driver ? u"driver"_s : u"boot"_s);
+        if (known) {
             entry.insert(u"vendor"_s, known->vendor);
-            if (!vendors.contains(known->vendor)) {
-                vendors.append(known->vendor);
-            }
-        } else {
-            unknown.append(subject.isEmpty() ? u"certificate %1"_s.arg(Certificate::fingerprint(sha256)) : subject);
         }
         raw.append(entry);
+
+        if (driver) {
+            if (!known) {
+                unknownDrivers.append(name);
+            }
+            continue;
+        }
+        ++certificates;
+        if (!known) {
+            unknown.append(name);
+        } else if (!vendors.contains(known->vendor)) {
+            vendors.append(known->vendor);
+        }
     }
 
     if (!unknown.isEmpty()) {
@@ -101,6 +133,10 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
         // Nothing verified the boot chain, e.g. because Secure Boot is off.
         return {title, CheckStatus::Fail, u"The TPM event log shows no Secure Boot verification"_s};
     }
-    return {title, CheckStatus::Pass, u"Well-known: %1"_s.arg(vendors.join(u", "_s))};
+    QString detail = u"Well-known: %1"_s.arg(vendors.join(u", "_s));
+    if (!unknownDrivers.isEmpty()) {
+        detail += u" · driver key not judged: %1"_s.arg(unknownDrivers.join(u", "_s));
+    }
+    return {title, CheckStatus::Pass, detail};
 }
 } // namespace EventLogHelpers
