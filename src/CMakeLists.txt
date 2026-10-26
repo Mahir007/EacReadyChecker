@@ -18,6 +18,7 @@ add_library(eacheck_core STATIC
     checks/TpmCheck.cpp
     parsers/EfiSignatureList.cpp
     parsers/KernelCmdline.cpp
+    parsers/TcgEventLog.cpp
 )
 target_include_directories(eacheck_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

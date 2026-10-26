@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "EfiSignatureList.h"
+#include "EfiGuid.h"
 
 #include <QtEndian>
 
@@ -10,14 +11,6 @@ namespace
 constexpr qsizetype kGuidSize = 16;
 // SignatureType, SignatureListSize, SignatureHeaderSize, SignatureSize.
 constexpr qsizetype kListHeaderSize = kGuidSize + 3 * 4;
-
-// EFI GUIDs store their first three fields little-endian.
-QUuid readGuid(const char *p)
-{
-    const auto *b = reinterpret_cast<const uchar *>(p);
-    return QUuid(qFromLittleEndian<quint32>(b), qFromLittleEndian<quint16>(b + 4), qFromLittleEndian<quint16>(b + 6), b[8], b[9], b[10], b[11],
-                 b[12], b[13], b[14], b[15]);
-}
 } // namespace
 
 namespace EfiSignatureList
@@ -32,7 +25,7 @@ std::optional<QList<Entry>> parse(const QByteArray &data)
             return std::nullopt;
         }
         const char *list = data.constData() + offset;
-        const QUuid type = readGuid(list);
+        const QUuid type = readEfiGuid(list);
         const quint32 listSize = qFromLittleEndian<quint32>(list + kGuidSize);
         const quint32 headerSize = qFromLittleEndian<quint32>(list + kGuidSize + 4);
         const quint32 signatureSize = qFromLittleEndian<quint32>(list + kGuidSize + 8);
@@ -42,7 +35,7 @@ std::optional<QList<Entry>> parse(const QByteArray &data)
             return std::nullopt;
         }
         for (qsizetype p = kListHeaderSize + headerSize; p < qsizetype(listSize); p += signatureSize) {
-            entries.append({type, readGuid(list + p), QByteArray(list + p + kGuidSize, signatureSize - kGuidSize)});
+            entries.append({type, readEfiGuid(list + p), QByteArray(list + p + kGuidSize, signatureSize - kGuidSize)});
         }
         offset += listSize;
     }
