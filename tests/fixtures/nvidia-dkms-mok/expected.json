@@ -1,8 +1,8 @@
 {
-    "description": "Desktop with signed out-of-tree proprietary modules (taint P+O), IOMMU passthrough and lockdown off.",
+    "description": "Desktop with signed out-of-tree proprietary modules (taint P+O) and their DKMS signing key enrolled as a MOK, IOMMU passthrough and lockdown off.",
     "synthetic": true,
     "checks": {
-        "kernel-signing": "needs-admin",
+        "kernel-signing": "fail",
         "tpm": "pass",
         "secure-boot": "needs-admin",
         "measured-boot": "needs-admin",

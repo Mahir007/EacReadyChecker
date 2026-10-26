@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "EfiTestData.h"
 #include "TestSysroot.h"
 #include "checks/AllChecks.h"
 #include "checks/HostPaths.h"
@@ -146,6 +147,34 @@ private Q_SLOTS:
         QTest::newRow("taint: garbage") << signing << Files{{HostPaths::Tainted, "abc\n"}} << modules << u"unknown"_s << u"Unexpected"_s;
         QTest::newRow("taint: missing") << signing << Files{} << modules << u"unknown"_s << u"Couldn't read"_s;
         QTest::newRow("signing: event log pending") << signing << Files{{HostPaths::Tainted, "0\n"}} << QString() << u"needs-admin"_s << QString();
+
+        const QString moks = u"Module-signing keys (MOKs) are well-known"_s;
+        const QString mokList = u"/sys/firmware/efi/efivars/MokListRT-"_s + HostPaths::ShimLockGuid;
+        const QString mokList1 = u"/sys/firmware/efi/efivars/MokListRT1-"_s + HostPaths::ShimLockGuid;
+        const QByteArray known = EfiTestData::x509(EfiTestData::canonicalCertificate());
+        const QByteArray unknown = EfiTestData::x509(EfiTestData::unknownCertificate());
+        const QByteArray hash = EfiTestData::list(EfiSignatureList::CertSha256, {QByteArray(32, 'a')});
+        const auto mok = [&](const QByteArray &data) {
+            return Files{{HostPaths::Tainted, "0\n"}, {mokList, EfiTestData::variable(data)}};
+        };
+        QTest::newRow("mok: none") << signing << Files{} << moks << u"pass"_s << u"No MOKs enrolled"_s;
+        QTest::newRow("mok: empty variable") << signing << mok({}) << moks << u"pass"_s << u"No MOKs enrolled"_s;
+        QTest::newRow("mok: shim vendor cert") << signing << mok(known) << moks << u"pass"_s << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("mok: same vendor twice") << signing << mok(known + known) << moks << u"pass"_s
+                                                << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("mok: unknown key") << signing << mok(unknown + known) << moks << u"fail"_s << u"Unknown key: CN=EACheck test MOK, O=EACheck tests"_s;
+        QTest::newRow("mok: unknown key, parent") << signing << mok(unknown + known) << QString() << u"fail"_s << u"Unknown key: CN=EACheck test MOK"_s;
+        QTest::newRow("mok: hash") << signing << mok(hash) << moks << u"fail"_s << u"Unknown key: SHA-256 hash 6161616161616161"_s;
+        QTest::newRow("mok: two unknown") << signing << mok(hash + unknown) << moks << u"fail"_s << u"Unknown keys: SHA-256 hash 6161616161616161 (+1 more)"_s;
+        QTest::newRow("mok: other type") << signing << mok(EfiTestData::list(EfiTestData::ShimLock, {"x"})) << moks << u"fail"_s
+                                         << u"605dab50-e046-4300-abb6-3dd810dd8b23 entry"_s;
+        {
+            Files files = mok(known);
+            files.insert(mokList1, EfiTestData::variable(unknown));
+            QTest::newRow("mok: split list") << signing << files << moks << u"fail"_s << u"CN=EACheck test MOK"_s;
+        }
+        QTest::newRow("mok: malformed") << signing << mok(known + "x") << moks << u"unknown"_s << u"Couldn't parse MokListRT"_s;
+        QTest::newRow("mok: no attributes") << signing << Files{{mokList, "\x06"}} << moks << u"unknown"_s << u"Couldn't parse MokListRT"_s;
     }
 
     void evaluate()

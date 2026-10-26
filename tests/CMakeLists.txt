@@ -7,7 +7,7 @@ endfunction()
 foreach(test tst_checkresult tst_checkrunner tst_checks tst_efisignaturelist tst_fixtures tst_hostaccess tst_kernelcmdline tst_wellknownkeys)
     eacheck_add_test(${test} eacheck_core)
 endforeach()
-foreach(test tst_efisignaturelist tst_wellknownkeys)
+foreach(test tst_checks tst_efisignaturelist tst_wellknownkeys)
     target_compile_definitions(${test} PRIVATE EACHECK_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 endforeach()
 target_compile_definitions(tst_fixtures PRIVATE
