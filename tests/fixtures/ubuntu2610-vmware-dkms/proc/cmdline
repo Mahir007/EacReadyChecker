@@ -1,0 +1,1 @@
+BOOT_IMAGE=/boot/vmlinuz-7.3.0-9-generic root=UUID=56ba96f2-08d6-4002-8a30-de17a16158bf ro quiet splash crashkernel=2G-4G:320M,4G-32G:512M,32G-64G:1024M,64G-128G:2048M,128G-:4096M

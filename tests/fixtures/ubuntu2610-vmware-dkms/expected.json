@@ -1,0 +1,14 @@
+{
+    "description": "The Ubuntu 26.10 VM after installing a DKMS module and enrolling its signing key (CN=ubuntu-vm Secure Boot Module Signature key) as a MOK, so the MOK check fails. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "fail",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

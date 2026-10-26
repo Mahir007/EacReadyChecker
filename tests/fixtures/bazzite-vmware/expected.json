@@ -1,0 +1,14 @@
+{
+    "description": "Bazzite (Fedora 44 base) in a VMware VM with a virtual IOMMU and Universal Blue's kernel key enrolled. Lockdown is off: Bazzite's kernel doesn't turn it on under Secure Boot. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

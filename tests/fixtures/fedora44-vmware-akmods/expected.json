@@ -1,0 +1,14 @@
+{
+    "description": "The Fedora 44 VM with \"Virtualize IOMMU\" on, after enrolling the akmods signing key as a MOK, so the MOK check fails. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

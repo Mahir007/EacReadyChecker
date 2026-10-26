@@ -1,0 +1,14 @@
+{
+    "description": "Ubuntu 26.10 in a VMware VM with a virtual TPM 2.0 and Secure Boot on. No virtual IOMMU, kexec allowed. MokListRT holds only Canonical's CA, which shim adds. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "fail",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

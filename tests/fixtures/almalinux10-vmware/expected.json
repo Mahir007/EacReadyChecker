@@ -1,0 +1,14 @@
+{
+    "description": "AlmaLinux 10.2 in a VMware VM with a virtual IOMMU. MokListRT holds the three certificates AlmaLinux's shim trusts. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}
