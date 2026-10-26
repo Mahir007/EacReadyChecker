@@ -14,6 +14,7 @@ add_library(eacheck_core STATIC
     checks/PlaceholderCheck.cpp
     checks/SecureBootCheck.cpp
     checks/TpmCheck.cpp
+    parsers/EfiSignatureList.cpp
     parsers/KernelCmdline.cpp
 )
 target_include_directories(eacheck_core PUBLIC
