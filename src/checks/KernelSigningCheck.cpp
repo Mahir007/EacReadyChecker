@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "CheckHelpers.h"
 #include "Checks.h"
+#include "EventLogHelpers.h"
 #include "core/Certificate.h"
 #include "core/WellKnownKeys.h"
 #include "parsers/EfiSignatureList.h"
@@ -101,11 +102,7 @@ SubCheckResult moksWellKnown(const HostSnapshot &snapshot, QJsonArray &rawEntrie
     }
 
     if (!unknown.isEmpty()) {
-        QString detail = (unknown.size() == 1 ? u"Unknown key: %1"_s : u"Unknown keys: %1"_s).arg(unknown.first());
-        if (unknown.size() > 1) {
-            detail += u" (+%1 more)"_s.arg(unknown.size() - 1);
-        }
-        return {title, CheckStatus::Fail, detail};
+        return {title, CheckStatus::Fail, CheckHelpers::unknownKeys(unknown)};
     }
     if (vendors.isEmpty()) {
         return {title, CheckStatus::Pass, u"No MOKs enrolled"_s};
@@ -125,12 +122,16 @@ QList<HostRequest> KernelSigningCheck::requests() const
 CheckResult KernelSigningCheck::evaluate(const HostSnapshot &snapshot) const
 {
     CheckResult result;
+    QJsonArray authorities;
     QJsonArray moks;
     result.subChecks = {
-        CheckHelpers::notImplemented(u"Kernel signed by a well-known key"_s, snapshot, true), // Phase 4
+        // shim logs each certificate once, so the authorities that verified GRUB and the kernel
+        // can't be told apart. Every authority of the boot chain is judged.
+        EventLogHelpers::authoritiesWellKnown(snapshot, u"Kernel signed by a well-known key"_s, authorities),
         unsignedModules(snapshot),
         moksWellKnown(snapshot, moks),
     };
+    result.raw.insert(u"bootAuthorities"_s, authorities);
     result.raw.insert(u"mokList"_s, moks);
     CheckHelpers::finishFromSubChecks(result, u"Kernel and modules signed by well-known keys"_s);
     return result;

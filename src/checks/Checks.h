@@ -35,6 +35,16 @@ public:
     CheckResult evaluate(const HostSnapshot &snapshot) const override;
 };
 
+class MeasuredBootCheck : public Check
+{
+public:
+    QString id() const override { return QStringLiteral("measured-boot"); }
+    QString title() const override { return QStringLiteral("Measured boot"); }
+    QList<HostRequest> requests() const override;
+    QList<HostRequest> privilegedRequests() const override { return {HostRequest::read(HostPaths::EventLog)}; }
+    CheckResult evaluate(const HostSnapshot &snapshot) const override;
+};
+
 class IommuCheck : public Check
 {
 public:

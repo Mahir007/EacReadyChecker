@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "CheckHelpers.h"
 #include "Checks.h"
+#include "EventLogHelpers.h"
 #include "parsers/EfiVariable.h"
+
+#include <QJsonArray>
 
 using namespace Qt::StringLiterals;
 
@@ -66,11 +69,14 @@ QList<HostRequest> SecureBootCheck::requests() const
 CheckResult SecureBootCheck::evaluate(const HostSnapshot &snapshot) const
 {
     CheckResult result;
+    QJsonArray authorities;
     result.subChecks = {
         enabled(snapshot),
         notInSetupMode(snapshot),
-        CheckHelpers::notImplemented(u"Only well-known keys used to boot"_s, snapshot, true), // Phase 4
+        // Only the keys used for this boot count. db may hold others.
+        EventLogHelpers::authoritiesWellKnown(snapshot, u"Only well-known keys used to boot"_s, authorities),
     };
+    result.raw.insert(u"bootAuthorities"_s, authorities);
     CheckHelpers::finishFromSubChecks(result, u"On, booted with well-known keys"_s);
     return result;
 }

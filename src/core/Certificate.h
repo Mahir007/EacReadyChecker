@@ -12,6 +12,9 @@ QByteArray sha256(const QByteArray &der);
 // "A3:B3:…:2E", the form openssl and the key list use.
 QString fingerprint(const QByteArray &sha256);
 
+// True if `data` is exactly one DER SEQUENCE, the outer shape of an X.509 certificate.
+bool isDer(const QByteArray &data);
+
 // Short subject for display, e.g. "CN=fedoraca, OU=Fedora Secure Boot CA 20200709, O=Red Hat, Inc.".
 // Empty if the certificate can't be parsed. Never used for matching.
 QString subject(const QByteArray &der);

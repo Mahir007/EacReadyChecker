@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "EfiTestData.h"
+#include "TcgTestData.h"
 #include "TestSysroot.h"
 #include "checks/AllChecks.h"
 #include "checks/HostPaths.h"
@@ -31,6 +32,36 @@ Files withSecureBoot(Files files, char secureBoot = 1, char setupMode = 0)
     return files;
 }
 
+// The TPM event log and the PCR values it replays to.
+Files withEventLog(const QList<TcgTestData::Event> &events, Files files = {})
+{
+    files.insert(HostPaths::EventLog, TcgTestData::log(events));
+    const QMap<quint32, QByteArray> pcrs = TcgTestData::pcrFiles(events);
+    for (auto it = pcrs.begin(); it != pcrs.end(); ++it) {
+        files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/%1"_s.arg(it.key()), it.value());
+    }
+    return files;
+}
+
+// shim + GRUB as on Fedora: the firmware verifies shim against db and logs that authority. shim
+// verifies GRUB and the kernel with its built-in certificate and logs it once, as MokListRT.
+QList<TcgTestData::Event> grubBoot(const QByteArray &shimAuthority, const QByteArray &kernelAuthority)
+{
+    using namespace TcgEventLog;
+    return {
+        {7, Separator, QByteArray(4, '\0')},
+        {4, Separator, QByteArray(4, '\0')},
+        TcgTestData::authority(u"db"_s, shimAuthority),
+        {4, EfiBootServicesApplication, "shimx64.efi"},
+        {7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"SbatLevel"_s, "sbat,1,2023012900\n")},
+        TcgTestData::authority(u"MokListRT"_s, kernelAuthority),
+        {4, EfiBootServicesApplication, "grubx64.efi"},
+        {9, Ipl, TcgTestData::ascii("(hd0,gpt2)/vmlinuz-6.17.4")},
+        {4, EfiBootServicesApplication, "vmlinuz"},
+        {8, Ipl, TcgTestData::ascii("kernel_cmdline: (hd0,gpt2)/vmlinuz-6.17.4 root=UUID=0b1c ro quiet")},
+    };
+}
+
 // A working IOMMU with two translated groups.
 Files withIommu(Files files)
 {
@@ -45,6 +76,45 @@ Files withIommu(Files files)
 class TestChecks : public QObject
 {
     Q_OBJECT
+
+private:
+    // Runs the checks on the current row's files and compares one check or sub-check.
+    static void verify(bool elevate)
+    {
+        QFETCH(QString, check);
+        QFETCH(Files, files);
+        QFETCH(QString, subCheck);
+        QFETCH(QString, status);
+        QFETCH(QString, detail);
+
+        TestSysroot root;
+        for (auto it = files.begin(); it != files.end(); ++it) {
+            if (it.key().endsWith(u'/')) {
+                root.mkdir(it.key());
+            } else {
+                root.write(it.key(), it.value());
+            }
+        }
+
+        const Report report = CheckRunner::run(HostAccess(HostAccess::Transport::Direct, {}, root.path()), createAllChecks(), elevate);
+        const auto result = std::find_if(report.results.begin(), report.results.end(), [&](const CheckResult &r) {
+            return r.id == check;
+        });
+        QVERIFY(result != report.results.end());
+
+        CheckStatus gotStatus = result->status;
+        QString gotDetail = result->detail;
+        if (!subCheck.isEmpty()) {
+            const auto sub = std::find_if(result->subChecks.begin(), result->subChecks.end(), [&](const SubCheckResult &s) {
+                return s.title == subCheck;
+            });
+            QVERIFY2(sub != result->subChecks.end(), qPrintable(u"no sub-check "_s + subCheck));
+            gotStatus = sub->status;
+            gotDetail = sub->detail;
+        }
+        QCOMPARE(statusKey(gotStatus), status);
+        QVERIFY2(gotDetail.contains(detail), qPrintable(u"detail “%1” doesn't contain “%2”"_s.arg(gotDetail, detail)));
+    }
 
 private Q_SLOTS:
     void evaluate_data()
@@ -72,6 +142,9 @@ private Q_SLOTS:
         QTest::newRow("sb: no variable") << sb << Files{{u"/sys/firmware/efi/efivars/"_s, {}}} << u"Enabled"_s << u"unknown"_s << u"SecureBoot not found"_s;
         QTest::newRow("sb: truncated") << sb << Files{{HostPaths::SecureBoot, kEfiAttr}} << u"Enabled"_s << u"unknown"_s << u"Unexpected contents"_s;
         QTest::newRow("sb: value 2") << sb << Files{{HostPaths::SecureBoot, efiByte(2)}} << u"Enabled"_s << u"unknown"_s << u"Unexpected contents"_s;
+
+        QTest::newRow("measured: event log pending") << u"measured-boot"_s << withEventLog(grubBoot({}, {})) << QString() << u"needs-admin"_s
+                                                     << u"Needs admin"_s;
 
         const QString iommu = u"iommu"_s;
         QTest::newRow("iommu: on") << iommu << withIommu({}) << QString() << u"pass"_s << u"no passthrough"_s;
@@ -177,42 +250,101 @@ private Q_SLOTS:
         QTest::newRow("mok: no attributes") << signing << Files{{mokList, "\x06"}} << moks << u"unknown"_s << u"Couldn't parse MokListRT"_s;
     }
 
-    void evaluate()
+    void evaluate() { verify(false); }
+
+    // Checks that read the TPM event log, with admin access granted.
+    void evaluateElevated_data()
     {
-        QFETCH(QString, check);
-        QFETCH(Files, files);
-        QFETCH(QString, subCheck);
-        QFETCH(QString, status);
-        QFETCH(QString, detail);
+        using namespace TcgEventLog;
+        using TcgTestData::Event;
+        QTest::addColumn<QString>("check");
+        QTest::addColumn<Files>("files");
+        QTest::addColumn<QString>("subCheck");
+        QTest::addColumn<QString>("status");
+        QTest::addColumn<QString>("detail");
 
-        TestSysroot root;
-        for (auto it = files.begin(); it != files.end(); ++it) {
-            if (it.key().endsWith(u'/')) {
-                root.mkdir(it.key());
-            } else {
-                root.write(it.key(), it.value());
-            }
+        const QByteArray known = EfiTestData::canonicalCertificate();
+        const QByteArray unknown = EfiTestData::unknownCertificate();
+        const QList<Event> grub = grubBoot(known, known);
+
+        const QString measured = u"measured-boot"_s;
+        const QString matches = u"Event log matches the TPM"_s;
+        const QString kernel = u"Boot manager measured the kernel"_s;
+        QTest::newRow("measured: grub") << measured << withEventLog(grub) << QString() << u"pass"_s << u"Kernel measured by GRUB, event log matches the TPM"_s;
+        QTest::newRow("measured: pcrs match") << measured << withEventLog(grub) << matches << u"pass"_s << u"PCRs 4, 7–9 match"_s;
+        {
+            Files files = withEventLog(grub);
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, QByteArray(64, '0') + '\n');
+            QTest::newRow("measured: pcr mismatch") << measured << files << QString() << u"fail"_s << u"PCR 4 doesn't match the TPM event log"_s;
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/8"_s, QByteArray(64, '0') + '\n');
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s, QByteArray(64, '0') + '\n');
+            QTest::newRow("measured: pcrs mismatch") << measured << files << matches << u"fail"_s << u"PCRs 4, 8–9 don't match"_s;
+            files.remove(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s);
+            QTest::newRow("measured: pcr file missing") << measured << files << matches << u"unknown"_s << u"Couldn't read PCR 9"_s;
         }
-
-        const Report report = CheckRunner::run(HostAccess(HostAccess::Transport::Direct, {}, root.path()), createAllChecks(), false);
-        const auto result = std::find_if(report.results.begin(), report.results.end(), [&](const CheckResult &r) {
-            return r.id == check;
-        });
-        QVERIFY(result != report.results.end());
-
-        CheckStatus gotStatus = result->status;
-        QString gotDetail = result->detail;
-        if (!subCheck.isEmpty()) {
-            const auto sub = std::find_if(result->subChecks.begin(), result->subChecks.end(), [&](const SubCheckResult &s) {
-                return s.title == subCheck;
-            });
-            QVERIFY2(sub != result->subChecks.end(), qPrintable(u"no sub-check "_s + subCheck));
-            gotStatus = sub->status;
-            gotDetail = sub->detail;
+        {
+            Files files{{HostPaths::EventLog, TcgTestData::log(grub)}};
+            QTest::newRow("measured: no pcr-sha256") << measured << files << matches << u"unknown"_s << u"doesn't report"_s;
         }
-        QCOMPARE(statusKey(gotStatus), status);
-        QVERIFY2(gotDetail.contains(detail), qPrintable(u"detail “%1” doesn't contain “%2”"_s.arg(gotDetail, detail)));
+        {
+            // The kernel and the command line GRUB measured don't belong together, and the only
+            // PCR 4 application is GRUB itself.
+            const QList<Event> events{{4, EfiBootServicesApplication, "grubx64.efi"},
+                                      {9, Ipl, TcgTestData::ascii("(hd0,gpt2)/vmlinuz-a")},
+                                      {8, Ipl, TcgTestData::ascii("kernel_cmdline: (hd0,gpt2)/vmlinuz-b ro")}};
+            QTest::newRow("measured: grub, other kernel") << measured << withEventLog(events) << kernel << u"fail"_s << u"No kernel measurement"_s;
+        }
+        {
+            // systemd-pcrphase extends PCR 11 after boot, so it no longer matches the log.
+            const QList<Event> events{{4, EfiBootServicesApplication, "uki.efi"},
+                                      {11, Ipl, TcgTestData::utf16(u".linux"_s)},
+                                      {11, Ipl, TcgTestData::utf16(u".osrel"_s)}};
+            Files files = withEventLog(events);
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/11"_s, QByteArray(64, 'A') + '\n');
+            QTest::newRow("measured: uki") << measured << files << QString() << u"pass"_s << u"Kernel measured by systemd-stub (UKI)"_s;
+        }
+        QTest::newRow("measured: efi applications") << measured
+                                                    << withEventLog({{4, EfiBootServicesApplication, "loader.efi"}, {4, EfiBootServicesApplication, "vmlinuz"}})
+                                                    << kernel << u"pass"_s << u"as an EFI application"_s;
+        QTest::newRow("measured: one application") << measured << withEventLog({{4, EfiBootServicesApplication, "loader.efi"}}) << kernel << u"fail"_s
+                                                   << u"No kernel measurement"_s;
+        QTest::newRow("measured: nothing measured") << measured << withEventLog({{0, NoAction, "info"}}) << matches << u"fail"_s << u"no boot measurements"_s;
+        QTest::newRow("measured: no log") << measured << Files{} << QString() << u"fail"_s << u"No TPM event log"_s;
+        QTest::newRow("measured: garbage log") << measured << Files{{HostPaths::EventLog, "garbage"}} << QString() << u"unknown"_s
+                                               << u"Couldn't parse the TPM event log"_s;
+        // A TPM 1.2 log starts straight away with a measured SHA-1 event.
+        const QByteArray legacy = EfiTestData::le32(0) + EfiTestData::le32(0x8) + QByteArray(20, 'x') + EfiTestData::le32(4) + "crtm";
+        QTest::newRow("measured: legacy log") << measured << Files{{HostPaths::EventLog, legacy}} << QString() << u"fail"_s << u"crypto-agile"_s;
+        QTest::newRow("measured: no sha256 bank") << measured << Files{{HostPaths::EventLog, TcgTestData::log(grub, {Sha1})}} << matches << u"unknown"_s
+                                                  << u"no SHA-256 digests"_s;
+
+        const QString sb = u"secure-boot"_s;
+        const QString usedToBoot = u"Only well-known keys used to boot"_s;
+        const QString signing = u"kernel-signing"_s;
+        const QString kernelSigned = u"Kernel signed by a well-known key"_s;
+        QTest::newRow("authorities: well-known") << sb << withEventLog(grub) << usedToBoot << u"pass"_s
+                                                 << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("authorities: unknown kernel key") << sb << withEventLog(grubBoot(known, unknown)) << usedToBoot << u"fail"_s
+                                                         << u"Unknown key: CN=EACheck test MOK, O=EACheck tests"_s;
+        QTest::newRow("authorities: unknown kernel key, signing") << signing << withEventLog(grubBoot(known, unknown)) << kernelSigned << u"fail"_s
+                                                                  << u"Unknown key: CN=EACheck test MOK"_s;
+        QTest::newRow("authorities: two unknown") << sb << withEventLog(grubBoot(unknown, unknown)) << usedToBoot << u"fail"_s << u"(+1 more)"_s;
+        QTest::newRow("authorities: well-known, signing") << signing << withEventLog(grub) << kernelSigned << u"pass"_s << u"Canonical"_s;
+        QTest::newRow("authorities: none") << sb << withEventLog({{4, EfiBootServicesApplication, "grubx64.efi"}}) << usedToBoot << u"fail"_s
+                                           << u"no Secure Boot verification"_s;
+        QTest::newRow("authorities: sbat only") << sb
+                                                << withEventLog({{7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"SbatLevel"_s, "sbat")}})
+                                                << usedToBoot << u"fail"_s << u"no Secure Boot verification"_s;
+        QTest::newRow("authorities: bare certificate")
+            << sb << withEventLog({{7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"db"_s, known)}}) << usedToBoot << u"pass"_s
+            << u"Canonical"_s;
+        QTest::newRow("authorities: malformed") << sb << withEventLog({{7, EfiVariableAuthority, "short"}}) << usedToBoot << u"unknown"_s
+                                                << u"Couldn't parse a Secure Boot authority"_s;
+        QTest::newRow("authorities: no log") << sb << Files{} << usedToBoot << u"unknown"_s << u"No TPM event log"_s;
+        QTest::newRow("authorities: legacy log") << signing << Files{{HostPaths::EventLog, legacy}} << kernelSigned << u"unknown"_s
+                                                 << u"crypto-agile"_s;
     }
+    void evaluateElevated() { verify(true); }
 
     void combineStatus_data()
     {
@@ -238,16 +370,6 @@ private Q_SLOTS:
         QCOMPARE(::combineStatus(results), expected);
     }
 
-    void elevatedSubChecks()
-    {
-        // With a fixture sysroot the admin read is "granted", so Phase 4 sub-checks stop asking.
-        TestSysroot root;
-        root.write(HostPaths::Tainted, "0\n");
-        const Report report = CheckRunner::run(HostAccess(HostAccess::Transport::Direct, {}, root.path()), createAllChecks(), true);
-        QCOMPARE(report.results[0].id, u"kernel-signing"_s);
-        QCOMPARE(report.results[0].subChecks[0].status, CheckStatus::Unknown);
-        QCOMPARE(report.results[0].status, CheckStatus::Unknown);
-    }
 };
 
 QTEST_GUILESS_MAIN(TestChecks)

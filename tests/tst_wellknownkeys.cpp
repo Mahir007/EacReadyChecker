@@ -77,6 +77,14 @@ private Q_SLOTS:
         QCOMPARE(Certificate::fingerprint(Certificate::sha256(der)), kCanonical);
         QCOMPARE(Certificate::subject(der), u"CN=Canonical Ltd. Master Certificate Authority, O=Canonical Ltd."_s);
         QCOMPARE(Certificate::subject("not a certificate"), QString());
+
+        QVERIFY(Certificate::isDer(der));
+        QVERIFY(!Certificate::isDer(der + '\0'));
+        QVERIFY(!Certificate::isDer(der.chopped(1)));
+        QVERIFY(!Certificate::isDer(QByteArray(16, '\0') + der)); // EFI_SIGNATURE_DATA: owner GUID first
+        QVERIFY(Certificate::isDer(QByteArray("\x30\x01\x00", 3)));
+        QVERIFY(!Certificate::isDer(QByteArray("\x30\x80", 2))); // indefinite length isn't DER
+        QVERIFY(!Certificate::isDer({}));
     }
 
     void fromJson()

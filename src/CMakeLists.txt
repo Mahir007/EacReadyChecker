@@ -9,11 +9,12 @@ add_library(eacheck_core STATIC
     core/WellKnownKeys.cpp
     checks/AllChecks.cpp
     checks/BpfLsmCheck.cpp
+    checks/EventLogHelpers.cpp
     checks/IommuCheck.cpp
     checks/KernelSigningCheck.cpp
     checks/KexecCheck.cpp
     checks/LockdownCheck.cpp
-    checks/PlaceholderCheck.cpp
+    checks/MeasuredBootCheck.cpp
     checks/SecureBootCheck.cpp
     checks/TpmCheck.cpp
     parsers/EfiSignatureList.cpp

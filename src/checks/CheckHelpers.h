@@ -25,19 +25,19 @@ inline void finishFromSubChecks(CheckResult &result, const QString &passDetail)
     }
 }
 
-// A sub-check a later phase implements. Shows Needs admin until the privileged read is granted.
-inline SubCheckResult notImplemented(const QString &title, const HostSnapshot &snapshot, bool needsAdmin)
-{
-    if (needsAdmin && snapshot.privilegedState != PrivilegedState::Granted) {
-        return {title, CheckStatus::NeedsAdmin, QStringLiteral("Needs admin access to read the TPM event log")};
-    }
-    return {title, CheckStatus::Unknown, QStringLiteral("Not implemented yet")};
-}
-
 // "Couldn't read <path>" for entries that are unreadable or weren't read at all.
 inline QString unreadable(const HostEntry &entry)
 {
     return QStringLiteral("Couldn't read %1").arg(entry.path);
+}
+
+// "Unknown key: <first>" or "Unknown keys: <first> (+n more)". `keys` must not be empty.
+inline QString unknownKeys(const QStringList &keys)
+{
+    if (keys.size() == 1) {
+        return QStringLiteral("Unknown key: %1").arg(keys.first());
+    }
+    return QStringLiteral("Unknown keys: %1 (+%2 more)").arg(keys.first()).arg(keys.size() - 1);
 }
 
 // Comma-separated list from a sysfs file such as /sys/kernel/security/lsm.
