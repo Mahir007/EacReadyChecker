@@ -27,9 +27,8 @@ int main(int argc, char **argv)
         QGuiApplication::setApplicationDisplayName(AppInfo::displayName());
         // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
         QGuiApplication::setDesktopFileName(AppInfo::id());
-        // Look in Breeze for icons the current theme lacks (e.g. Adwaita on GNOME). Icons.h
-        // falls back to bundled icons if Breeze isn't installed either.
-        QIcon::setFallbackThemeName(u"breeze"_s);
+        // Icons the theme lacks come from Breeze (MainWindow sets that up, see Icons.h), then
+        // from icons bundled in the app.
         QApplication::setWindowIcon(QIcon::fromTheme(AppInfo::id(), QIcon(u":/icons/%1.svg"_s.arg(AppInfo::id()))));
     }
     QCoreApplication::setApplicationName(AppInfo::binaryName());

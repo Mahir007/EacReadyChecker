@@ -3,8 +3,38 @@
 
 #include "core/CheckResult.h"
 
+#include <QEvent>
+#include <QGuiApplication>
 #include <QIcon>
+#include <QPalette>
 #include <QStringList>
+
+// Icons the current theme lacks (e.g. Adwaita on GNOME) come from Breeze. Breeze's glyphs are
+// drawn for one background, so use Breeze Dark when the palette has light text on a dark window.
+// Call it before (re)loading icons. It only changes anything when the palette has changed.
+inline void syncFallbackIconTheme()
+{
+    const QPalette palette = QGuiApplication::palette();
+    const bool dark = palette.color(QPalette::Window).lightness() < palette.color(QPalette::WindowText).lightness();
+    const QString name = dark ? QStringLiteral("breeze-dark") : QStringLiteral("breeze");
+    if (QIcon::fallbackThemeName() != name) {
+        QIcon::setFallbackThemeName(name);
+    }
+}
+
+// True for changes after which icons need loading again: the colour scheme (palette), the icon
+// theme or the style (icon sizes). Widgets that keep pixmaps in labels redraw them.
+inline bool affectsIcons(const QEvent *event)
+{
+    switch (event->type()) {
+    case QEvent::PaletteChange:
+    case QEvent::ThemeChange:
+    case QEvent::StyleChange:
+        return true;
+    default:
+        return false;
+    }
+}
 
 // First theme icon that exists, so we look right with Breeze and with other themes. If none does,
 // the bundled icon `:/icons/<bundled>.svg` (when given).

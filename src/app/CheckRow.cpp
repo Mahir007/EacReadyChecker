@@ -57,9 +57,6 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     m_title->setFont(titleFont);
     m_title->setWordWrap(true);
 
-    const int size = iconSize(this);
-    m_icon->setFixedSize(size, size);
-
     m_subLayout->setContentsMargins(0, 4, 0, 0);
     m_subLayout->setSpacing(4);
     m_subChecks->hide();
@@ -79,13 +76,14 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
 
 void CheckRow::setPending()
 {
-    m_icon->setPixmap(themeIcon({u"view-refresh"_s}).pixmap(iconSize(this)));
+    m_status.reset();
     m_detail->setText(u"Checking…"_s);
     // Drop the old sub-checks rather than show stale results under "Checking…". The row stays
     // expanded (or not) for when the result arrives.
     clearSubChecks();
     m_expander->hide();
     m_subChecks->hide();
+    updateIcons();
 }
 
 void CheckRow::clearSubChecks()
@@ -94,21 +92,21 @@ void CheckRow::clearSubChecks()
         delete item->widget();
         delete item;
     }
+    m_subIcons.clear();
 }
 
 void CheckRow::setResult(const CheckResult &result)
 {
-    m_icon->setPixmap(statusIcon(result.status).pixmap(iconSize(this)));
+    m_status = result.status;
     m_icon->setToolTip(statusLabel(result.status));
     m_icon->setAccessibleName(statusLabel(result.status));
     m_detail->setText(result.detail.isEmpty() ? statusLabel(result.status) : result.detail);
 
     clearSubChecks();
-    const int size = iconSize(this) * 2 / 3;
     for (const SubCheckResult &sub : result.subChecks) {
         auto *row = new QWidget(m_subChecks);
         auto *icon = new QLabel(row);
-        icon->setPixmap(statusIcon(sub.status).pixmap(size));
+        m_subIcons.append({icon, sub.status});
         icon->setToolTip(statusLabel(sub.status));
         auto *text = secondaryLabel(row);
         text->setText(sub.detail.isEmpty() ? sub.title : u"%1 — %2"_s.arg(sub.title, sub.detail));
@@ -118,8 +116,30 @@ void CheckRow::setResult(const CheckResult &result)
         rowLayout->addWidget(text, 1);
         m_subLayout->addWidget(row);
     }
+    updateIcons();
     m_expander->setVisible(!result.subChecks.isEmpty());
     setExpanded(m_expanded && !result.subChecks.isEmpty());
+}
+
+void CheckRow::changeEvent(QEvent *event)
+{
+    if (affectsIcons(event)) {
+        syncFallbackIconTheme();
+        updateIcons();
+    }
+    QWidget::changeEvent(event);
+}
+
+void CheckRow::updateIcons()
+{
+    const int size = iconSize(this);
+    const QIcon icon = m_status ? statusIcon(*m_status) : themeIcon({u"view-refresh"_s});
+    m_icon->setFixedSize(size, size);
+    m_icon->setPixmap(icon.pixmap(QSize(size, size), devicePixelRatio()));
+    const int subSize = size * 2 / 3;
+    for (const auto &[label, status] : std::as_const(m_subIcons)) {
+        label->setPixmap(statusIcon(status).pixmap(QSize(subSize, subSize), devicePixelRatio()));
+    }
 }
 
 void CheckRow::setExpanded(bool expanded)

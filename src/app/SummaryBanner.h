@@ -5,6 +5,8 @@
 
 #include <QWidget>
 
+#include <optional>
+
 class QLabel;
 
 // Header: overall verdict with its icon and a one-line summary.
@@ -18,8 +20,14 @@ public:
     void setRunning(bool elevated);
     void setReport(const Report &report);
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
+    void updateIcon();
+
     QLabel *m_icon;
     QLabel *m_title;
     QLabel *m_subtitle;
+    std::optional<Verdict> m_verdict; // empty while running
 };

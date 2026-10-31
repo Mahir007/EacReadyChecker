@@ -3,7 +3,11 @@
 #include "app/Icons.h"
 #include "app/MainWindow.h"
 
+#include <QApplication>
 #include <QIcon>
+#include <QImage>
+#include <QPalette>
+#include <QStyle>
 #include <QLabel>
 #include <QPushButton>
 #include <QStandardPaths>
@@ -112,6 +116,70 @@ private Q_SLOTS:
         QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
+    }
+
+    void darkColourScheme()
+    {
+        // GNOME: Adwaita lacks most of our icons, so they come from the Breeze fallback. With a
+        // dark palette that has to be breeze-dark, or the glyphs are dark on dark. Switch at
+        // runtime too, as when the desktop's colour scheme changes while the app runs.
+        const QString theme = QIcon::themeName();
+        const QPalette palette = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+        QIcon::setThemeName(u"Adwaita"_s);
+        QIcon::setFallbackThemeName(u"breeze"_s);
+        QApplication::setPalette(breezeDarkPalette());
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QPushButton *refresh = button(window, u"Refresh"_s);
+        QTRY_VERIFY(refresh->isEnabled());
+        screenshot(window, u"mainwindow-dark"_s);
+        QCOMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
+        QVERIFY(glyphLightness(refresh->icon()) > 128);
+
+        QApplication::setPalette(QApplication::style()->standardPalette());
+        QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
+        QVERIFY(glyphLightness(refresh->icon()) < 128);
+        QApplication::setPalette(breezeDarkPalette());
+        QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
+        QVERIFY(glyphLightness(refresh->icon()) > 128);
+
+        QApplication::setPalette(palette);
+        QIcon::setThemeName(theme);
+    }
+
+private:
+    // Breeze Dark's main colours.
+    static QPalette breezeDarkPalette()
+    {
+        QPalette p(QColor(0x31, 0x36, 0x3b), QColor(0x20, 0x23, 0x26));
+        p.setColor(QPalette::WindowText, QColor(0xfc, 0xfc, 0xfc));
+        p.setColor(QPalette::Text, QColor(0xfc, 0xfc, 0xfc));
+        p.setColor(QPalette::ButtonText, QColor(0xfc, 0xfc, 0xfc));
+        p.setColor(QPalette::Base, QColor(0x14, 0x16, 0x18));
+        p.setColor(QPalette::PlaceholderText, QColor(0xa1, 0xa9, 0xb1));
+        return p;
+    }
+
+    // Average lightness of an icon's opaque pixels.
+    static int glyphLightness(const QIcon &icon)
+    {
+        const QImage image = icon.pixmap(16).toImage();
+        qint64 sum = 0;
+        qint64 count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const QColor c = image.pixelColor(x, y);
+                if (c.alpha() > 128) {
+                    sum += c.lightness();
+                    ++count;
+                }
+            }
+        }
+        return count > 0 ? int(sum / count) : -1;
     }
 };
 

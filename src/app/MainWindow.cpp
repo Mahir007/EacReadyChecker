@@ -36,10 +36,13 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     : QWidget(parent)
     , m_runner(new CheckRunner(host, createAllChecks(), this))
     , m_banner(new SummaryBanner(this))
-    , m_runFull(new QPushButton(themeIcon({u"dialog-password"_s, u"security-high"_s}), u"Run full check"_s, this))
-    , m_refresh(new QPushButton(themeIcon({u"view-refresh"_s}), u"Refresh"_s, this))
-    , m_copy(new QPushButton(themeIcon({u"edit-copy"_s}), u"Copy report"_s, this))
+    , m_runFull(new QPushButton(u"Run full check"_s, this))
+    , m_refresh(new QPushButton(u"Refresh"_s, this))
+    , m_copy(new QPushButton(u"Copy report"_s, this))
+    , m_about(new QPushButton(u"About"_s, this))
 {
+    syncFallbackIconTheme();
+    updateIcons();
     setWindowTitle(u"EACheck"_s);
     resize(560, 640);
 
@@ -88,11 +91,10 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     });
     m_copy->setMenu(copyMenu);
 
-    auto *about = new QPushButton(themeIcon({u"help-about"_s}), u"About"_s, this);
-    connect(about, &QPushButton::clicked, this, &MainWindow::showAbout);
+    connect(m_about, &QPushButton::clicked, this, &MainWindow::showAbout);
 
     auto *buttons = new QHBoxLayout;
-    buttons->addWidget(about);
+    buttons->addWidget(m_about);
     buttons->addStretch(1);
     buttons->addWidget(m_runFull);
     buttons->addWidget(m_copy);
@@ -108,6 +110,23 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
     connect(m_runner, &CheckRunner::finished, this, &MainWindow::onFinished);
+}
+
+void MainWindow::changeEvent(QEvent *event)
+{
+    if (affectsIcons(event)) {
+        syncFallbackIconTheme();
+        updateIcons();
+    }
+    QWidget::changeEvent(event);
+}
+
+void MainWindow::updateIcons()
+{
+    m_runFull->setIcon(themeIcon({u"dialog-password"_s, u"security-high"_s}));
+    m_refresh->setIcon(themeIcon({u"view-refresh"_s}));
+    m_copy->setIcon(themeIcon({u"edit-copy"_s}));
+    m_about->setIcon(themeIcon({u"help-about"_s}));
 }
 
 void MainWindow::runChecks(bool elevate)

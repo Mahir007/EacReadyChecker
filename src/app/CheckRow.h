@@ -5,6 +5,9 @@
 
 #include <QWidget>
 
+#include <optional>
+#include <utility>
+
 class QLabel;
 class QToolButton;
 class QVBoxLayout;
@@ -20,7 +23,11 @@ public:
     void setPending();
     void setResult(const CheckResult &result);
 
+protected:
+    void changeEvent(QEvent *event) override;
+
 private:
+    void updateIcons();
     void setExpanded(bool expanded);
     void clearSubChecks();
 
@@ -31,4 +38,6 @@ private:
     QWidget *m_subChecks;
     QVBoxLayout *m_subLayout;
     bool m_expanded = false;
+    std::optional<CheckStatus> m_status; // empty while checking
+    QList<std::pair<QLabel *, CheckStatus>> m_subIcons;
 };

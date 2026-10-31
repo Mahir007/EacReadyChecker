@@ -45,7 +45,8 @@ SummaryBanner::SummaryBanner(QWidget *parent)
 
 void SummaryBanner::setRunning(bool elevated)
 {
-    m_icon->setPixmap(themeIcon({u"view-refresh"_s}).pixmap(kIconSize));
+    m_verdict.reset();
+    updateIcon();
     m_title->setText(u"Checking…"_s);
     m_subtitle->setText(elevated ? u"Waiting for admin access"_s : QString());
 }
@@ -53,7 +54,8 @@ void SummaryBanner::setRunning(bool elevated)
 void SummaryBanner::setReport(const Report &report)
 {
     const Verdict verdict = report.verdict();
-    m_icon->setPixmap(verdictIcon(verdict).pixmap(kIconSize));
+    m_verdict = verdict;
+    updateIcon();
     m_title->setText(verdictLabel(verdict));
 
     const auto met = std::count_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
@@ -78,4 +80,19 @@ void SummaryBanner::setReport(const Report &report)
         break;
     }
     m_subtitle->setText(subtitle);
+}
+
+void SummaryBanner::changeEvent(QEvent *event)
+{
+    if (affectsIcons(event)) {
+        syncFallbackIconTheme();
+        updateIcon();
+    }
+    QWidget::changeEvent(event);
+}
+
+void SummaryBanner::updateIcon()
+{
+    const QIcon icon = m_verdict ? verdictIcon(*m_verdict) : themeIcon({u"view-refresh"_s});
+    m_icon->setPixmap(icon.pixmap(QSize(kIconSize, kIconSize), devicePixelRatio()));
 }
