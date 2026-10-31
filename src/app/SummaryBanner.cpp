@@ -62,22 +62,9 @@ void SummaryBanner::setReport(const Report &report)
         return r.status == CheckStatus::Pass || r.status == CheckStatus::NotRequired;
     });
     QString subtitle = u"%1 of %2 requirements met"_s.arg(met).arg(report.results.size());
-    if (!report.hostReadError.isEmpty()) {
-        subtitle += u" · couldn't read system state: "_s + report.hostReadError;
-    }
-    switch (report.privilegedState) {
-    case PrivilegedState::Cancelled:
-        subtitle += u" · admin access wasn't granted"_s;
-        break;
-    case PrivilegedState::NoAgent:
-        subtitle += u" · no polkit authentication agent is running"_s;
-        break;
-    case PrivilegedState::Failed:
-        subtitle += u" · admin read failed: "_s + report.privilegedError;
-        break;
-    case PrivilegedState::NotRequested:
-    case PrivilegedState::Granted:
-        break;
+    const QStringList problems = report.accessProblems();
+    for (const QString &problem : problems) {
+        subtitle += u" · "_s + problem;
     }
     m_subtitle->setText(subtitle);
 }

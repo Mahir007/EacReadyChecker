@@ -9,6 +9,7 @@
 #include <QJsonValue>
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 // Everything one run produced. Feeds the window, `--json` and "Copy report".
 struct Report {
@@ -22,6 +23,9 @@ struct Report {
     QString privilegedError;
 
     Verdict verdict() const { return overallVerdict(results); }
+    // Why results may be missing: the host read failed, or admin access wasn't granted. Lowercase
+    // phrases, e.g. "admin access wasn't granted". Empty when neither happened.
+    QStringList accessProblems() const;
     QJsonObject toJson() const;
     QString toText() const;
 };

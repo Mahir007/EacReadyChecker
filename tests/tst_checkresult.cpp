@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/CheckResult.h"
+#include "core/Report.h"
 
 #include <QTest>
 
@@ -42,6 +43,28 @@ private Q_SLOTS:
         QCOMPARE(statusKey(CheckStatus::NeedsAdmin), QStringLiteral("needs-admin"));
         QCOMPARE(statusKey(CheckStatus::NotRequired), QStringLiteral("not-required"));
         QCOMPARE(verdictKey(Verdict::NotReady), QStringLiteral("not-ready"));
+    }
+
+    void textReportNamesAccessProblems()
+    {
+        // A copied report says why rows still need admin, as the window's header does.
+        Report report;
+        CheckResult result;
+        result.title = QStringLiteral("Measured boot");
+        result.status = CheckStatus::NeedsAdmin;
+        report.results.append(result);
+        QVERIFY(report.accessProblems().isEmpty());
+        QVERIFY(!report.toText().contains(QStringLiteral("admin access")));
+
+        report.privilegedState = PrivilegedState::Cancelled;
+        QCOMPARE(report.accessProblems(), QStringList{QStringLiteral("admin access wasn't granted")});
+        QVERIFY(report.toText().contains(QStringLiteral("\nAdmin access wasn't granted\n")));
+
+        report.privilegedState = PrivilegedState::Failed;
+        report.privilegedError = QStringLiteral("pkexec exited with 1");
+        report.hostReadError = QStringLiteral("sh not found");
+        QCOMPARE(report.accessProblems(),
+                 (QStringList{QStringLiteral("couldn't read system state: sh not found"), QStringLiteral("admin read failed: pkexec exited with 1")}));
     }
 };
 

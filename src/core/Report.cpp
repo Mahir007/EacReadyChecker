@@ -135,11 +135,39 @@ QJsonObject Report::toJson() const
     };
 }
 
+QStringList Report::accessProblems() const
+{
+    QStringList problems;
+    if (!hostReadError.isEmpty()) {
+        problems.append(u"couldn't read system state: "_s + hostReadError);
+    }
+    switch (privilegedState) {
+    case PrivilegedState::Cancelled:
+        problems.append(u"admin access wasn't granted"_s);
+        break;
+    case PrivilegedState::NoAgent:
+        problems.append(u"no polkit authentication agent is running"_s);
+        break;
+    case PrivilegedState::Failed:
+        problems.append(u"admin read failed: "_s + privilegedError);
+        break;
+    case PrivilegedState::NotRequested:
+    case PrivilegedState::Granted:
+        break;
+    }
+    return problems;
+}
+
 QString Report::toText() const
 {
     QString text;
     text += u"EACheck %1 — %2\n"_s.arg(QStringLiteral(EACHECK_VERSION_STRING), verdictLabel(verdict()));
-    text += u"Generated %1 · requirements as of %2\n\n"_s.arg(generated.toUTC().toString(Qt::ISODate), requirementsAsOf());
+    text += u"Generated %1 · requirements as of %2\n"_s.arg(generated.toUTC().toString(Qt::ISODate), requirementsAsOf());
+    for (QString problem : accessProblems()) {
+        problem[0] = problem[0].toUpper();
+        text += problem + u'\n';
+    }
+    text += u'\n';
     for (const CheckResult &r : results) {
         text += u"[%1] %2"_s.arg(statusLabel(r.status), r.title);
         if (!r.detail.isEmpty()) {
