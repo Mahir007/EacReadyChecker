@@ -7,6 +7,7 @@
 
 class CheckRow;
 class QPushButton;
+class QTimer;
 class SummaryBanner;
 
 class MainWindow : public QWidget
@@ -36,6 +37,7 @@ private:
     QPushButton *m_refresh;
     QPushButton *m_copy;
     QPushButton *m_about;
+    QTimer *m_copiedReset;
     Report m_report;
     bool m_elevating = false;
 };

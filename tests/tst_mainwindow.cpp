@@ -2,13 +2,20 @@
 #include "app/CheckRow.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
+#include "core/AppInfo.h"
 
 #include <QApplication>
+#include <QClipboard>
 #include <QIcon>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPalette>
 #include <QStyle>
 #include <QLabel>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QToolButton>
@@ -65,7 +72,7 @@ private Q_SLOTS:
         for (Verdict verdict : {Verdict::Ready, Verdict::NotReady, Verdict::Incomplete}) {
             QVERIFY2(!verdictIcon(verdict).pixmap(48).isNull(), qPrintable(verdictKey(verdict)));
         }
-        QVERIFY(!QIcon(u":/icons/io.github.Mahir007.EacReadyChecker.svg"_s).pixmap(48).isNull());
+        QVERIFY(!appIcon().pixmap(48).isNull());
         QIcon::setThemeName(theme);
         QIcon::setFallbackThemeName(fallback);
     }
@@ -116,6 +123,36 @@ private Q_SLOTS:
         QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
+    }
+
+    void copyReportAndAbout()
+    {
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QPushButton *copy = button(window, u"Copy report"_s);
+        QTRY_VERIFY(copy->isEnabled());
+
+        const int width = copy->width();
+        const auto actions = copy->menu()->actions();
+        QCOMPARE(actions.size(), 2);
+        actions[0]->trigger(); // as text
+        QVERIFY(QGuiApplication::clipboard()->text().startsWith(u"EACheck "_s));
+        QCOMPARE(copy->text(), u"Copied"_s);
+        QCOMPARE(copy->width(), width);
+        actions[1]->trigger(); // as JSON
+        QCOMPARE(QJsonDocument::fromJson(QGuiApplication::clipboard()->text().toUtf8()).object().value(u"checks"_s).toArray().size(), 8);
+        QTRY_COMPARE(copy->text(), u"Copy report"_s);
+
+        button(window, u"About"_s)->click();
+        auto *about = window.findChild<QMessageBox *>();
+        QVERIFY(about);
+        QTRY_VERIFY(about->isVisible());
+        QVERIFY(about->text().contains(AppInfo::version()));
+        QVERIFY(about->text().contains(AppInfo::requirementsUrl()));
+        screenshot(*about, u"about"_s);
+        about->close();
     }
 
     void darkColourScheme()

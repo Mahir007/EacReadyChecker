@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "core/AppInfo.h"
 #include "core/CheckResult.h"
 
 #include <QEvent>
@@ -49,6 +50,12 @@ inline QIcon themeIcon(const QStringList &names, const QString &bundled = {})
         return QIcon(QStringLiteral(":/icons/%1.svg").arg(bundled));
     }
     return QIcon::fromTheme(names.value(0));
+}
+
+// The installed icon (from the .desktop file's theme lookup), or the one bundled in the app.
+inline QIcon appIcon()
+{
+    return QIcon::fromTheme(AppInfo::id(), QIcon(QStringLiteral(":/icons/%1.svg").arg(AppInfo::id())));
 }
 
 inline QIcon statusIcon(CheckStatus status)

@@ -12,11 +12,14 @@
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QJsonDocument>
+#include <QKeySequence>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QShortcut>
+#include <QTimer>
 #include <QVBoxLayout>
 
 using namespace Qt::StringLiterals;
@@ -40,6 +43,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_refresh(new QPushButton(u"Refresh"_s, this))
     , m_copy(new QPushButton(u"Copy report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
+    , m_copiedReset(new QTimer(this))
 {
     syncFallbackIconTheme();
     updateIcons();
@@ -65,8 +69,9 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    auto *note = new QLabel(u"Based on Epic's published requirements as of %1. EAC performs its own verification at game launch."_s.arg(requirementsAsOf()), this);
+    auto *note = new QLabel(u"Based on <a href=\"%1\">Epic's published requirements</a> as of %2. EAC performs its own verification at game launch."_s.arg(AppInfo::requirementsUrl(), requirementsAsOf()), this);
     note->setWordWrap(true);
+    note->setOpenExternalLinks(true);
     note->setForegroundRole(QPalette::PlaceholderText);
     QFont noteFont = note->font();
     noteFont.setPointSizeF(noteFont.pointSizeF() * 0.9);
@@ -77,6 +82,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     connect(m_runFull, &QPushButton::clicked, this, [this] {
         runChecks(true);
     });
+    m_refresh->setShortcut(QKeySequence::Refresh);
     connect(m_refresh, &QPushButton::clicked, this, [this] {
         // Keep admin results once granted; otherwise a plain refresh.
         runChecks(m_report.privilegedState == PrivilegedState::Granted);
@@ -90,6 +96,15 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
         copyReport(true);
     });
     m_copy->setMenu(copyMenu);
+    // After a copy the button says "Copied" for a moment. Keep its width so the row doesn't move.
+    m_copy->setMinimumWidth(m_copy->sizeHint().width());
+    m_copiedReset->setSingleShot(true);
+    m_copiedReset->setInterval(2000);
+    connect(m_copiedReset, &QTimer::timeout, this, [this] {
+        m_copy->setText(u"Copy report"_s);
+    });
+
+    new QShortcut(QKeySequence::Quit, this, this, &QWidget::close);
 
     connect(m_about, &QPushButton::clicked, this, &MainWindow::showAbout);
 
@@ -173,16 +188,31 @@ void MainWindow::copyReport(bool json)
 {
     const QString text = json ? QString::fromUtf8(QJsonDocument(m_report.toJson()).toJson(QJsonDocument::Indented)) : m_report.toText();
     QGuiApplication::clipboard()->setText(text);
+    m_copy->setText(u"Copied"_s);
+    m_copiedReset->start();
 }
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this,
-                       u"About %1"_s.arg(AppInfo::displayName()),
-                       u"<h3>%1 %2</h3><p>%3</p><p>%4</p><p><a href=\"%5\">%5</a></p><p>License: %6</p>"_s.arg(AppInfo::displayName(),
-                                                                                                         AppInfo::version(),
-                                                                                                         AppInfo::description(),
-                                                                                                         AppInfo::copyright(),
-                                                                                                         AppInfo::homepage(),
-                                                                                                         AppInfo::license()));
+    // Not QMessageBox::about(): that blocks in its own event loop, so the window couldn't be tested.
+    auto *box = new QMessageBox(this);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->setWindowTitle(u"About %1"_s.arg(AppInfo::displayName()));
+    box->setIconPixmap(appIcon().pixmap(QSize(64, 64), devicePixelRatio()));
+    box->setTextFormat(Qt::RichText);
+    box->setText(u"<h3>%1 %2</h3>"
+                 "<p>%3.</p>"
+                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5.</p>"
+                 "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"
+                 "<p>Qt %9</p>"_s.arg(AppInfo::displayName(),
+                                      AppInfo::version(),
+                                      AppInfo::description(),
+                                      AppInfo::requirementsUrl(),
+                                      requirementsAsOf(),
+                                      AppInfo::copyright(),
+                                      AppInfo::license(),
+                                      AppInfo::homepage(),
+                                      QString::fromLatin1(qVersion())));
+    box->setStandardButtons(QMessageBox::Close);
+    box->open();
 }
