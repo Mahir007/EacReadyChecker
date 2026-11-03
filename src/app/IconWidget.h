@@ -5,8 +5,7 @@
 #include <QWidget>
 
 // An icon drawn at the window's current scale. A QLabel keeps the pixmap it was given, which goes
-// blurry when the scale changes: when the desktop's scale changes, when the window moves to another
-// screen, or when Wayland only reports the scale after the first frame.
+// blurry when the desktop's scale changes or the window moves to a screen with another scale.
 class IconWidget : public QWidget
 {
     Q_OBJECT
