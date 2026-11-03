@@ -5,21 +5,54 @@
 #include "core/CheckResult.h"
 
 #include <QEvent>
+#include <QFile>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QPalette>
 #include <QStringList>
 
-// Icons the current theme lacks (e.g. Adwaita on GNOME) come from Breeze. Breeze's glyphs are
-// drawn for one background, so use Breeze Dark when the palette has light text on a dark window.
-// Call it before (re)loading icons. It only changes anything when the palette has changed.
-inline void syncFallbackIconTheme()
+inline bool isDarkPalette(const QPalette &palette)
 {
-    const QPalette palette = QGuiApplication::palette();
-    const bool dark = palette.color(QPalette::Window).lightness() < palette.color(QPalette::WindowText).lightness();
-    const QString name = dark ? QStringLiteral("breeze-dark") : QStringLiteral("breeze");
+    return palette.color(QPalette::Window).lightness() < palette.color(QPalette::WindowText).lightness();
+}
+
+inline bool isAdwaitaTheme(const QString &theme)
+{
+    return theme.compare(QStringLiteral("Adwaita"), Qt::CaseInsensitive) == 0;
+}
+
+inline bool isBreezeInstalled()
+{
+    const QStringList paths = QIcon::themeSearchPaths();
+    for (const QString &path : paths) {
+        if (QFile::exists(path + QStringLiteral("/breeze/index.theme"))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Icons the current theme lacks come from Breeze. Breeze's glyphs are drawn for one background, so
+// use Breeze Dark when the palette has light text on a dark window. Adwaita is replaced outright:
+// it has full-colour icons left over from GTK 2 and 3, mostly fixed-size PNGs.
+// Call it before (re)loading icons. It only changes anything when the palette has changed.
+inline void syncIconThemes()
+{
+    const QString name = isDarkPalette(QGuiApplication::palette()) ? QStringLiteral("breeze-dark") : QStringLiteral("breeze");
     if (QIcon::fallbackThemeName() != name) {
         QIcon::setFallbackThemeName(name);
+    }
+
+    static bool replacedAdwaita = false;
+    const QString theme = QIcon::themeName();
+    if (isAdwaitaTheme(theme)) {
+        if (!isBreezeInstalled()) {
+            return;
+        }
+        replacedAdwaita = true;
+    }
+    if (replacedAdwaita && theme != name && (isAdwaitaTheme(theme) || theme.startsWith(QStringLiteral("breeze")))) {
+        QIcon::setThemeName(name);
     }
 }
 
@@ -38,18 +71,20 @@ inline bool affectsIcons(const QEvent *event)
 }
 
 // First theme icon that exists, so we look right with Breeze and with other themes. If none does,
-// the bundled icon `:/icons/<bundled>.svg` (when given).
+// or the theme is still Adwaita because Breeze isn't installed, the bundled icon
+// `:/icons/<bundled>.svg` (when given).
 inline QIcon themeIcon(const QStringList &names, const QString &bundled = {})
 {
+    const QIcon bundledIcon = bundled.isEmpty() ? QIcon() : QIcon(QStringLiteral(":/icons/%1.svg").arg(bundled));
+    if (!bundledIcon.isNull() && isAdwaitaTheme(QIcon::themeName())) {
+        return bundledIcon;
+    }
     for (const QString &name : names) {
         if (QIcon::hasThemeIcon(name)) {
             return QIcon::fromTheme(name);
         }
     }
-    if (!bundled.isEmpty()) {
-        return QIcon(QStringLiteral(":/icons/%1.svg").arg(bundled));
-    }
-    return QIcon::fromTheme(names.value(0));
+    return bundledIcon.isNull() ? QIcon::fromTheme(names.value(0)) : bundledIcon;
 }
 
 // The installed icon (from the .desktop file's theme lookup), or the one bundled in the app.

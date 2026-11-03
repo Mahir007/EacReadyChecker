@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
 #include "cli/CliMain.h"
@@ -30,6 +31,7 @@ int main(int argc, char **argv)
         // Icons the theme lacks come from Breeze (MainWindow sets that up, see Icons.h), then
         // from icons bundled in the app.
         QApplication::setWindowIcon(appIcon());
+        followDesktopColorScheme();
     }
     QCoreApplication::setApplicationName(AppInfo::binaryName());
     QCoreApplication::setApplicationVersion(AppInfo::version());

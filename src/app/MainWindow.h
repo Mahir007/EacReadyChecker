@@ -6,6 +6,7 @@
 #include <QWidget>
 
 class CheckRow;
+class QLabel;
 class QPushButton;
 class QTimer;
 class SummaryBanner;
@@ -25,6 +26,7 @@ protected:
 
 private:
     void updateIcons();
+    void updateNote();
     void onStarted();
     void onFinished(const Report &report);
     void copyReport(bool json);
@@ -37,6 +39,7 @@ private:
     QPushButton *m_refresh;
     QPushButton *m_copy;
     QPushButton *m_about;
+    QLabel *m_note;
     QTimer *m_copiedReset;
     Report m_report;
     bool m_elevating = false;

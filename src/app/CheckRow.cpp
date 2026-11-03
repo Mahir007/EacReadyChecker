@@ -125,7 +125,7 @@ void CheckRow::setResult(const CheckResult &result)
 void CheckRow::changeEvent(QEvent *event)
 {
     if (affectsIcons(event)) {
-        syncFallbackIconTheme();
+        syncIconThemes();
         updateIcons();
     }
     QWidget::changeEvent(event);

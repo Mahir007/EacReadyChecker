@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/CheckRow.h"
+#include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
 #include "core/AppInfo.h"
@@ -88,6 +89,7 @@ private Q_SLOTS:
         QPushButton *refresh = button(window, u"Refresh"_s);
         QVERIFY(runFull);
         QVERIFY(refresh);
+        QCOMPARE(refresh->shortcut(), QKeySequence(Qt::Key_F5));
 
         window.runChecks(false);
         QTRY_VERIFY(refresh->isEnabled());
@@ -157,9 +159,9 @@ private Q_SLOTS:
 
     void darkColourScheme()
     {
-        // GNOME: Adwaita lacks most of our icons, so they come from the Breeze fallback. With a
-        // dark palette that has to be breeze-dark, or the glyphs are dark on dark. Switch at
-        // runtime too, as when the desktop's colour scheme changes while the app runs.
+        // GNOME: Adwaita is replaced by Breeze. With a dark palette that has to be breeze-dark, or
+        // the glyphs are dark on dark. Switch at runtime too, as when the desktop's colour scheme
+        // changes while the app runs.
         const QString theme = QIcon::themeName();
         const QPalette palette = QApplication::palette();
         QApplication::setStyle(u"Fusion"_s);
@@ -175,10 +177,12 @@ private Q_SLOTS:
         QTRY_VERIFY(refresh->isEnabled());
         screenshot(window, u"mainwindow-dark"_s);
         QCOMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
+        QCOMPARE(QIcon::themeName(), u"breeze-dark"_s);
         QVERIFY(glyphLightness(refresh->icon()) > 128);
 
         QApplication::setPalette(QApplication::style()->standardPalette());
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
+        QCOMPARE(QIcon::themeName(), u"breeze"_s);
         QVERIFY(glyphLightness(refresh->icon()) < 128);
         QApplication::setPalette(breezeDarkPalette());
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
@@ -188,7 +192,69 @@ private Q_SLOTS:
         QIcon::setThemeName(theme);
     }
 
+    void adwaitaWithoutBreeze()
+    {
+        // A native build on GNOME: the verdict and status icons are the bundled ones, not Adwaita's.
+        const QString theme = QIcon::themeName();
+        const QStringList paths = QIcon::themeSearchPaths();
+        QIcon::setThemeSearchPaths({});
+        QIcon::setThemeName(u"Adwaita"_s);
+        syncIconThemes();
+        QCOMPARE(QIcon::themeName(), u"Adwaita"_s);
+        QVERIFY(verdictIcon(Verdict::NotReady).name().isEmpty());
+        QVERIFY(!verdictIcon(Verdict::NotReady).pixmap(48).isNull());
+        QVERIFY(statusIcon(CheckStatus::Fail).name().isEmpty());
+        QIcon::setThemeSearchPaths(paths);
+        QIcon::setThemeName(theme);
+    }
+
+    void desktopAsksForDark()
+    {
+        // GNOME's dark style: the platform theme reports dark and keeps a light palette.
+        const QColor lightWindow = QApplication::palette().color(QPalette::Window);
+        QVERIFY(!isDarkPalette(QApplication::palette()));
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QPushButton *refresh = button(window, u"Refresh"_s);
+        QTRY_VERIFY(refresh->isEnabled());
+
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        QTRY_VERIFY(isDarkPalette(window.palette()));
+        QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
+        screenshot(window, u"mainwindow-gnome-dark"_s);
+        QLabel *note = nullptr;
+        const auto labels = window.findChildren<QLabel *>();
+        for (QLabel *label : labels) {
+            if (label->text().contains(u"<a href"_s)) {
+                note = label;
+            }
+        }
+        QVERIFY(note);
+        QTRY_VERIFY(hasColour(note->grab().toImage(), QApplication::palette().color(QPalette::Link)));
+
+        applyColorScheme(Qt::ColorScheme::Light);
+        QCOMPARE(QApplication::palette().color(QPalette::Window), lightWindow);
+        QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
+        QTRY_VERIFY(hasColour(note->grab().toImage(), QApplication::palette().color(QPalette::Link)));
+    }
+
 private:
+    static bool hasColour(const QImage &image, const QColor &colour)
+    {
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y).rgb() == colour.rgb()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Breeze Dark's main colours.
     static QPalette breezeDarkPalette()
     {

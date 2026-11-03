@@ -43,9 +43,10 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_refresh(new QPushButton(u"Refresh"_s, this))
     , m_copy(new QPushButton(u"Copy report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
+    , m_note(new QLabel(this))
     , m_copiedReset(new QTimer(this))
 {
-    syncFallbackIconTheme();
+    syncIconThemes();
     updateIcons();
     setWindowTitle(u"EACheck"_s);
     resize(560, 640);
@@ -69,20 +70,21 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    auto *note = new QLabel(u"Based on <a href=\"%1\">Epic's published requirements</a> as of %2. EAC performs its own verification at game launch."_s.arg(AppInfo::requirementsUrl(), requirementsAsOf()), this);
-    note->setWordWrap(true);
-    note->setOpenExternalLinks(true);
-    note->setForegroundRole(QPalette::PlaceholderText);
-    QFont noteFont = note->font();
+    updateNote();
+    m_note->setWordWrap(true);
+    m_note->setOpenExternalLinks(true);
+    m_note->setForegroundRole(QPalette::PlaceholderText);
+    QFont noteFont = m_note->font();
     noteFont.setPointSizeF(noteFont.pointSizeF() * 0.9);
-    note->setFont(noteFont);
+    m_note->setFont(noteFont);
 
     m_runFull->setToolTip(u"Reads the TPM event log as root. You'll be asked for an admin password once."_s);
     m_runFull->hide();
     connect(m_runFull, &QPushButton::clicked, this, [this] {
         runChecks(true);
     });
-    m_refresh->setShortcut(QKeySequence::Refresh);
+    // Not QKeySequence::Refresh: that keeps only the platform's first binding, Ctrl+R on GNOME.
+    m_refresh->setShortcut(Qt::Key_F5);
     connect(m_refresh, &QPushButton::clicked, this, [this] {
         // Keep admin results once granted; otherwise a plain refresh.
         runChecks(m_report.privilegedState == PrivilegedState::Granted);
@@ -120,7 +122,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     layout->addWidget(separator(this));
     layout->addWidget(scroll, 1);
     layout->addWidget(separator(this));
-    layout->addWidget(note);
+    layout->addWidget(m_note);
     layout->addLayout(buttons);
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
@@ -130,8 +132,11 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
 void MainWindow::changeEvent(QEvent *event)
 {
     if (affectsIcons(event)) {
-        syncFallbackIconTheme();
+        syncIconThemes();
         updateIcons();
+    }
+    if (event->type() == QEvent::PaletteChange) {
+        updateNote();
     }
     QWidget::changeEvent(event);
 }
@@ -142,6 +147,13 @@ void MainWindow::updateIcons()
     m_refresh->setIcon(themeIcon({u"view-refresh"_s}));
     m_copy->setIcon(themeIcon({u"edit-copy"_s}));
     m_about->setIcon(themeIcon({u"help-about"_s}));
+}
+
+void MainWindow::updateNote()
+{
+    // Qt picks the link colour when it parses the text. setText() skips text it already has.
+    m_note->clear();
+    m_note->setText(u"Based on <a href=\"%1\">Epic's published requirements</a> as of %2. EAC performs its own verification at game launch."_s.arg(AppInfo::requirementsUrl(), requirementsAsOf()));
 }
 
 void MainWindow::runChecks(bool elevate)

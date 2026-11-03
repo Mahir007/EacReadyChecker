@@ -73,7 +73,7 @@ void SummaryBanner::setReport(const Report &report)
 void SummaryBanner::changeEvent(QEvent *event)
 {
     if (affectsIcons(event)) {
-        syncFallbackIconTheme();
+        syncIconThemes();
         updateIcon();
     }
     QWidget::changeEvent(event);
