@@ -41,6 +41,7 @@ qt_add_resources(eacheck_core "data"
 # Widgets, split out so tests can drive the window offscreen.
 add_library(eacheck_app STATIC
     app/CheckRow.cpp
+    app/IconWidget.cpp
     app/MainWindow.cpp
     app/SummaryBanner.cpp
 )

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "CheckRow.h"
 
+#include "IconWidget.h"
 #include "Icons.h"
 
 #include <QGridLayout>
@@ -32,7 +33,7 @@ QLabel *secondaryLabel(QWidget *parent)
 CheckRow::CheckRow(const QString &title, QWidget *parent)
     : QWidget(parent)
     , m_expander(new QToolButton(this))
-    , m_icon(new QLabel(this))
+    , m_icon(new IconWidget(this))
     , m_title(new QLabel(title, this))
     , m_detail(secondaryLabel(this))
     , m_subChecks(new QWidget(this))
@@ -105,7 +106,7 @@ void CheckRow::setResult(const CheckResult &result)
     clearSubChecks();
     for (const SubCheckResult &sub : result.subChecks) {
         auto *row = new QWidget(m_subChecks);
-        auto *icon = new QLabel(row);
+        auto *icon = new IconWidget(row);
         m_subIcons.append({icon, sub.status});
         icon->setToolTip(statusLabel(sub.status));
         auto *text = secondaryLabel(row);
@@ -135,10 +136,11 @@ void CheckRow::updateIcons()
     const int size = iconSize(this);
     const QIcon icon = m_status ? statusIcon(*m_status) : themeIcon({u"view-refresh"_s});
     m_icon->setFixedSize(size, size);
-    m_icon->setPixmap(icon.pixmap(QSize(size, size), devicePixelRatio()));
+    m_icon->setIcon(icon);
     const int subSize = size * 2 / 3;
-    for (const auto &[label, status] : std::as_const(m_subIcons)) {
-        label->setPixmap(statusIcon(status).pixmap(QSize(subSize, subSize), devicePixelRatio()));
+    for (const auto &[subIcon, status] : std::as_const(m_subIcons)) {
+        subIcon->setFixedSize(subSize, subSize);
+        subIcon->setIcon(statusIcon(status));
     }
 }
 

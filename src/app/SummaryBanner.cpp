@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "SummaryBanner.h"
 
+#include "IconWidget.h"
 #include "Icons.h"
 
 #include <QHBoxLayout>
@@ -19,7 +20,7 @@ constexpr int kIconSize = 48;
 
 SummaryBanner::SummaryBanner(QWidget *parent)
     : QWidget(parent)
-    , m_icon(new QLabel(this))
+    , m_icon(new IconWidget(this))
     , m_title(new QLabel(this))
     , m_subtitle(new QLabel(this))
 {
@@ -81,5 +82,5 @@ void SummaryBanner::changeEvent(QEvent *event)
 void SummaryBanner::updateIcon()
 {
     const QIcon icon = m_verdict ? verdictIcon(*m_verdict) : themeIcon({u"view-refresh"_s});
-    m_icon->setPixmap(icon.pixmap(QSize(kIconSize, kIconSize), devicePixelRatio()));
+    m_icon->setIcon(icon);
 }

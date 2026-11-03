@@ -8,6 +8,7 @@
 #include <optional>
 #include <utility>
 
+class IconWidget;
 class QLabel;
 class QToolButton;
 class QVBoxLayout;
@@ -32,12 +33,12 @@ private:
     void clearSubChecks();
 
     QToolButton *m_expander;
-    QLabel *m_icon;
+    IconWidget *m_icon;
     QLabel *m_title;
     QLabel *m_detail;
     QWidget *m_subChecks;
     QVBoxLayout *m_subLayout;
     bool m_expanded = false;
     std::optional<CheckStatus> m_status; // empty while checking
-    QList<std::pair<QLabel *, CheckStatus>> m_subIcons;
+    QList<std::pair<IconWidget *, CheckStatus>> m_subIcons;
 };

@@ -1,0 +1,6 @@
+{
+    "screens": [
+        { "name": "first", "x": 0, "y": 0, "width": 800, "height": 800, "logicalDpi": 96, "logicalBaseDpi": 96 },
+        { "name": "second", "x": 800, "y": 0, "width": 800, "height": 800, "logicalDpi": 96, "logicalBaseDpi": 96 }
+    ]
+}

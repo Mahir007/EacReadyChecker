@@ -116,7 +116,7 @@ private Q_SLOTS:
         runFull->click();
         QCOMPARE(detail(0), u"Checking…"_s); // kernel signing
         QVERIFY(!kernelExpander->isVisible());
-        QCOMPARE(rows[0]->findChildren<QLabel *>().size(), 3); // icon, title, detail: no sub-checks
+        QCOMPARE(rows[0]->findChildren<QLabel *>().size(), 2); // title, detail: no sub-checks
         QCOMPARE(detail(1), tpmDetail);
         QTRY_VERIFY(refresh->isEnabled());
         QVERIFY(kernelExpander->isVisible());

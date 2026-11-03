@@ -7,6 +7,7 @@
 
 #include <optional>
 
+class IconWidget;
 class QLabel;
 
 // Header: overall verdict with its icon and a one-line summary.
@@ -26,7 +27,7 @@ protected:
 private:
     void updateIcon();
 
-    QLabel *m_icon;
+    IconWidget *m_icon;
     QLabel *m_title;
     QLabel *m_subtitle;
     std::optional<Verdict> m_verdict; // empty while running
