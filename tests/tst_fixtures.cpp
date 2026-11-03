@@ -77,21 +77,22 @@ private Q_SLOTS:
         }
     }
 
-    // measured-boot's status doesn't say which rule found the kernel, and Arch's fails on the replay.
+    // measured-boot's status doesn't say which rule found the kernel.
     void kernelMeasuredBy_data()
     {
         QTest::addColumn<QString>("fixture");
         QTest::addColumn<QString>("rule");
-        QTest::addColumn<bool>("replayMatches");
-        QTest::newRow("shim + GRUB") << u"fedora44-vmware"_s << u"grub"_s << true;
-        QTest::newRow("systemd-boot + UKI") << u"arch-vmware-sdboot-uki"_s << u"systemd-stub"_s << false;
-        QTest::newRow("systemd-boot + plain kernel") << u"popos2404-vmware-sdboot"_s << u"efi-application"_s << true;
+        QTest::addColumn<int>("afterLog");
+        QTest::newRow("shim + GRUB") << u"fedora44-vmware"_s << u"grub"_s << 0;
+        // Recent systemd's separators: os-separator on PCRs 0–7, 9, and nvpcr-separator on 9.
+        QTest::newRow("systemd-boot + UKI") << u"arch-vmware-sdboot-uki"_s << u"systemd-stub"_s << 9;
+        QTest::newRow("systemd-boot + plain kernel") << u"popos2404-vmware-sdboot"_s << u"efi-application"_s << 0;
     }
     void kernelMeasuredBy()
     {
         QFETCH(QString, fixture);
         QFETCH(QString, rule);
-        QFETCH(bool, replayMatches);
+        QFETCH(int, afterLog);
         const QString sysroot = QStringLiteral(EACHECK_FIXTURES_DIR) + u'/' + fixture;
         const Report report = run(HostAccess::Transport::Direct, sysroot, true);
         const auto measuredBoot = std::find_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
@@ -107,7 +108,11 @@ private Q_SLOTS:
         const bool allMatch = std::all_of(replay.begin(), replay.end(), [](const QJsonValueConstRef pcr) {
             return pcr.toObject().value(u"match"_s).toBool();
         });
-        QCOMPARE(allMatch, replayMatches);
+        QVERIFY(allMatch);
+        const auto separated = std::count_if(replay.begin(), replay.end(), [](const QJsonValueConstRef pcr) {
+            return pcr.toObject().contains(u"afterLog"_s);
+        });
+        QCOMPARE(separated, afterLog);
     }
 
     void captureRoundTrip_data() { addFixtures(); }

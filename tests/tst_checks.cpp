@@ -283,6 +283,25 @@ private Q_SLOTS:
             QTest::newRow("measured: pcr file missing") << measured << files << matches << u"unknown"_s << u"Couldn't read PCR 9"_s;
         }
         {
+            // systemd extends these strings after boot, outside the firmware log. PCR 4 gets
+            // os-separator, PCR 9 also nvpcr-separator. grubBoot's PCRs 7 and 8 stay as they are.
+            const auto extended = [&grub](quint32 pcr, const QList<QByteArray> &strings) {
+                QList<Event> events = grub;
+                for (const QByteArray &string : strings) {
+                    events.append({pcr, EfiBootServicesApplication, string});
+                }
+                return TcgTestData::pcrFiles(events).value(pcr);
+            };
+            Files files = withEventLog(grub);
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator"}));
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s, extended(9, {"os-separator", "nvpcr-separator"}));
+            QTest::newRow("measured: systemd separators") << measured << files << matches << u"pass"_s << u"PCRs 4, 7–9 match"_s;
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator", "something-else"}));
+            QTest::newRow("measured: more than the separators") << measured << files << matches << u"fail"_s << u"PCR 4 doesn't match"_s;
+            files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"something-else"}));
+            QTest::newRow("measured: not a separator") << measured << files << matches << u"fail"_s << u"PCR 4 doesn't match"_s;
+        }
+        {
             Files files{{HostPaths::EventLog, TcgTestData::log(grub)}};
             QTest::newRow("measured: no pcr-sha256") << measured << files << matches << u"unknown"_s << u"doesn't report"_s;
         }

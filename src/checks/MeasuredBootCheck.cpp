@@ -3,8 +3,11 @@
 #include "Checks.h"
 #include "EventLogHelpers.h"
 
+#include <QCryptographicHash>
 #include <QJsonArray>
 #include <QSet>
+
+#include <optional>
 
 using namespace Qt::StringLiterals;
 
@@ -16,6 +19,28 @@ namespace
 bool replayable(quint32 pcr)
 {
     return pcr <= 14 && pcr != 10 && pcr != 11;
+}
+
+// Recent systemd extends these fixed strings after boot, without adding to the firmware log:
+// os-separator into every boot PCR, then nvpcr-separator into PCR 9. Seen on Arch. They
+// can't hide a measurement: anything else extended into the PCR still makes the comparison fail.
+// Returns the strings needed to get from the replayed value to the TPM's. nullopt if there's no way.
+std::optional<QJsonArray> extendedAfterLog(const QByteArray &replayed, const QByteArray &tpm)
+{
+    QByteArray value = replayed;
+    QJsonArray strings;
+    if (value == tpm) {
+        return strings;
+    }
+    for (const char *separator : {"os-separator", "nvpcr-separator"}) {
+        const QByteArray digest = QCryptographicHash::hash(QByteArray(separator), QCryptographicHash::Sha256);
+        value = QCryptographicHash::hash(QByteArray(value + digest), QCryptographicHash::Sha256);
+        strings.append(QString::fromLatin1(separator));
+        if (value == tpm) {
+            return strings;
+        }
+    }
+    return std::nullopt;
 }
 
 // "0–9, 14"
@@ -79,9 +104,13 @@ SubCheckResult logMatchesTpm(const HostSnapshot &snapshot, const EventLogHelpers
         if (!entry.ok()) {
             return {title, CheckStatus::Unknown, u"Couldn't read PCR %1"_s.arg(pcr)};
         }
-        const bool match = QByteArray::fromHex(entry.trimmed()) == value;
-        replay.insert(QString::number(pcr), QJsonObject{{u"log"_s, QString::fromLatin1(value.toHex())}, {u"match"_s, match}});
-        if (!match) {
+        const std::optional<QJsonArray> afterLog = extendedAfterLog(value, QByteArray::fromHex(entry.trimmed()));
+        QJsonObject result{{u"log"_s, QString::fromLatin1(value.toHex())}, {u"match"_s, afterLog.has_value()}};
+        if (afterLog && !afterLog->isEmpty()) {
+            result.insert(u"afterLog"_s, *afterLog);
+        }
+        replay.insert(QString::number(pcr), result);
+        if (!afterLog) {
             mismatched.append(pcr);
         }
     }
