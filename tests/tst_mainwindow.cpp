@@ -125,6 +125,12 @@ private Q_SLOTS:
         QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
+
+        // Refreshing with admin access asks for the password again. Same rows wait.
+        refresh->click();
+        QCOMPARE(detail(0), u"Checking…"_s);
+        QCOMPARE(detail(1), tpmDetail);
+        QTRY_VERIFY(refresh->isEnabled());
     }
 
     void copyReportAndAbout()

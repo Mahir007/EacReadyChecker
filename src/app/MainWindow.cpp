@@ -165,12 +165,11 @@ void MainWindow::runChecks(bool elevate)
 void MainWindow::onStarted()
 {
     m_banner->setRunning(m_elevating);
-    // "Run full check" only re-checks the rows that need admin. The others keep their results
-    // behind the password dialog, so it's clear what the password is for.
-    const bool keepResults = m_elevating && m_report.privilegedState != PrivilegedState::Granted && !m_report.results.isEmpty();
+    // Behind the password dialog, only the rows that need it wait. The others keep their results,
+    // so it's clear what the password is for.
+    const bool keepResults = m_elevating && !m_report.results.isEmpty();
     for (qsizetype i = 0; i < m_rows.size(); ++i) {
-        const bool needsAdmin = i < m_report.results.size() && m_report.results[i].status == CheckStatus::NeedsAdmin;
-        if (!keepResults || needsAdmin) {
+        if (!keepResults || !m_runner->checks()[i]->privilegedRequests().isEmpty()) {
             m_rows[i]->setPending();
         }
     }
