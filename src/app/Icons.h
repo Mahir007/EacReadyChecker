@@ -34,7 +34,7 @@ inline bool isBreezeInstalled()
 
 // Icons the current theme lacks come from Breeze. Breeze's glyphs are drawn for one background, so
 // use Breeze Dark when the palette has light text on a dark window. Adwaita is replaced outright:
-// it has full-colour icons left over from GTK 2 and 3, mostly fixed-size PNGs.
+// it inherits AdwaitaLegacy, whose old full-colour icons look out of place.
 // Call it before (re)loading icons. It only changes anything when the palette has changed.
 inline void syncIconThemes()
 {
