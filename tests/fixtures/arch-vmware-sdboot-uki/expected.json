@@ -1,0 +1,24 @@
+{
+    "description": "Arch Linux in a VMware VM with a virtual TPM 2.0 and a virtual IOMMU: systemd-boot and a UKI, Secure Boot off, lockdown=integrity on the cmdline. PCRs 0-7 and 9 don't match the event log, so measured boot fails. Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    },
+    "checksElevated": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "fail",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "pass",
+        "bpf-lsm": "pass"
+    }
+}

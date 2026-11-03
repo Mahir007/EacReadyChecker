@@ -1,0 +1,24 @@
+{
+    "description": "Pop!_OS 24.04 in a VMware VM with a virtual TPM 2.0 and a virtual IOMMU: systemd-boot and a plain kernel, Secure Boot off, unsigned module loaded (taint O, E). Real capture, including the TPM event log.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "fail",
+        "bpf-lsm": "fail"
+    },
+    "checksElevated": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "pass",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "fail",
+        "bpf-lsm": "fail"
+    }
+}

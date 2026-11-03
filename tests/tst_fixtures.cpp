@@ -9,6 +9,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 // Every tree in tests/fixtures/ must produce the statuses in its expected.json, without and with
@@ -73,6 +75,39 @@ private Q_SLOTS:
                 QCOMPARE(shell.results[i].raw, direct.results[i].raw);
             }
         }
+    }
+
+    // measured-boot's status doesn't say which rule found the kernel, and Arch's fails on the replay.
+    void kernelMeasuredBy_data()
+    {
+        QTest::addColumn<QString>("fixture");
+        QTest::addColumn<QString>("rule");
+        QTest::addColumn<bool>("replayMatches");
+        QTest::newRow("shim + GRUB") << u"fedora44-vmware"_s << u"grub"_s << true;
+        QTest::newRow("systemd-boot + UKI") << u"arch-vmware-sdboot-uki"_s << u"systemd-stub"_s << false;
+        QTest::newRow("systemd-boot + plain kernel") << u"popos2404-vmware-sdboot"_s << u"efi-application"_s << true;
+    }
+    void kernelMeasuredBy()
+    {
+        QFETCH(QString, fixture);
+        QFETCH(QString, rule);
+        QFETCH(bool, replayMatches);
+        const QString sysroot = QStringLiteral(EACHECK_FIXTURES_DIR) + u'/' + fixture;
+        const Report report = run(HostAccess::Transport::Direct, sysroot, true);
+        const auto measuredBoot = std::find_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
+            return r.id == u"measured-boot"_s;
+        });
+        QVERIFY(measuredBoot != report.results.end());
+        QCOMPARE(measuredBoot->raw.value(u"kernelMeasuredBy"_s).toString(), rule);
+
+        // PCR 11 is left out: systemd-pcrphase extends it after boot, outside the firmware log.
+        const QJsonObject replay = measuredBoot->raw.value(u"pcrReplay"_s).toObject();
+        QVERIFY(!replay.isEmpty());
+        QVERIFY(!replay.contains(u"11"_s));
+        const bool allMatch = std::all_of(replay.begin(), replay.end(), [](const QJsonValueConstRef pcr) {
+            return pcr.toObject().value(u"match"_s).toBool();
+        });
+        QCOMPARE(allMatch, replayMatches);
     }
 
     void captureRoundTrip_data() { addFixtures(); }
