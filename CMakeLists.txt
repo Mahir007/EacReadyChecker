@@ -17,7 +17,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets Concurrent Network)
+find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core DBus Gui Widgets Concurrent Network)
 if(BUILD_TESTING)
     find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Test)
 endif()

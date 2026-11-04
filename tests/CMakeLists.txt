@@ -26,3 +26,14 @@ set_tests_properties(tst_mainwindow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offs
 
 eacheck_add_test(tst_iconwidget eacheck_app)
 set_tests_properties(tst_iconwidget PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen:configfile=${CMAKE_CURRENT_SOURCE_DIR}/data/two-screens.json")
+
+# Runs on a private session bus when it can, since a real portal would hold the stand-in's name.
+add_executable(tst_colorscheme tst_colorscheme.cpp)
+target_link_libraries(tst_colorscheme PRIVATE eacheck_app Qt6::DBus Qt6::Test eacheck_settings)
+find_program(DBUS_RUN_SESSION dbus-run-session)
+if(DBUS_RUN_SESSION)
+    add_test(NAME tst_colorscheme COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:tst_colorscheme>)
+else()
+    add_test(NAME tst_colorscheme COMMAND tst_colorscheme)
+endif()
+set_tests_properties(tst_colorscheme PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

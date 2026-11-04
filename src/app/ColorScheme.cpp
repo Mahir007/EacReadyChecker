@@ -4,14 +4,66 @@
 #include "Icons.h"
 
 #include <QApplication>
+#include <QDBusArgument>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusVariant>
 #include <QPalette>
 #include <QStyleHints>
+
+#include <optional>
 
 using namespace Qt::StringLiterals;
 
 namespace
 {
+constexpr auto PortalService = "org.freedesktop.portal.Desktop"_L1;
+constexpr auto PortalPath = "/org/freedesktop/portal/desktop"_L1;
+constexpr auto PortalInterface = "org.freedesktop.portal.Settings"_L1;
+constexpr auto AppearanceNamespace = "org.freedesktop.appearance"_L1;
+constexpr auto ColorSchemeKey = "color-scheme"_L1;
+constexpr int PortalTimeoutMs = 1000;
+
 bool s_darkPaletteSet = false;
+
+// The portal's values: 0 no preference, 1 prefer dark, 2 prefer light.
+Qt::ColorScheme schemeFromPortal(uint value)
+{
+    return value == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light;
+}
+
+// Blocks, so the first frame already has the right colours.
+std::optional<Qt::ColorScheme> readPortalColorScheme()
+{
+    QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, u"ReadAll"_s);
+    message << QStringList{AppearanceNamespace};
+    const QDBusMessage reply = QDBusConnection::sessionBus().call(message, QDBus::Block, PortalTimeoutMs);
+    if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty()) {
+        return std::nullopt;
+    }
+    const auto settings = qdbus_cast<QMap<QString, QVariantMap>>(reply.arguments().constFirst());
+    const QVariant value = settings.value(AppearanceNamespace).value(ColorSchemeKey);
+    if (!value.isValid()) {
+        return std::nullopt;
+    }
+    return schemeFromPortal(value.toUInt());
+}
+
+class PortalListener : public QObject
+{
+    Q_OBJECT
+
+public:
+    using QObject::QObject;
+
+public Q_SLOTS:
+    void settingChanged(const QString &group, const QString &key, const QDBusVariant &value)
+    {
+        if (group == AppearanceNamespace && key == ColorSchemeKey) {
+            applyColorScheme(schemeFromPortal(value.variant().toUInt()));
+        }
+    }
+};
 
 // libadwaita's dark colours, so the window matches its title bar.
 QPalette darkPalette()
@@ -67,7 +119,19 @@ void followDesktopColorScheme()
     if (!desktops.contains(u"GNOME"_s, Qt::CaseInsensitive)) {
         return;
     }
+    if (const auto scheme = readPortalColorScheme()) {
+        applyColorScheme(*scheme);
+        QDBusConnection::sessionBus().connect(PortalService,
+                                              PortalPath,
+                                              PortalInterface,
+                                              u"SettingChanged"_s,
+                                              new PortalListener(qApp),
+                                              SLOT(settingChanged(QString, QString, QDBusVariant)));
+        return;
+    }
     applyColorScheme(QGuiApplication::styleHints()->colorScheme());
     // Queued: the platform theme may update the palette after it reports the new scheme.
     QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, qApp, &applyColorScheme, Qt::QueuedConnection);
 }
+
+#include "ColorScheme.moc"
