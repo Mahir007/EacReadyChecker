@@ -18,6 +18,8 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QStandardPaths>
 #include <QToolButton>
 #include <QTest>
@@ -246,6 +248,37 @@ private Q_SLOTS:
         QCOMPARE(QApplication::palette().color(QPalette::Window), lightWindow);
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
         QTRY_VERIFY(hasColour(note->grab().toImage(), QApplication::palette().color(QPalette::Link)));
+    }
+
+    void scrollBar()
+    {
+        // Fusion's own scroll bar is out of place on GNOME. Other styles keep theirs.
+        const QString style = QApplication::style()->name();
+        const QPalette palette = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        screenshot(window, u"mainwindow-fusion"_s);
+        QScrollBar *bar = window.findChild<QScrollArea *>()->verticalScrollBar();
+        QVERIFY(bar->isVisible());
+        QCOMPARE(bar->sizeHint().width(), 12);
+        const QString lightSheet = bar->styleSheet();
+
+        // The handle's colour follows the palette, as when the desktop switches to dark.
+        QApplication::setPalette(breezeDarkPalette());
+        QTRY_VERIFY(bar->styleSheet() != lightSheet);
+        QVERIFY(bar->styleSheet().contains(QColor(0xfc, 0xfc, 0xfc).name().mid(1)));
+        QApplication::setPalette(palette);
+
+        QApplication::setStyle(u"Windows"_s);
+        QTRY_VERIFY(bar->styleSheet().isEmpty());
+        QVERIFY(bar->sizeHint().width() != 12);
+
+        QApplication::setStyle(style);
     }
 
 private:

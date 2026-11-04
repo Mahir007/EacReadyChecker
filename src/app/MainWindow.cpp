@@ -18,7 +18,9 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QShortcut>
+#include <QStyle>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -44,6 +46,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_copy(new QPushButton(u"Copy report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
     , m_note(new QLabel(this))
+    , m_scroll(new QScrollArea(this))
     , m_copiedReset(new QTimer(this))
 {
     syncIconThemes();
@@ -64,11 +67,11 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     }
     listLayout->addStretch(1);
 
-    auto *scroll = new QScrollArea(this);
-    scroll->setWidget(list);
-    scroll->setWidgetResizable(true);
-    scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_scroll->setWidget(list);
+    m_scroll->setWidgetResizable(true);
+    m_scroll->setFrameShape(QFrame::NoFrame);
+    m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    updateScrollBar();
 
     updateNote();
     m_note->setWordWrap(true);
@@ -120,7 +123,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(m_banner);
     layout->addWidget(separator(this));
-    layout->addWidget(scroll, 1);
+    layout->addWidget(m_scroll, 1);
     layout->addWidget(separator(this));
     layout->addWidget(m_note);
     layout->addLayout(buttons);
@@ -134,6 +137,7 @@ void MainWindow::changeEvent(QEvent *event)
     if (affectsIcons(event)) {
         syncIconThemes();
         updateIcons();
+        updateScrollBar();
     }
     if (event->type() == QEvent::PaletteChange) {
         updateNote();
@@ -154,6 +158,30 @@ void MainWindow::updateNote()
     // Qt picks the link colour when it parses the text. setText() skips text it already has.
     m_note->clear();
     m_note->setText(u"Based on <a href=\"%1\">Epic's published requirements</a> as of %2. EAC performs its own verification at game launch."_s.arg(AppInfo::requirementsUrl(), requirementsAsOf()));
+}
+
+void MainWindow::updateScrollBar()
+{
+    // Fusion's scroll bar has arrows and, with GNOME's light colours, a handle lighter than its
+    // groove. Under Fusion, draw a thin handle like GNOME's own apps. Other styles keep theirs.
+    QScrollBar *bar = m_scroll->verticalScrollBar();
+    if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) != 0) {
+        bar->setStyleSheet({});
+        return;
+    }
+    const auto handle = [this](qreal opacity) {
+        QColor colour = palette().color(QPalette::WindowText);
+        colour.setAlphaF(opacity);
+        return colour.name(QColor::HexArgb);
+    };
+    bar->setStyleSheet(uR"(
+        QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
+        QScrollBar::handle:vertical { background: %1; border-radius: 4px; min-height: 32px; margin: 2px; }
+        QScrollBar::handle:vertical:hover { background: %2; }
+        QScrollBar::handle:vertical:pressed { background: %3; }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+    )"_s.arg(handle(0.2), handle(0.4), handle(0.6)));
 }
 
 void MainWindow::runChecks(bool elevate)
