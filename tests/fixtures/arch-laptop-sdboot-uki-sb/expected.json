@@ -1,0 +1,24 @@
+{
+    "description": "Arch Linux with a CachyOS kernel on a Lenovo laptop with an AMD IOMMU: systemd-boot and a UKI, Secure Boot on with the owner's own keys, lockdown off. No discrete GPU. Real capture, including the TPM event log, with the disk and partition GUIDs and the root UUID zeroed.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    },
+    "checksElevated": {
+        "kernel-signing": "fail",
+        "tpm": "pass",
+        "secure-boot": "fail",
+        "measured-boot": "pass",
+        "iommu": "pass",
+        "lockdown": "fail",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

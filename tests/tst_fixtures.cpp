@@ -86,6 +86,8 @@ private Q_SLOTS:
         QTest::newRow("shim + GRUB") << u"fedora44-vmware"_s << u"grub"_s << 0;
         // Recent systemd's separators: os-separator on PCRs 0–7, 9, and nvpcr-separator on 9.
         QTest::newRow("systemd-boot + UKI") << u"arch-vmware-sdboot-uki"_s << u"systemd-stub"_s << 9;
+        // The same boot chain on real hardware. This one has no separators.
+        QTest::newRow("systemd-boot + UKI, laptop") << u"arch-laptop-sdboot-uki-sb"_s << u"systemd-stub"_s << 0;
         QTest::newRow("systemd-boot + plain kernel") << u"popos2404-vmware-sdboot"_s << u"efi-application"_s << 0;
     }
     void kernelMeasuredBy()

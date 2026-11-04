@@ -1,0 +1,1 @@
+resume="UUID=00000000-0000-0000-0000-000000000000" resume_offset=48640 root="UUID=00000000-0000-0000-0000-000000000000" rw lsm=landlock,lockdown,yama,integrity,apparmor,bpf quiet loglevel=3 udev.log_level=3 vt.global_cursor_default=0 splash systemd.zram=0 zswap.max_pool_percent=40
