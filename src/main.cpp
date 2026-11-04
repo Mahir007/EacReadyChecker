@@ -24,6 +24,9 @@ int main(int argc, char **argv)
         if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
             qputenv("QT_QPA_PLATFORM", "wayland");
         }
+        // Qt adds fake bold on top of a variable font's real Bold (QTBUG-112136), which smears
+        // Adwaita Sans. A font with no bold at all stays regular instead.
+        qputenv("QT_NO_SYNTHESIZED_BOLD", "1");
         app = std::make_unique<QApplication>(argc, argv);
         QGuiApplication::setApplicationDisplayName(AppInfo::displayName());
         // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
