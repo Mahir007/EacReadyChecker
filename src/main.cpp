@@ -27,10 +27,12 @@ int main(int argc, char **argv)
         // Qt adds fake bold on top of a variable font's real Bold (QTBUG-112136), which smears
         // Adwaita Sans. A font with no bold at all stays regular instead.
         qputenv("QT_NO_SYNTHESIZED_BOLD", "1");
+        // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
+        // Set before QApplication, which registers it with the host portal right away if it's
+        // set. Otherwise Qt registers later, after the first portal call, and the portal refuses.
+        QGuiApplication::setDesktopFileName(AppInfo::id());
         app = std::make_unique<QApplication>(argc, argv);
         QGuiApplication::setApplicationDisplayName(AppInfo::displayName());
-        // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
-        QGuiApplication::setDesktopFileName(AppInfo::id());
         // Icons the theme lacks come from Breeze (MainWindow sets that up, see Icons.h), then
         // from icons bundled in the app.
         QApplication::setWindowIcon(appIcon());
