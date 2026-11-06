@@ -63,11 +63,30 @@ private Q_SLOTS:
 
         in = gnome();
         in.runningQtVersion = u"6.11.3"_s;
-        QTest::newRow("newer patch release") << in << Decoration::QtVersionDiffers;
+        QTest::newRow("newer patch release") << in << Decoration::Bundled;
 
         in = gnome();
-        in.runningQtVersion = u"6.11.1"_s;
-        QTest::newRow("older patch release") << in << Decoration::QtVersionDiffers;
+        in.runningQtVersion = u"6.11.0"_s;
+        QTest::newRow("older patch release") << in << Decoration::Bundled;
+
+        in = gnome();
+        in.builtQtVersion = u"6.9.1"_s;
+        in.runningQtVersion = u"6.9.2"_s;
+        QTest::newRow("newer patch release, private API changed") << in << Decoration::QtVersionDiffers;
+
+        in = gnome();
+        in.builtQtVersion = u"6.9.2"_s;
+        in.runningQtVersion = u"6.9.1"_s;
+        QTest::newRow("older patch release, private API changed") << in << Decoration::QtVersionDiffers;
+
+        in = gnome();
+        in.runningQtVersion = u"6.11.4"_s;
+        QTest::newRow("patch release not checked") << in << Decoration::QtVersionDiffers;
+
+        in = gnome();
+        in.builtQtVersion = u"6.12.0"_s;
+        in.runningQtVersion = u"6.12.1"_s;
+        QTest::newRow("built for a release not checked") << in << Decoration::QtVersionDiffers;
 
         in = gnome();
         in.runningQtVersion = u"6.12.0"_s;

@@ -5,8 +5,50 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QPluginLoader>
+#include <QVersionNumber>
+
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
+
+namespace
+{
+// Qt 6 patch releases on which the plugin uses Qt's private API the same way, so a build for one
+// runs on the others. Found with tools/compare-qt-releases.py. A release not listed only runs a
+// build for itself. Only patch releases matter: the app doesn't start on an older minor release
+// than it was built for.
+struct PatchReleases {
+    int minor;
+    int first;
+    int last;
+};
+constexpr PatchReleases samePrivateApi[] = {
+    {5, 0, 3},
+    {6, 0, 3},
+    {7, 0, 3},
+    {8, 0, 3},
+    {9, 0, 1},
+    {9, 2, 3}, // 6.9.2 moved a field the plugin reads
+    {10, 0, 3},
+    {11, 0, 3},
+};
+
+bool sharesPrivateApi(const QString &built, const QString &running)
+{
+    const QVersionNumber a = QVersionNumber::fromString(built);
+    const QVersionNumber b = QVersionNumber::fromString(running);
+    if (a.segmentCount() != 3 || b.segmentCount() != 3 || a.majorVersion() != 6 || b.majorVersion() != 6
+        || a.minorVersion() != b.minorVersion()) {
+        return false;
+    }
+    return std::ranges::any_of(samePrivateApi, [&](const PatchReleases &r) {
+        const auto in = [&](const QVersionNumber &v) {
+            return r.minor == v.minorVersion() && r.first <= v.microVersion() && v.microVersion() <= r.last;
+        };
+        return in(a) && in(b);
+    });
+}
+}
 
 Decoration chooseDecoration(const DecorationInputs &inputs)
 {
@@ -15,8 +57,8 @@ Decoration chooseDecoration(const DecorationInputs &inputs)
     if (inputs.platformName != "wayland"_L1 || !gnome || inputs.decorationSet || !inputs.pluginInstalled) {
         return Decoration::QtPlugin;
     }
-    // Even patch releases have changed what the plugin relies on (6.9.2 moved a field it reads).
-    if (inputs.runningQtVersion != inputs.builtQtVersion) {
+    if (inputs.runningQtVersion != inputs.builtQtVersion
+        && !sharesPrivateApi(inputs.builtQtVersion, inputs.runningQtVersion)) {
         return Decoration::QtVersionDiffers;
     }
     return Decoration::Bundled;

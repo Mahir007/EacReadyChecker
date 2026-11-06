@@ -10,7 +10,7 @@ endif()
 
 find_package(Qt6 ${QT_MIN_VERSION} QUIET OPTIONAL_COMPONENTS Svg WaylandClient)
 # From Qt 6.10 the private modules are separate packages. Finding them warns that the build is tied to
-# this Qt version. The app only loads the plugin on that version, so the warning is turned off.
+# this Qt version. The app checks the Qt version before it loads the plugin, so the warning is off.
 if(Qt6Core_VERSION VERSION_GREATER_EQUAL 6.10)
     set(QT_NO_PRIVATE_MODULE_WARNING ON)
     find_package(Qt6 ${QT_MIN_VERSION} QUIET OPTIONAL_COMPONENTS GuiPrivate WaylandClientPrivate)

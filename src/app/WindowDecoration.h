@@ -5,8 +5,8 @@
 
 // On GNOME the title bar comes from a Qt plugin. Qt's own paints no shadow, and from Qt 6.10.1 to
 // 6.11.2 its light-mode border doesn't show on white. The app bundles QAdwaitaDecorations for both.
-// It uses Qt's private API, so it only runs on the Qt it was built with: a
-// plugin built for another version can crash the app.
+// It uses Qt's private API, so it only runs on the Qt it was built with or a
+// patch release that uses that API the same way: a plugin built for another version can crash the app.
 enum class Decoration {
     QtPlugin, // Qt picks the title bar, as without the bundled plugin
     Bundled,
