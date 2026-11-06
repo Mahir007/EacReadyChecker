@@ -32,14 +32,14 @@ if(TARGET Qt6::Svg AND TARGET Qt6::GuiPrivate AND TARGET Qt6::WaylandClientPriva
 endif()
 
 if(NOT found)
-    set(missing "Qt's private headers or Qt SVG's development files are missing (see README.md)")
+    set(missing "missing Qt private headers or Qt SVG dev files")
     if(EACHECK_DECORATIONS STREQUAL "ON")
-        message(FATAL_ERROR "EACHECK_DECORATIONS is ON, but ${missing}.")
+        message(FATAL_ERROR "EACHECK_DECORATIONS is ON: ${missing}")
     endif()
-    message(STATUS "Not building the GNOME title bar plugin: ${missing}.")
+    message(STATUS "GNOME title bar plugin: off (${missing})")
     return()
 endif()
-message(STATUS "Building the GNOME title bar plugin")
+message(STATUS "GNOME title bar plugin: on")
 
 add_library(qadwaitadecorations MODULE
     qadwaitadecorations/src/qadwaitadecorations.cpp
