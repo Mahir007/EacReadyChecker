@@ -18,16 +18,25 @@ endif()
 
 set(found FALSE)
 if(TARGET Qt6::Svg AND TARGET Qt6::GuiPrivate AND TARGET Qt6::WaylandClientPrivate)
-    # Some distributions ship the private headers separately from the CMake files. Checked on every
-    # configure, so installing them later is picked up.
+    # Some distributions ship the private headers separately from the CMake files. The headers pull in
+    # most of QtGui, so the check takes a few seconds. A pass is cached; a failure is checked again on
+    # the next configure, so installing the headers later is picked up.
+    if(NOT EACHECK_HAVE_QT_PRIVATE_HEADERS)
+        unset(EACHECK_HAVE_QT_PRIVATE_HEADERS CACHE)
+    endif()
+    message(CHECK_START "Looking for Qt private headers")
     include(CheckCXXSourceCompiles)
     set(CMAKE_REQUIRED_LIBRARIES Qt6::GuiPrivate Qt6::WaylandClientPrivate)
     set(CMAKE_REQUIRED_QUIET ON)
-    unset(EACHECK_HAVE_QT_PRIVATE_HEADERS CACHE)
     check_cxx_source_compiles("
         #include <QtGui/private/qguiapplication_p.h>
         #include <QtWaylandClient/private/qwaylandabstractdecoration_p.h>
         int main() { return 0; }" EACHECK_HAVE_QT_PRIVATE_HEADERS)
+    if(EACHECK_HAVE_QT_PRIVATE_HEADERS)
+        message(CHECK_PASS "found")
+    else()
+        message(CHECK_FAIL "not found")
+    endif()
     set(found ${EACHECK_HAVE_QT_PRIVATE_HEADERS})
 endif()
 
