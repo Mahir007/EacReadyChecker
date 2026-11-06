@@ -17,7 +17,7 @@ Status: early development.
 | `src/app` | The Qt Widgets window (`eacheck_app`). |
 | `src/cli` | `--json` and `--text` output. |
 | `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
-| `tools` | `capture-fixture.sh` and `shim-vendor-certs.py`. |
+| `tools` | `capture-fixture.sh`, `shim-vendor-certs.py` and `compare-qt-releases.py`. |
 | `packaging` | Flatpak manifest, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from. |
 | `third_party` | QAdwaitaDecorations, the title bar plugin used on GNOME. |
@@ -86,8 +86,10 @@ cmake --build build
 The default build type is `RelWithDebInfo`. Add `-DCMAKE_BUILD_TYPE=Debug` for a debug build, or
 `-DBUILD_TESTING=OFF` to skip the tests.
 
-CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app,
-and the app only uses it on that exact Qt version, so rebuild after an update that changes Qt.
+CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app.
+The app uses it on that Qt release and on the patch releases checked to share its build (see
+[Adding a Qt release](#adding-a-qt-release)). If a Qt update turns it off, the app says so when it
+starts, and rebuilding turns it back on.
 `-DEACHECK_DECORATIONS=ON` makes missing dependencies an error, and `OFF` leaves the plugin out.
 
 ## Flatpak
@@ -183,6 +185,20 @@ usage error.
 sources, recorded in [docs/well-known-keys.md](docs/well-known-keys.md).
 `tools/shim-vendor-certs.py SHIMX64.EFI` prints the fingerprint and subject of every certificate a
 shim trusts. It needs `objcopy` and `openssl`.
+
+## Adding a Qt release
+
+The GNOME title bar plugin uses Qt's private API. The app uses a build of it on the Qt release it
+was built with and on the patch releases in `samePrivateApi` (`src/app/WindowDecoration.cpp`). When
+Qt publishes a patch release, compare it with the others of its minor version:
+
+```sh
+tools/compare-qt-releases.py ~/qt-compare 6.12.0 6.12.1
+```
+
+It downloads each release from qt.io, builds the plugin against it and compares what the plugin
+uses of the private API. Releases it reports as the same go in one entry. It needs `aqtinstall` and
+`pyelftools` from pip, and the build tools above.
 
 ## Contributing
 
