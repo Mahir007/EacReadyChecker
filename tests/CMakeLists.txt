@@ -24,6 +24,8 @@ eacheck_add_test(tst_mainwindow eacheck_app)
 target_compile_definitions(tst_mainwindow PRIVATE EACHECK_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 set_tests_properties(tst_mainwindow PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+eacheck_add_test(tst_windowdecoration eacheck_app)
+
 eacheck_add_test(tst_iconwidget eacheck_app)
 set_tests_properties(tst_iconwidget PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen:configfile=${CMAKE_CURRENT_SOURCE_DIR}/data/two-screens.json")
 

@@ -2,6 +2,7 @@
 #include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
+#include "app/WindowDecoration.h"
 #include "cli/CliMain.h"
 #include "core/AppInfo.h"
 
@@ -31,12 +32,15 @@ int main(int argc, char **argv)
         // Set before QApplication, which registers it with the host portal right away if it's
         // set. Otherwise Qt registers later, after the first portal call, and the portal refuses.
         QGuiApplication::setDesktopFileName(AppInfo::id());
+        // Read before QApplication: in the KDE Flatpak runtime, Qt sets it on GNOME while it starts.
+        const bool decorationSet = !qEnvironmentVariableIsEmpty("QT_WAYLAND_DECORATION");
         app = std::make_unique<QApplication>(argc, argv);
         QGuiApplication::setApplicationDisplayName(AppInfo::displayName());
         // Icons the theme lacks come from Breeze (MainWindow sets that up, see Icons.h), then
         // from icons bundled in the app.
         QApplication::setWindowIcon(appIcon());
         followDesktopColorScheme();
+        useBundledDecoration(decorationSet);
     }
     QCoreApplication::setApplicationName(AppInfo::binaryName());
     QCoreApplication::setApplicationVersion(AppInfo::version());

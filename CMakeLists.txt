@@ -44,6 +44,12 @@ endif()
 
 configure_file(src/eacheck_version.h.in ${CMAKE_BINARY_DIR}/eacheck_version.h @ONLY)
 
+# Plugins only this app loads, outside Qt's plugin folder so other Qt apps never pick them up.
+# The build tree uses the same layout relative to bin/, so the app finds them in both.
+set(EACHECK_PLUGIN_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/eac-ready-checker/plugins")
+file(RELATIVE_PATH EACHECK_PLUGIN_DIR_FROM_BIN "${CMAKE_INSTALL_FULL_BINDIR}" "${CMAKE_INSTALL_FULL_LIBDIR}/eac-ready-checker/plugins")
+
+add_subdirectory(third_party)
 add_subdirectory(src)
 add_subdirectory(packaging)
 if(BUILD_TESTING)

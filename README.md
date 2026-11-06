@@ -20,11 +20,14 @@ Status: early development.
 | `tools` | `capture-fixture.sh` and `shim-vendor-certs.py`. |
 | `packaging` | Flatpak manifest, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from. |
+| `third_party` | QAdwaitaDecorations, the title bar plugin used on GNOME. |
 
 ## Requirements
 
 - CMake 3.22 or later, Ninja and a C++20 compiler.
 - Qt 6.5 or later with its Wayland and SVG plugins.
+- For the title bar on GNOME: Qt's private headers and Qt SVG's development files. Without them
+  the window gets Qt's own title bar, which has no shadow.
 - Breeze icons. `tst_mainwindow` fails without them. The app runs without them and uses its bundled
   status icons.
 - `pkexec`, for "Run full check" and `--elevate`.
@@ -34,13 +37,15 @@ Status: early development.
 apt (Debian 13 or later, Ubuntu 26.04 or later):
 
 ```sh
-sudo apt install g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils
+sudo apt install g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils \
+  qt6-base-private-dev qt6-wayland-private-dev qt6-svg-dev
 ```
 
 dnf (Fedora 43 or later):
 
 ```sh
-sudo dnf install gcc-c++ git cmake ninja-build qt6-qtbase-devel qt6-qtsvg breeze-icon-theme appstream desktop-file-utils
+sudo dnf install gcc-c++ git cmake ninja-build qt6-qtbase-devel qt6-qtsvg breeze-icon-theme appstream desktop-file-utils \
+  qt6-qtbase-private-devel qt6-qtsvg-devel
 ```
 
 pacman (Arch):
@@ -80,6 +85,10 @@ cmake --build build
 
 The default build type is `RelWithDebInfo`. Add `-DCMAKE_BUILD_TYPE=Debug` for a debug build, or
 `-DBUILD_TESTING=OFF` to skip the tests.
+
+CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app,
+and the app only uses it on that exact Qt version, so rebuild after an update that changes Qt.
+`-DEACHECK_DECORATIONS=ON` makes missing dependencies an error, and `OFF` leaves the plugin out.
 
 ## Flatpak
 
@@ -144,7 +153,8 @@ before sharing.
 
 Without a Wayland session, the window aborts with `no Qt platform plugin could be initialized`.
 `QT_QPA_PLATFORM` overrides the platform (`xcb`, or `offscreen` for no display), and
-`QT_DEBUG_PLUGINS=1` shows why a plugin didn't load.
+`QT_DEBUG_PLUGINS=1` shows why a plugin didn't load. On GNOME, `QT_WAYLAND_DECORATION=adwaita`
+gives Qt's own title bar instead of the bundled one.
 
 ## CLI
 
@@ -186,4 +196,5 @@ Changes to the checks are tested on real machines, and the captures become fixtu
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE). QAdwaitaDecorations in `third_party/qadwaitadecorations`
+is LGPL-2.1-or-later, see its [LICENSE](third_party/qadwaitadecorations/LICENSE).

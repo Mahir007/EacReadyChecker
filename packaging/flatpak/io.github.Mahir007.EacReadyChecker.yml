@@ -20,6 +20,8 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DBUILD_TESTING=OFF
+      # The SDK has Qt's private headers, so fail rather than ship without the title bar plugin.
+      - -DEACHECK_DECORATIONS=ON
     sources:
       - type: dir
         path: ../..

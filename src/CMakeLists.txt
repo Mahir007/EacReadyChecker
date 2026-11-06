@@ -45,6 +45,7 @@ add_library(eacheck_app STATIC
     app/IconWidget.cpp
     app/MainWindow.cpp
     app/SummaryBanner.cpp
+    app/WindowDecoration.cpp
 )
 target_link_libraries(eacheck_app
     PUBLIC eacheck_core Qt6::Widgets
@@ -75,5 +76,12 @@ add_executable(eac-ready-checker
     cli/CliMain.cpp
 )
 target_link_libraries(eac-ready-checker PRIVATE eacheck_app eacheck_settings)
+if(TARGET qadwaitadecorations)
+    target_compile_definitions(eacheck_app PRIVATE
+        EACHECK_DECORATION_PLUGIN_DIR="${EACHECK_PLUGIN_DIR_FROM_BIN}"
+        EACHECK_DECORATION_PLUGIN_FILE="$<TARGET_FILE_NAME:qadwaitadecorations>"
+    )
+    add_dependencies(eac-ready-checker qadwaitadecorations)
+endif()
 
 install(TARGETS eac-ready-checker RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
