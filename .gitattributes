@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.der binary
+**/efivars/** binary
+**/binary_bios_measurements binary
