@@ -1,0 +1,24 @@
+{
+    "description": "Ubuntu 26.10 live USB on a Gigabyte B550 AORUS PRO with a discrete GPU, Secure Boot on. The firmware measures the GPU's option ROM into PCR 2 but logs no PCR 7 authority for it. Kexec allowed. Real capture, including the TPM event log. Disk and partition identifiers in the log are zeroed.",
+    "synthetic": false,
+    "checks": {
+        "kernel-signing": "needs-admin",
+        "tpm": "pass",
+        "secure-boot": "needs-admin",
+        "measured-boot": "needs-admin",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    },
+    "checksElevated": {
+        "kernel-signing": "pass",
+        "tpm": "pass",
+        "secure-boot": "pass",
+        "measured-boot": "pass",
+        "iommu": "pass",
+        "lockdown": "pass",
+        "kexec": "fail",
+        "bpf-lsm": "pass"
+    }
+}

@@ -84,6 +84,8 @@ private Q_SLOTS:
         QTest::addColumn<QString>("rule");
         QTest::addColumn<int>("afterLog");
         QTest::newRow("shim + GRUB") << u"fedora44-vmware"_s << u"grub"_s << 0;
+        // Real firmware, with a GPU option ROM measured into PCR 2.
+        QTest::newRow("shim + GRUB, desktop") << u"ubuntu2610-live-dgpu"_s << u"grub"_s << 0;
         // Recent systemd's separators: os-separator on PCRs 0–7, 9, and nvpcr-separator on 9.
         QTest::newRow("systemd-boot + UKI") << u"arch-vmware-sdboot-uki"_s << u"systemd-stub"_s << 9;
         // The same boot chain on real hardware. This one has no separators.
