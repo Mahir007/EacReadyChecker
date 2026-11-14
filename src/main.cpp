@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QStandardPaths>
 
 #include <memory>
 
@@ -29,9 +30,13 @@ int main(int argc, char **argv)
         // Adwaita Sans. A font with no bold at all stays regular instead.
         qputenv("QT_NO_SYNTHESIZED_BOLD", "1");
         // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
-        // Set before QApplication, which registers it with the host portal right away if it's
-        // set. Otherwise Qt registers later, after the first portal call, and the portal refuses.
-        QGuiApplication::setDesktopFileName(AppInfo::id());
+        // Only when that file is installed. Qt registers the name with the host portal, which
+        // refuses an ID it has no desktop file for, as when the app runs from its build folder.
+        // Set before QApplication, which registers right away if it's set. Otherwise Qt
+        // registers later, after the first portal call, and the portal refuses.
+        if (!QStandardPaths::locate(QStandardPaths::ApplicationsLocation, AppInfo::id() + u".desktop"_s).isEmpty()) {
+            QGuiApplication::setDesktopFileName(AppInfo::id());
+        }
         // Read before QApplication: in the KDE Flatpak runtime, Qt sets it on GNOME while it starts.
         const bool decorationSet = !qEnvironmentVariableIsEmpty("QT_WAYLAND_DECORATION");
         app = std::make_unique<QApplication>(argc, argv);
