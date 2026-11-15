@@ -6,7 +6,6 @@
 #include <QWidget>
 
 class CheckRow;
-class QLabel;
 class QPushButton;
 class QScrollArea;
 class QTimer;
@@ -27,7 +26,6 @@ protected:
 
 private:
     void updateIcons();
-    void updateNote();
     void updateScrollBar();
     void onStarted();
     void onFinished(const Report &report);
@@ -41,7 +39,6 @@ private:
     QPushButton *m_refresh;
     QPushButton *m_copy;
     QPushButton *m_about;
-    QLabel *m_note;
     QScrollArea *m_scroll;
     QTimer *m_copiedReset;
     Report m_report;

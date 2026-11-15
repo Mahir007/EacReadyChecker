@@ -161,6 +161,7 @@ private Q_SLOTS:
         QTRY_VERIFY(about->isVisible());
         QVERIFY(about->text().contains(AppInfo::version()));
         QVERIFY(about->text().contains(AppInfo::requirementsUrl()));
+        QVERIFY(about->text().contains(u"EAC performs its own verification"_s));
         screenshot(*about, u"about"_s);
         about->close();
     }
@@ -234,20 +235,10 @@ private Q_SLOTS:
         QTRY_VERIFY(isDarkPalette(window.palette()));
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
         screenshot(window, u"mainwindow-gnome-dark"_s);
-        QLabel *note = nullptr;
-        const auto labels = window.findChildren<QLabel *>();
-        for (QLabel *label : labels) {
-            if (label->text().contains(u"<a href"_s)) {
-                note = label;
-            }
-        }
-        QVERIFY(note);
-        QTRY_VERIFY(hasColour(note->grab().toImage(), QApplication::palette().color(QPalette::Link)));
 
         applyColorScheme(Qt::ColorScheme::Light);
         QCOMPARE(QApplication::palette().color(QPalette::Window), lightWindow);
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
-        QTRY_VERIFY(hasColour(note->grab().toImage(), QApplication::palette().color(QPalette::Link)));
     }
 
     void scrollBar()
@@ -282,18 +273,6 @@ private Q_SLOTS:
     }
 
 private:
-    static bool hasColour(const QImage &image, const QColor &colour)
-    {
-        for (int y = 0; y < image.height(); ++y) {
-            for (int x = 0; x < image.width(); ++x) {
-                if (image.pixelColor(x, y).rgb() == colour.rgb()) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     // Breeze Dark's main colours.
     static QPalette breezeDarkPalette()
     {

@@ -13,7 +13,6 @@
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QKeySequence>
-#include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
@@ -45,7 +44,6 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_refresh(new QPushButton(u"Refresh"_s, this))
     , m_copy(new QPushButton(u"Copy Report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
-    , m_note(new QLabel(this))
     , m_scroll(new QScrollArea(this))
     , m_copiedReset(new QTimer(this))
 {
@@ -72,14 +70,6 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     updateScrollBar();
-
-    updateNote();
-    m_note->setWordWrap(true);
-    m_note->setOpenExternalLinks(true);
-    m_note->setForegroundRole(QPalette::PlaceholderText);
-    QFont noteFont = m_note->font();
-    noteFont.setPointSizeF(noteFont.pointSizeF() * 0.9);
-    m_note->setFont(noteFont);
 
     m_runFull->setToolTip(u"Reads the TPM event log as root. You'll be asked for an admin password once."_s);
     m_runFull->hide();
@@ -125,7 +115,6 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     layout->addWidget(separator(this));
     layout->addWidget(m_scroll, 1);
     layout->addWidget(separator(this));
-    layout->addWidget(m_note);
     layout->addLayout(buttons);
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
@@ -139,9 +128,6 @@ void MainWindow::changeEvent(QEvent *event)
         updateIcons();
         updateScrollBar();
     }
-    if (event->type() == QEvent::PaletteChange) {
-        updateNote();
-    }
     QWidget::changeEvent(event);
 }
 
@@ -151,13 +137,6 @@ void MainWindow::updateIcons()
     m_refresh->setIcon(themeIcon({u"view-refresh"_s}));
     m_copy->setIcon(themeIcon({u"edit-copy"_s}));
     m_about->setIcon(themeIcon({u"help-about"_s}));
-}
-
-void MainWindow::updateNote()
-{
-    // Qt picks the link colour when it parses the text. setText() skips text it already has.
-    m_note->clear();
-    m_note->setText(u"Based on <a href=\"%1\">Epic's published requirements</a> as of %2. EAC performs its own verification at game launch."_s.arg(AppInfo::requirementsUrl(), requirementsAsOf()));
 }
 
 void MainWindow::updateScrollBar()
@@ -241,7 +220,7 @@ void MainWindow::showAbout()
     box->setTextFormat(Qt::RichText);
     box->setText(u"<h3>%1 %2</h3>"
                  "<p>%3.</p>"
-                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5.</p>"
+                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5. EAC performs its own verification at game launch.</p>"
                  "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"
                  "<p>Qt %9</p>"_s.arg(AppInfo::displayName(),
                                       AppInfo::version(),
