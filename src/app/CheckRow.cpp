@@ -7,15 +7,71 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
+#include <QPainter>
 #include <QSet>
 #include <QStyle>
+#include <QStyleOptionViewItem>
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <functional>
+
 using namespace Qt::StringLiterals;
+
+// The part of a row above its sub-checks. While the row can expand, a click anywhere on it
+// toggles them, and it shows a hover like an item view's.
+class CheckRowHeader : public QWidget
+{
+public:
+    using QWidget::QWidget;
+
+    std::function<void()> toggle; // empty while the row can't expand
+
+protected:
+    void enterEvent(QEnterEvent *) override { update(); }
+    void leaveEvent(QEvent *) override { update(); }
+
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        // Labels pass clicks on to here. Accepting the press keeps the release here too.
+        event->setAccepted(toggle && event->button() == Qt::LeftButton);
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (toggle && event->button() == Qt::LeftButton && rect().contains(event->position().toPoint())) {
+            toggle();
+        }
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        if (!toggle || !underMouse()) {
+            return;
+        }
+        QPainter painter(this);
+        if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) == 0) {
+            // Fusion draws no hover in item views. Shade the row like GNOME's lists do.
+            QColor colour = palette().color(foregroundRole());
+            colour.setAlphaF(0.06);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colour);
+            painter.drawRoundedRect(rect(), 6, 6);
+            return;
+        }
+        QStyleOptionViewItem option;
+        option.initFrom(this);
+        option.state |= QStyle::State_MouseOver;
+        style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &option, &painter, this);
+    }
+};
 
 namespace
 {
+constexpr int kSpacing = 8;
+
 int iconSize(const QWidget *w)
 {
     return w->style()->pixelMetric(QStyle::PM_ToolBarIconSize, nullptr, w);
@@ -33,10 +89,11 @@ QLabel *secondaryLabel(QWidget *parent)
 
 CheckRow::CheckRow(const QString &title, QWidget *parent)
     : QWidget(parent)
-    , m_expander(new QToolButton(this))
-    , m_icon(new IconWidget(this))
-    , m_title(new QLabel(title, this))
-    , m_detail(secondaryLabel(this))
+    , m_header(new CheckRowHeader(this))
+    , m_expander(new QToolButton(m_header))
+    , m_icon(new IconWidget(m_header))
+    , m_title(new QLabel(title, m_header))
+    , m_detail(secondaryLabel(m_header))
     , m_subChecks(new QWidget(this))
     , m_subLayout(new QVBoxLayout(m_subChecks))
 {
@@ -59,19 +116,23 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     m_title->setFont(titleFont);
     m_title->setWordWrap(true);
 
-    m_subLayout->setContentsMargins(0, 8, 0, 0);
-    m_subLayout->setSpacing(8);
+    m_subLayout->setSpacing(kSpacing);
     m_subChecks->hide();
 
-    auto *layout = new QGridLayout(this);
-    layout->setHorizontalSpacing(8);
-    layout->setVerticalSpacing(0);
-    layout->setColumnStretch(2, 1);
-    layout->addWidget(m_expander, 0, 0, Qt::AlignTop);
-    layout->addWidget(m_icon, 0, 1, Qt::AlignTop);
-    layout->addWidget(m_title, 0, 2);
-    layout->addWidget(m_detail, 1, 2);
-    layout->addWidget(m_subChecks, 2, 2);
+    auto *header = new QGridLayout(m_header);
+    header->setHorizontalSpacing(kSpacing);
+    header->setVerticalSpacing(0);
+    header->setColumnStretch(2, 1);
+    header->addWidget(m_expander, 0, 0, Qt::AlignTop);
+    header->addWidget(m_icon, 0, 1, Qt::AlignTop);
+    header->addWidget(m_title, 0, 2);
+    header->addWidget(m_detail, 1, 2);
+
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins({});
+    layout->setSpacing(0);
+    layout->addWidget(m_header);
+    layout->addWidget(m_subChecks);
 
     setPending();
 }
@@ -84,7 +145,7 @@ void CheckRow::setPending()
     // Drop the old sub-checks rather than show stale results under "Checking…". The row stays
     // expanded (or not) for when the result arrives.
     clearSubChecks();
-    m_expander->hide();
+    setExpandable(false);
     m_subChecks->hide();
     updateIcons();
 }
@@ -131,13 +192,13 @@ void CheckRow::setResult(const CheckResult &result)
         }
         auto *itemLayout = new QHBoxLayout(item);
         itemLayout->setContentsMargins({});
-        itemLayout->setSpacing(8);
+        itemLayout->setSpacing(kSpacing);
         itemLayout->addWidget(icon, 0, Qt::AlignTop);
         itemLayout->addLayout(text, 1);
         m_subLayout->addWidget(item);
     }
     updateIcons();
-    m_expander->setVisible(!result.subChecks.isEmpty());
+    setExpandable(!result.subChecks.isEmpty());
     setExpanded(m_expanded && !result.subChecks.isEmpty());
 }
 
@@ -161,6 +222,25 @@ void CheckRow::updateIcons()
         subIcon->setFixedSize(subSize, subSize);
         subIcon->setIcon(statusIcon(status));
     }
+
+    // Sub-checks line up with the row's title. Both sizes depend on the style.
+    const QMargins margins = m_header->layout()->contentsMargins();
+    const int indent = margins.left() + m_expander->sizeHint().width() + kSpacing + size + kSpacing;
+    m_subLayout->setContentsMargins(indent, 0, margins.right(), margins.bottom());
+}
+
+void CheckRow::setExpandable(bool expandable)
+{
+    m_expander->setVisible(expandable);
+    // Clicking the row expands it, so its detail can't also be a place to select text.
+    m_detail->setTextInteractionFlags(expandable ? Qt::NoTextInteraction : Qt::TextSelectableByMouse);
+    m_header->toggle = nullptr;
+    if (expandable) {
+        m_header->toggle = [this] {
+            setExpanded(!m_expanded);
+        };
+    }
+    m_header->update();
 }
 
 void CheckRow::setExpanded(bool expanded)

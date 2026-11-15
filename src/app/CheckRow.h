@@ -8,13 +8,14 @@
 #include <optional>
 #include <utility>
 
+class CheckRowHeader;
 class IconWidget;
 class QLabel;
 class QToolButton;
 class QVBoxLayout;
 
 // One requirement: status icon, title and, when it adds something, a detail line. Rows with
-// sub-checks can be expanded.
+// sub-checks expand to show them, by clicking the row or its arrow.
 class CheckRow : public QWidget
 {
     Q_OBJECT
@@ -30,9 +31,11 @@ protected:
 
 private:
     void updateIcons();
+    void setExpandable(bool expandable);
     void setExpanded(bool expanded);
     void clearSubChecks();
 
+    CheckRowHeader *m_header;
     QToolButton *m_expander;
     IconWidget *m_icon;
     QLabel *m_title;

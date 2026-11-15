@@ -106,13 +106,27 @@ private Q_SLOTS:
         // A passing row has no detail line. TPM passes on this fixture.
         QVERIFY(!rows[1]->findChild<QLabel *>(u"detail"_s)->isVisible());
 
-        // Expand the IOMMU row's sub-checks.
+        // Expand the IOMMU row's sub-checks with its arrow, and collapse it by clicking its title.
         QToolButton *expander = rows[4]->findChild<QToolButton *>();
         QVERIFY(expander && expander->isVisible());
         expander->click();
         const QLabel *subDetail = rows[4]->findChildren<QLabel *>().constLast();
         QTRY_VERIFY(subDetail->isVisible() && subDetail->height() > 0);
         screenshot(window, u"mainwindow"_s);
+        QLabel *iommuTitle = rows[4]->findChildren<QLabel *>().constFirst();
+        QCOMPARE(iommuTitle->text(), u"IOMMU"_s);
+        QTest::mouseMove(iommuTitle);
+        QTRY_VERIFY(iommuTitle->parentWidget()->underMouse());
+        screenshot(window, u"mainwindow-hover"_s);
+        QTest::mouseClick(iommuTitle, Qt::LeftButton);
+        QTRY_VERIFY(!subDetail->isVisible());
+        QTest::mouseClick(iommuTitle, Qt::LeftButton);
+        QTRY_VERIFY(subDetail->isVisible());
+        // A row without sub-checks doesn't expand.
+        QLabel *tpmTitle = rows[1]->findChildren<QLabel *>().constFirst();
+        const QSize tpmSize = rows[1]->size();
+        QTest::mouseClick(tpmTitle, Qt::LeftButton);
+        QCOMPARE(rows[1]->size(), tpmSize);
 
         // A fixture sysroot grants admin reads without pkexec. While it runs, only the rows that
         // need admin go back to "Checking…".
