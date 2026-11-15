@@ -98,8 +98,12 @@ private Q_SLOTS:
         // Checks that need the event log show Needs admin, so the button appears.
         QVERIFY(runFull->isVisible());
 
-        // Expand the IOMMU row's sub-checks.
+        // The list is on the View colours (Base), not the window's.
         const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
+        QCOMPARE(rows[0]->backgroundRole(), QPalette::Base);
+        QVERIFY(rows[0]->parentWidget()->autoFillBackground());
+
+        // Expand the IOMMU row's sub-checks.
         QToolButton *expander = rows[4]->findChild<QToolButton *>();
         QVERIFY(expander && expander->isVisible());
         expander->click();
@@ -254,8 +258,10 @@ private Q_SLOTS:
         window.runChecks(false);
         QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
         screenshot(window, u"mainwindow-fusion"_s);
+        // The rows fit at the default size, so make the window short enough to need the bar.
+        window.resize(window.width(), 300);
         QScrollBar *bar = window.findChild<QScrollArea *>()->verticalScrollBar();
-        QVERIFY(bar->isVisible());
+        QTRY_VERIFY(bar->isVisible());
         QCOMPARE(bar->sizeHint().width(), 12);
         const QString lightSheet = bar->styleSheet();
 

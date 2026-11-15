@@ -26,6 +26,7 @@ protected:
 
 private:
     void updateIcons();
+    void updateMargins();
     void updateScrollBar();
     void onStarted();
     void onFinished(const Report &report);
@@ -39,6 +40,8 @@ private:
     QPushButton *m_refresh;
     QPushButton *m_copy;
     QPushButton *m_about;
+    QWidget *m_list;
+    QWidget *m_footer;
     QScrollArea *m_scroll;
     QTimer *m_copiedReset;
     Report m_report;

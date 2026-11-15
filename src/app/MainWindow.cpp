@@ -23,6 +23,8 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include <algorithm>
+
 using namespace Qt::StringLiterals;
 
 namespace
@@ -44,6 +46,8 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_refresh(new QPushButton(u"Refresh"_s, this))
     , m_copy(new QPushButton(u"Copy Report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
+    , m_list(new QWidget)
+    , m_footer(new QWidget(this))
     , m_scroll(new QScrollArea(this))
     , m_copiedReset(new QTimer(this))
 {
@@ -52,20 +56,20 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     setWindowTitle(u"EACheck"_s);
     resize(560, 640);
 
-    // Rows, in the article's order.
-    auto *list = new QWidget;
-    auto *listLayout = new QVBoxLayout(list);
+    // Rows, in the article's order. The list is a content view: it uses the View colours (Base)
+    // and runs to the window's edges, like Dolphin's. The banner and footer keep the Window colours.
+    m_list->setBackgroundRole(QPalette::Base);
+    m_list->setAutoFillBackground(true);
+    auto *listLayout = new QVBoxLayout(m_list);
+    listLayout->setSpacing(0);
     for (const auto &check : m_runner->checks()) {
-        if (!m_rows.isEmpty()) {
-            listLayout->addWidget(separator(list));
-        }
-        auto *row = new CheckRow(check->title(), list);
+        auto *row = new CheckRow(check->title(), m_list);
         m_rows.append(row);
         listLayout->addWidget(row);
     }
     listLayout->addStretch(1);
 
-    m_scroll->setWidget(list);
+    m_scroll->setWidget(m_list);
     m_scroll->setWidgetResizable(true);
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -103,7 +107,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
 
     connect(m_about, &QPushButton::clicked, this, &MainWindow::showAbout);
 
-    auto *buttons = new QHBoxLayout;
+    auto *buttons = new QHBoxLayout(m_footer);
     buttons->addWidget(m_about);
     buttons->addStretch(1);
     buttons->addWidget(m_runFull);
@@ -111,11 +115,14 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     buttons->addWidget(m_refresh);
 
     auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins({});
+    layout->setSpacing(0);
     layout->addWidget(m_banner);
     layout->addWidget(separator(this));
     layout->addWidget(m_scroll, 1);
     layout->addWidget(separator(this));
-    layout->addLayout(buttons);
+    layout->addWidget(m_footer);
+    updateMargins();
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
     connect(m_runner, &CheckRunner::finished, this, &MainWindow::onFinished);
@@ -128,6 +135,9 @@ void MainWindow::changeEvent(QEvent *event)
         updateIcons();
         updateScrollBar();
     }
+    if (event->type() == QEvent::StyleChange) {
+        updateMargins();
+    }
     QWidget::changeEvent(event);
 }
 
@@ -137,6 +147,19 @@ void MainWindow::updateIcons()
     m_refresh->setIcon(themeIcon({u"view-refresh"_s}));
     m_copy->setIcon(themeIcon({u"edit-copy"_s}));
     m_about->setIcon(themeIcon({u"help-about"_s}));
+}
+
+void MainWindow::updateMargins()
+{
+    // The window has no margins of its own, so the list can reach its edges. The banner and the
+    // buttons get the window's margins instead. The list's are what's left after its rows' own,
+    // so the rows' arrows line up with the banner's icon.
+    const int window = style()->pixelMetric(QStyle::PM_LayoutLeftMargin, nullptr, this);
+    const int row = style()->pixelMetric(QStyle::PM_LayoutLeftMargin, nullptr, m_rows.constFirst());
+    const int inset = std::max(0, window - row);
+    m_banner->layout()->setContentsMargins(window, window, window, window);
+    m_footer->layout()->setContentsMargins(window, window, window, window);
+    m_list->layout()->setContentsMargins(inset, inset, inset, inset);
 }
 
 void MainWindow::updateScrollBar()
