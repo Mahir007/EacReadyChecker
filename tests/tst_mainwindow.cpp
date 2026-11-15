@@ -87,7 +87,7 @@ private Q_SLOTS:
         QVERIFY(QTest::qWaitForWindowExposed(&window));
 
         QCOMPARE(window.findChildren<CheckRow *>().size(), 8);
-        QPushButton *runFull = button(window, u"Run full check"_s);
+        QPushButton *runFull = button(window, u"Run Full Check"_s);
         QPushButton *refresh = button(window, u"Refresh"_s);
         QVERIFY(runFull);
         QVERIFY(refresh);
@@ -141,7 +141,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QPushButton *copy = button(window, u"Copy report"_s);
+        QPushButton *copy = button(window, u"Copy Report"_s);
         QTRY_VERIFY(copy->isEnabled());
 
         const int width = copy->width();
@@ -153,7 +153,7 @@ private Q_SLOTS:
         QCOMPARE(copy->width(), width);
         actions[1]->trigger(); // as JSON
         QCOMPARE(QJsonDocument::fromJson(QGuiApplication::clipboard()->text().toUtf8()).object().value(u"checks"_s).toArray().size(), 8);
-        QTRY_COMPARE(copy->text(), u"Copy report"_s);
+        QTRY_COMPARE(copy->text(), u"Copy Report"_s);
 
         button(window, u"About"_s)->click();
         auto *about = window.findChild<QMessageBox *>();

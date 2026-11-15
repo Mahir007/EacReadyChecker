@@ -41,9 +41,9 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     : QWidget(parent)
     , m_runner(new CheckRunner(host, createAllChecks(), this))
     , m_banner(new SummaryBanner(this))
-    , m_runFull(new QPushButton(u"Run full check"_s, this))
+    , m_runFull(new QPushButton(u"Run Full Check"_s, this))
     , m_refresh(new QPushButton(u"Refresh"_s, this))
-    , m_copy(new QPushButton(u"Copy report"_s, this))
+    , m_copy(new QPushButton(u"Copy Report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
     , m_note(new QLabel(this))
     , m_scroll(new QScrollArea(this))
@@ -106,7 +106,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     m_copiedReset->setSingleShot(true);
     m_copiedReset->setInterval(2000);
     connect(m_copiedReset, &QTimer::timeout, this, [this] {
-        m_copy->setText(u"Copy report"_s);
+        m_copy->setText(u"Copy Report"_s);
     });
 
     new QShortcut(QKeySequence::Quit, this, this, &QWidget::close);

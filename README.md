@@ -30,7 +30,7 @@ Status: early development.
   the window gets Qt's own title bar, which has no shadow.
 - Breeze icons. `tst_mainwindow` fails without them. The app runs without them and uses its bundled
   status icons.
-- `pkexec`, for "Run full check" and `--elevate`.
+- `pkexec`, for "Run Full Check" and `--elevate`.
 
 ## Linux setup
 
