@@ -103,6 +103,9 @@ private Q_SLOTS:
         QCOMPARE(rows[0]->backgroundRole(), QPalette::Base);
         QVERIFY(rows[0]->parentWidget()->autoFillBackground());
 
+        // A passing row has no detail line. TPM passes on this fixture.
+        QVERIFY(!rows[1]->findChild<QLabel *>(u"detail"_s)->isVisible());
+
         // Expand the IOMMU row's sub-checks.
         QToolButton *expander = rows[4]->findChild<QToolButton *>();
         QVERIFY(expander && expander->isVisible());

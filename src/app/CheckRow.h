@@ -13,7 +13,8 @@ class QLabel;
 class QToolButton;
 class QVBoxLayout;
 
-// One requirement: status icon, title, one-line detail. Rows with sub-checks can be expanded.
+// One requirement: status icon, title and, when it adds something, a detail line. Rows with
+// sub-checks can be expanded.
 class CheckRow : public QWidget
 {
     Q_OBJECT

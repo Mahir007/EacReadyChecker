@@ -7,6 +7,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QSet>
 #include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -58,13 +59,13 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     m_title->setFont(titleFont);
     m_title->setWordWrap(true);
 
-    m_subLayout->setContentsMargins(0, 4, 0, 0);
-    m_subLayout->setSpacing(4);
+    m_subLayout->setContentsMargins(0, 8, 0, 0);
+    m_subLayout->setSpacing(8);
     m_subChecks->hide();
 
     auto *layout = new QGridLayout(this);
     layout->setHorizontalSpacing(8);
-    layout->setVerticalSpacing(2);
+    layout->setVerticalSpacing(0);
     layout->setColumnStretch(2, 1);
     layout->addWidget(m_expander, 0, 0, Qt::AlignTop);
     layout->addWidget(m_icon, 0, 1, Qt::AlignTop);
@@ -79,6 +80,7 @@ void CheckRow::setPending()
 {
     m_status.reset();
     m_detail->setText(u"Checking…"_s);
+    m_detail->show();
     // Drop the old sub-checks rather than show stale results under "Checking…". The row stays
     // expanded (or not) for when the result arrives.
     clearSubChecks();
@@ -101,21 +103,38 @@ void CheckRow::setResult(const CheckResult &result)
     m_status = result.status;
     m_icon->setToolTip(statusLabel(result.status));
     m_icon->setAccessibleName(statusLabel(result.status));
-    m_detail->setText(result.detail.isEmpty() ? statusLabel(result.status) : result.detail);
+    // A pass needs no words. Anything else says why, even if the check gave no detail.
+    const QString detail = result.detail.isEmpty() && result.status != CheckStatus::Pass ? statusLabel(result.status) : result.detail;
+    m_detail->setText(detail);
+    m_detail->setVisible(!detail.isEmpty());
 
     clearSubChecks();
+    // A detail is shown once per row. With no event log, for example, every sub-check that needs
+    // it would say "No TPM event log" again.
+    QSet<QString> shown{detail};
     for (const SubCheckResult &sub : result.subChecks) {
-        auto *row = new QWidget(m_subChecks);
-        auto *icon = new IconWidget(row);
+        auto *item = new QWidget(m_subChecks);
+        auto *icon = new IconWidget(item);
         m_subIcons.append({icon, sub.status});
         icon->setToolTip(statusLabel(sub.status));
-        auto *text = secondaryLabel(row);
-        text->setText(sub.detail.isEmpty() ? sub.title : u"%1 — %2"_s.arg(sub.title, sub.detail));
-        auto *rowLayout = new QHBoxLayout(row);
-        rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->addWidget(icon, 0, Qt::AlignTop);
-        rowLayout->addWidget(text, 1);
-        m_subLayout->addWidget(row);
+        icon->setAccessibleName(statusLabel(sub.status));
+        auto *title = new QLabel(sub.title, item);
+        title->setWordWrap(true);
+        auto *text = new QVBoxLayout;
+        text->setSpacing(0);
+        text->addWidget(title);
+        if (!sub.detail.isEmpty() && !shown.contains(sub.detail)) {
+            shown.insert(sub.detail);
+            auto *subDetail = secondaryLabel(item);
+            subDetail->setText(sub.detail);
+            text->addWidget(subDetail);
+        }
+        auto *itemLayout = new QHBoxLayout(item);
+        itemLayout->setContentsMargins({});
+        itemLayout->setSpacing(8);
+        itemLayout->addWidget(icon, 0, Qt::AlignTop);
+        itemLayout->addLayout(text, 1);
+        m_subLayout->addWidget(item);
     }
     updateIcons();
     m_expander->setVisible(!result.subChecks.isEmpty());
