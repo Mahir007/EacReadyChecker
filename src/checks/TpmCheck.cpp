@@ -20,7 +20,6 @@ CheckResult TpmCheck::evaluate(const HostSnapshot &snapshot) const
         const QByteArray major = version.trimmed();
         if (major == "2") {
             result.status = CheckStatus::Pass;
-            result.detail = u"TPM 2.0 found"_s;
         } else if (major == "1") {
             result.status = CheckStatus::Fail;
             result.detail = u"TPM 1.2 found, 2.0 required"_s;

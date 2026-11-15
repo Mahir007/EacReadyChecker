@@ -77,6 +77,17 @@ private Q_SLOTS:
         }
     }
 
+    // A passing check's icon and title say it all, so it has no detail. Its sub-checks only have
+    // one when it adds something, such as which keys or boot manager were found.
+    void passHasNoDetail()
+    {
+        const Report report = run(HostAccess::Transport::Direct, QStringLiteral(EACHECK_FIXTURES_DIR) + u"/fedora-ready"_s, true);
+        for (const CheckResult &result : report.results) {
+            QCOMPARE(result.status, CheckStatus::Pass);
+            QVERIFY2(result.detail.isEmpty(), qPrintable(result.id + u": "_s + result.detail));
+        }
+    }
+
     // measured-boot's status doesn't say which rule found the kernel.
     void kernelMeasuredBy_data()
     {

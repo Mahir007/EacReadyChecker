@@ -133,7 +133,7 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
         // Nothing verified the boot chain, e.g. because Secure Boot is off.
         return {title, CheckStatus::Fail, u"The TPM event log shows no Secure Boot verification"_s};
     }
-    QString detail = u"Well-known: %1"_s.arg(vendors.join(u", "_s));
+    QString detail = vendors.join(u", "_s);
     if (!unknownDrivers.isEmpty()) {
         detail += u" · driver key not judged: %1"_s.arg(unknownDrivers.join(u", "_s));
     }

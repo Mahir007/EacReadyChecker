@@ -8,13 +8,12 @@
 
 namespace CheckHelpers
 {
-// Sets the check's status from its sub-checks. The detail is `passDetail` when it passes,
-// otherwise the detail of the first sub-check that decided the status.
-inline void finishFromSubChecks(CheckResult &result, const QString &passDetail)
+// Sets the check's status from its sub-checks. A passing check has no detail, since its icon and
+// title already say it. Otherwise the detail is that of the first sub-check that decided the status.
+inline void finishFromSubChecks(CheckResult &result)
 {
     result.status = combineStatus(result.subChecks);
     if (result.status == CheckStatus::Pass || result.status == CheckStatus::NotRequired) {
-        result.detail = passDetail;
         return;
     }
     for (const SubCheckResult &sub : std::as_const(result.subChecks)) {

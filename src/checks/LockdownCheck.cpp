@@ -51,21 +51,17 @@ CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
     const QString mode = match.captured(1);
     if (mode == u"integrity") {
         result.status = CheckStatus::Pass;
-        result.detail = u"Lockdown mode: integrity"_s;
         // How it was enabled doesn't matter, but say so when we can tell.
         const HostEntry cmdline = snapshot.file(HostPaths::Cmdline);
         if (cmdline.ok() && KernelCmdline::parse(cmdline.data).values(u"lockdown").contains(u"integrity"_s)) {
-            result.detail += u" · set via cmdline"_s;
+            result.detail = u"Set on the kernel command line"_s;
         }
-    } else if (mode == u"confidentiality") {
-        result.status = CheckStatus::Fail;
-        result.detail = u"Lockdown mode: confidentiality (integrity required)"_s;
     } else if (mode == u"none") {
         result.status = CheckStatus::Fail;
         result.detail = u"Lockdown is off"_s;
     } else {
         result.status = CheckStatus::Fail;
-        result.detail = u"Lockdown mode: %1 (integrity required)"_s.arg(mode);
+        result.detail = u"Lockdown is in %1 mode"_s.arg(mode);
     }
     return result;
 }

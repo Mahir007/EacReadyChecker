@@ -13,7 +13,6 @@ CheckResult KexecCheck::evaluate(const HostSnapshot &snapshot) const
         const QByteArray value = disabled.trimmed();
         if (value == "1") {
             result.status = CheckStatus::Pass;
-            result.detail = u"kexec_load_disabled = 1"_s;
         } else if (value == "0") {
             result.status = CheckStatus::Fail;
             result.detail = u"Kexec is allowed (kexec_load_disabled = 0)"_s;

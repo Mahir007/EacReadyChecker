@@ -23,7 +23,6 @@ CheckResult BpfLsmCheck::evaluate(const HostSnapshot &snapshot) const
     const QStringList active = CheckHelpers::commaList(lsm);
     if (active.contains(u"bpf"_s)) {
         result.status = CheckStatus::Pass;
-        result.detail = u"Active LSMs: %1"_s.arg(active.join(u", "_s));
     } else {
         result.status = CheckStatus::Fail;
         result.detail = u"BPF isn't an active LSM (active: %1)"_s.arg(active.isEmpty() ? u"none"_s : active.join(u", "_s));

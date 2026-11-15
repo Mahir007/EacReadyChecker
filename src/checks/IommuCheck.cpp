@@ -80,12 +80,15 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
         return {title, CheckStatus::Fail, u"Unexpected group types: %1"_s.arg(other.join(u", "_s))};
     }
     if (!identity.isEmpty()) {
+        const qsizetype translated = types.size() - identity.size();
         const QString which = identity.size() == 1 ? u"group %1 uses"_s.arg(identity[0]) : u"groups %1 use"_s.arg(identity.join(u", "_s));
         return {title,
                 CheckStatus::Pass,
-                u"%1 of %2 groups translate DMA; %3 identity (a single device, not system-wide)"_s.arg(types.size() - identity.size()).arg(types.size()).arg(which)};
+                u"%1 of %2 groups %3 DMA; %4 identity (a single device, not system-wide)"_s.arg(translated)
+                    .arg(types.size())
+                    .arg(translated == 1 ? u"translates"_s : u"translate"_s, which)};
     }
-    return {title, CheckStatus::Pass, u"All %1 groups translate DMA"_s.arg(types.size())};
+    return {title, CheckStatus::Pass, {}};
 }
 
 SubCheckResult cmdlinePassthrough(const HostSnapshot &snapshot)
@@ -124,7 +127,7 @@ SubCheckResult cmdlinePassthrough(const HostSnapshot &snapshot)
     if (passthrough) {
         return {title, CheckStatus::Fail, u"Passthrough requested (%1)"_s.arg(why)};
     }
-    return {title, CheckStatus::Pass, u"Not requested"_s};
+    return {title, CheckStatus::Pass, {}};
 }
 } // namespace
 
@@ -155,6 +158,6 @@ CheckResult IommuCheck::evaluate(const HostSnapshot &snapshot) const
     }
 
     result.subChecks = {enabled(snapshot), groups(snapshot), groupTypes(snapshot), cmdlinePassthrough(snapshot)};
-    CheckHelpers::finishFromSubChecks(result, u"Enabled, no passthrough"_s);
+    CheckHelpers::finishFromSubChecks(result);
     return result;
 }

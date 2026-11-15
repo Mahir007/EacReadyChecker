@@ -42,7 +42,7 @@ SubCheckResult enabled(const HostSnapshot &snapshot)
     if (auto problem = readFlag(snapshot, title, HostPaths::SecureBoot, value)) {
         return *problem;
     }
-    return *value == 1 ? SubCheckResult{title, CheckStatus::Pass, u"Secure Boot is on"_s} : SubCheckResult{title, CheckStatus::Fail, u"Secure Boot is off"_s};
+    return *value == 1 ? SubCheckResult{title, CheckStatus::Pass, {}} : SubCheckResult{title, CheckStatus::Fail, u"Secure Boot is off"_s};
 }
 
 SubCheckResult notInSetupMode(const HostSnapshot &snapshot)
@@ -52,8 +52,7 @@ SubCheckResult notInSetupMode(const HostSnapshot &snapshot)
     if (auto problem = readFlag(snapshot, title, HostPaths::SetupMode, value)) {
         return *problem;
     }
-    return *value == 0 ? SubCheckResult{title, CheckStatus::Pass, u"Firmware is in User Mode"_s}
-                       : SubCheckResult{title, CheckStatus::Fail, u"Firmware is in Setup Mode"_s};
+    return *value == 0 ? SubCheckResult{title, CheckStatus::Pass, {}} : SubCheckResult{title, CheckStatus::Fail, u"Firmware is in Setup Mode"_s};
 }
 } // namespace
 
@@ -77,6 +76,6 @@ CheckResult SecureBootCheck::evaluate(const HostSnapshot &snapshot) const
         EventLogHelpers::authoritiesWellKnown(snapshot, u"Only well-known keys used to boot"_s, authorities),
     };
     result.raw.insert(u"bootAuthorities"_s, authorities);
-    CheckHelpers::finishFromSubChecks(result, u"On, booted with well-known keys"_s);
+    CheckHelpers::finishFromSubChecks(result);
     return result;
 }

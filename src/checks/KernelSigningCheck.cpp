@@ -45,7 +45,7 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot)
         return {title, CheckStatus::Fail, u"An unsigned module is loaded (taint flags: %1)"_s.arg(taintLetters(taint))};
     }
     // Out-of-tree modules (O) alone are fine as long as they're signed.
-    return {title, CheckStatus::Pass, taint == 0 ? u"Kernel isn't tainted"_s : u"No unsigned modules (taint flags: %1)"_s.arg(taintLetters(taint))};
+    return {title, CheckStatus::Pass, taint == 0 ? QString() : u"Taint flags: %1"_s.arg(taintLetters(taint))};
 }
 
 // "MokListRT", "MokListRT1", … from an efivars path.
@@ -107,7 +107,7 @@ SubCheckResult moksWellKnown(const HostSnapshot &snapshot, QJsonArray &rawEntrie
     if (vendors.isEmpty()) {
         return {title, CheckStatus::Pass, u"No MOKs enrolled"_s};
     }
-    return {title, CheckStatus::Pass, u"Well-known: %1"_s.arg(vendors.join(u", "_s))};
+    return {title, CheckStatus::Pass, vendors.join(u", "_s)};
 }
 } // namespace
 
@@ -133,6 +133,6 @@ CheckResult KernelSigningCheck::evaluate(const HostSnapshot &snapshot) const
     };
     result.raw.insert(u"bootAuthorities"_s, authorities);
     result.raw.insert(u"mokList"_s, moks);
-    CheckHelpers::finishFromSubChecks(result, u"Kernel and modules signed by well-known keys"_s);
+    CheckHelpers::finishFromSubChecks(result);
     return result;
 }

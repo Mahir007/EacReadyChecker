@@ -122,7 +122,7 @@ SubCheckResult logMatchesTpm(const HostSnapshot &snapshot, const EventLogHelpers
     if (!mismatched.isEmpty()) {
         return {title, CheckStatus::Fail, u"PCRs %1 don't match the TPM event log"_s.arg(pcrRanges(mismatched))};
     }
-    return {title, CheckStatus::Pass, u"PCRs %1 match the TPM event log"_s.arg(pcrRanges(pcrs))};
+    return {title, CheckStatus::Pass, u"PCRs %1"_s.arg(pcrRanges(pcrs))};
 }
 
 // The boot manager measured the kernel.
@@ -152,7 +152,7 @@ SubCheckResult kernelMeasured(const EventLogHelpers::Loaded &loaded, QJsonObject
         if (!kernel.isEmpty() && grubFiles.contains(kernel)) {
             raw.insert(u"kernelMeasuredBy"_s, u"grub"_s);
             raw.insert(u"measuredKernel"_s, kernel);
-            return {title, CheckStatus::Pass, u"Kernel measured by GRUB"_s};
+            return {title, CheckStatus::Pass, u"GRUB"_s};
         }
     }
 
@@ -166,13 +166,13 @@ SubCheckResult kernelMeasured(const EventLogHelpers::Loaded &loaded, QJsonObject
     // including the kernel (".linux"), into PCR 11.
     if (ukiSections && applications > 0) {
         raw.insert(u"kernelMeasuredBy"_s, u"systemd-stub"_s);
-        return {title, CheckStatus::Pass, u"Kernel measured by systemd-stub (UKI)"_s};
+        return {title, CheckStatus::Pass, u"systemd-stub (UKI)"_s};
     }
     // Other boot managers load the kernel as an EFI application, which the firmware (or shim)
     // measures into PCR 4 after the boot manager's own entry.
     if (applications >= 2) {
         raw.insert(u"kernelMeasuredBy"_s, u"efi-application"_s);
-        return {title, CheckStatus::Pass, u"Kernel measured as an EFI application"_s};
+        return {title, CheckStatus::Pass, u"As an EFI application"_s};
     }
     return {title, CheckStatus::Fail, u"No kernel measurement in the TPM event log"_s};
 }
@@ -191,6 +191,6 @@ CheckResult MeasuredBootCheck::evaluate(const HostSnapshot &snapshot) const
         logMatchesTpm(snapshot, loaded, result.raw),
         kernelMeasured(loaded, result.raw),
     };
-    CheckHelpers::finishFromSubChecks(result, result.subChecks[1].detail + u", event log matches the TPM"_s);
+    CheckHelpers::finishFromSubChecks(result);
     return result;
 }

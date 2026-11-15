@@ -126,18 +126,18 @@ private Q_SLOTS:
         QTest::addColumn<QString>("detail"); // substring of the detail line
 
         const QString tpm = u"tpm"_s;
-        QTest::newRow("tpm: 2.0") << tpm << Files{{HostPaths::TpmVersionMajor, "2\n"}} << QString() << u"pass"_s << u"TPM 2.0"_s;
+        QTest::newRow("tpm: 2.0") << tpm << Files{{HostPaths::TpmVersionMajor, "2\n"}} << QString() << u"pass"_s << QString();
         QTest::newRow("tpm: 1.2") << tpm << Files{{HostPaths::TpmVersionMajor, "1\n"}} << QString() << u"fail"_s << u"TPM 1.2"_s;
         QTest::newRow("tpm: none") << tpm << Files{} << QString() << u"fail"_s << u"No TPM"_s;
         QTest::newRow("tpm: old kernel") << tpm << Files{{u"/sys/class/tpm/tpm0/"_s, {}}} << QString() << u"unknown"_s << u"doesn't report"_s;
         QTest::newRow("tpm: garbage") << tpm << Files{{HostPaths::TpmVersionMajor, "x\n"}} << QString() << u"unknown"_s << u"Unexpected"_s;
 
         const QString sb = u"secure-boot"_s;
-        QTest::newRow("sb: on") << sb << withSecureBoot({}) << u"Enabled"_s << u"pass"_s << u"on"_s;
+        QTest::newRow("sb: on") << sb << withSecureBoot({}) << u"Enabled"_s << u"pass"_s << QString();
         QTest::newRow("sb: on, event log pending") << sb << withSecureBoot({}) << QString() << u"needs-admin"_s << u"Needs admin"_s;
         QTest::newRow("sb: off") << sb << withSecureBoot({}, 0) << QString() << u"fail"_s << u"Secure Boot is off"_s;
         QTest::newRow("sb: setup mode") << sb << withSecureBoot({}, 1, 1) << QString() << u"fail"_s << u"Setup Mode"_s;
-        QTest::newRow("sb: user mode") << sb << withSecureBoot({}) << u"Not in Setup Mode"_s << u"pass"_s << u"User Mode"_s;
+        QTest::newRow("sb: user mode") << sb << withSecureBoot({}) << u"Not in Setup Mode"_s << u"pass"_s << QString();
         QTest::newRow("sb: legacy boot") << sb << Files{} << QString() << u"fail"_s << u"Not booted in UEFI mode"_s;
         QTest::newRow("sb: no variable") << sb << Files{{u"/sys/firmware/efi/efivars/"_s, {}}} << u"Enabled"_s << u"unknown"_s << u"SecureBoot not found"_s;
         QTest::newRow("sb: truncated") << sb << Files{{HostPaths::SecureBoot, kEfiAttr}} << u"Enabled"_s << u"unknown"_s << u"Unexpected contents"_s;
@@ -147,7 +147,7 @@ private Q_SLOTS:
                                                      << u"Needs admin"_s;
 
         const QString iommu = u"iommu"_s;
-        QTest::newRow("iommu: on") << iommu << withIommu({}) << QString() << u"pass"_s << u"no passthrough"_s;
+        QTest::newRow("iommu: on") << iommu << withIommu({}) << QString() << u"pass"_s << QString();
         QTest::newRow("iommu: no chassis info") << iommu << withIommu({}) << QString() << u"pass"_s << QString();
         QTest::newRow("iommu: handheld") << iommu << Files{{HostPaths::ChassisType, "11\n"}} << QString() << u"not-required"_s << u"Handheld"_s;
         QTest::newRow("iommu: tablet") << iommu << Files{{HostPaths::ChassisType, "30\n"}} << QString() << u"not-required"_s << u"Tablet"_s;
@@ -157,9 +157,9 @@ private Q_SLOTS:
             Files files = withIommu({});
             files.insert(u"/sys/kernel/iommu_groups/1/type"_s, "identity\n");
             // One device in identity mode (e.g. an AMD APU's integrated GPU) isn't system-wide passthrough.
-            QTest::newRow("iommu: one identity group") << iommu << files << QString() << u"pass"_s << u"no passthrough"_s;
+            QTest::newRow("iommu: one identity group") << iommu << files << QString() << u"pass"_s << QString();
             QTest::newRow("iommu: one identity group, sub-check") << iommu << files << u"No passthrough (group types)"_s << u"pass"_s
-                                                                 << u"1 of 2 groups translate DMA; group 1 uses identity"_s;
+                                                                 << u"1 of 2 groups translates DMA; group 1 uses identity"_s;
             files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "identity\n");
             QTest::newRow("iommu: all groups identity") << iommu << files << QString() << u"fail"_s << u"All 2 groups use passthrough"_s;
             files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "DMA-FQ\n");
@@ -185,12 +185,12 @@ private Q_SLOTS:
         const QString lockdown = u"lockdown"_s;
         const QByteArray lsm("capability,yama,bpf");
         QTest::newRow("lockdown: integrity") << lockdown << Files{{HostPaths::Lockdown, "none [integrity] confidentiality\n"}} << QString() << u"pass"_s
-                                             << u"Lockdown mode: integrity"_s;
+                                             << QString();
         QTest::newRow("lockdown: integrity via cmdline")
             << lockdown << Files{{HostPaths::Lockdown, "none [integrity] confidentiality\n"}, {HostPaths::Cmdline, "lockdown=integrity"}} << QString()
-            << u"pass"_s << u"set via cmdline"_s;
+            << u"pass"_s << u"Set on the kernel command line"_s;
         QTest::newRow("lockdown: confidentiality") << lockdown << Files{{HostPaths::Lockdown, "none integrity [confidentiality]\n"}} << QString()
-                                                   << u"fail"_s << u"confidentiality"_s;
+                                                   << u"fail"_s << u"Lockdown is in confidentiality mode"_s;
         QTest::newRow("lockdown: none") << lockdown << Files{{HostPaths::Lockdown, "[none] integrity confidentiality\n"}} << QString() << u"fail"_s
                                         << u"off"_s;
         QTest::newRow("lockdown: LSM not active") << lockdown << Files{{HostPaths::Lsm, lsm}} << QString() << u"fail"_s << u"lockdown LSM isn't active"_s;
@@ -204,7 +204,7 @@ private Q_SLOTS:
         QTest::newRow("kexec: garbage") << kexec << Files{{HostPaths::KexecLoadDisabled, "2\n"}} << QString() << u"unknown"_s << u"Unexpected"_s;
 
         const QString bpf = u"bpf-lsm"_s;
-        QTest::newRow("bpf: active") << bpf << Files{{HostPaths::Lsm, lsm}} << QString() << u"pass"_s << u"bpf"_s;
+        QTest::newRow("bpf: active") << bpf << Files{{HostPaths::Lsm, lsm}} << QString() << u"pass"_s << QString();
         QTest::newRow("bpf: inactive") << bpf << Files{{HostPaths::Lsm, "capability,yama,apparmor"}} << QString() << u"fail"_s << u"apparmor"_s;
         QTest::newRow("bpf: exact token") << bpf << Files{{HostPaths::Lsm, "capability,bpfx"}} << QString() << u"fail"_s << QString();
         QTest::newRow("bpf: empty list") << bpf << Files{{HostPaths::Lsm, ""}} << QString() << u"fail"_s << u"none"_s;
@@ -212,8 +212,8 @@ private Q_SLOTS:
 
         const QString signing = u"kernel-signing"_s;
         const QString modules = u"No unsigned modules loaded"_s;
-        QTest::newRow("taint: clean") << signing << Files{{HostPaths::Tainted, "0\n"}} << modules << u"pass"_s << u"isn't tainted"_s;
-        QTest::newRow("taint: out-of-tree") << signing << Files{{HostPaths::Tainted, "4096\n"}} << modules << u"pass"_s << u"taint flags: O"_s;
+        QTest::newRow("taint: clean") << signing << Files{{HostPaths::Tainted, "0\n"}} << modules << u"pass"_s << QString();
+        QTest::newRow("taint: out-of-tree") << signing << Files{{HostPaths::Tainted, "4096\n"}} << modules << u"pass"_s << u"Taint flags: O"_s;
         QTest::newRow("taint: proprietary + out-of-tree") << signing << Files{{HostPaths::Tainted, "4097\n"}} << modules << u"pass"_s << u"P, O"_s;
         QTest::newRow("taint: unsigned") << signing << Files{{HostPaths::Tainted, "8192\n"}} << modules << u"fail"_s << u"taint flags: E"_s;
         QTest::newRow("taint: unsigned, parent") << signing << Files{{HostPaths::Tainted, "12288\n"}} << QString() << u"fail"_s << u"O, E"_s;
@@ -232,9 +232,9 @@ private Q_SLOTS:
         };
         QTest::newRow("mok: none") << signing << Files{} << moks << u"pass"_s << u"No MOKs enrolled"_s;
         QTest::newRow("mok: empty variable") << signing << mok({}) << moks << u"pass"_s << u"No MOKs enrolled"_s;
-        QTest::newRow("mok: shim vendor cert") << signing << mok(known) << moks << u"pass"_s << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("mok: shim vendor cert") << signing << mok(known) << moks << u"pass"_s << u"Canonical Ltd. Master Certificate Authority"_s;
         QTest::newRow("mok: same vendor twice") << signing << mok(known + known) << moks << u"pass"_s
-                                                << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+                                                << u"Canonical Ltd. Master Certificate Authority"_s;
         QTest::newRow("mok: unknown key") << signing << mok(unknown + known) << moks << u"fail"_s << u"Unknown key: CN=EACheck test MOK, O=EACheck tests"_s;
         QTest::newRow("mok: unknown key, parent") << signing << mok(unknown + known) << QString() << u"fail"_s << u"Unknown key: CN=EACheck test MOK"_s;
         QTest::newRow("mok: hash") << signing << mok(hash) << moks << u"fail"_s << u"Unknown key: SHA-256 hash 6161616161616161"_s;
@@ -270,8 +270,8 @@ private Q_SLOTS:
         const QString measured = u"measured-boot"_s;
         const QString matches = u"Event log matches the TPM"_s;
         const QString kernel = u"Boot manager measured the kernel"_s;
-        QTest::newRow("measured: grub") << measured << withEventLog(grub) << QString() << u"pass"_s << u"Kernel measured by GRUB, event log matches the TPM"_s;
-        QTest::newRow("measured: pcrs match") << measured << withEventLog(grub) << matches << u"pass"_s << u"PCRs 4, 7–9 match"_s;
+        QTest::newRow("measured: grub") << measured << withEventLog(grub) << kernel << u"pass"_s << u"GRUB"_s;
+        QTest::newRow("measured: pcrs match") << measured << withEventLog(grub) << matches << u"pass"_s << u"PCRs 4, 7–9"_s;
         {
             Files files = withEventLog(grub);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, QByteArray(64, '0') + '\n');
@@ -295,7 +295,7 @@ private Q_SLOTS:
             Files files = withEventLog(grub);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator"}));
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s, extended(9, {"os-separator", "nvpcr-separator"}));
-            QTest::newRow("measured: systemd separators") << measured << files << matches << u"pass"_s << u"PCRs 4, 7–9 match"_s;
+            QTest::newRow("measured: systemd separators") << measured << files << matches << u"pass"_s << u"PCRs 4, 7–9"_s;
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator", "something-else"}));
             QTest::newRow("measured: more than the separators") << measured << files << matches << u"fail"_s << u"PCR 4 doesn't match"_s;
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"something-else"}));
@@ -320,11 +320,11 @@ private Q_SLOTS:
                                       {11, Ipl, TcgTestData::utf16(u".osrel"_s)}};
             Files files = withEventLog(events);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/11"_s, QByteArray(64, 'A') + '\n');
-            QTest::newRow("measured: uki") << measured << files << QString() << u"pass"_s << u"Kernel measured by systemd-stub (UKI)"_s;
+            QTest::newRow("measured: uki") << measured << files << kernel << u"pass"_s << u"systemd-stub (UKI)"_s;
         }
         QTest::newRow("measured: efi applications") << measured
                                                     << withEventLog({{4, EfiBootServicesApplication, "loader.efi"}, {4, EfiBootServicesApplication, "vmlinuz"}})
-                                                    << kernel << u"pass"_s << u"as an EFI application"_s;
+                                                    << kernel << u"pass"_s << u"As an EFI application"_s;
         QTest::newRow("measured: one application") << measured << withEventLog({{4, EfiBootServicesApplication, "loader.efi"}}) << kernel << u"fail"_s
                                                    << u"No kernel measurement"_s;
         QTest::newRow("measured: nothing measured") << measured << withEventLog({{0, NoAction, "info"}}) << matches << u"fail"_s << u"no boot measurements"_s;
@@ -342,7 +342,7 @@ private Q_SLOTS:
         const QString signing = u"kernel-signing"_s;
         const QString kernelSigned = u"Kernel signed by a well-known key"_s;
         QTest::newRow("authorities: well-known") << sb << withEventLog(grub) << usedToBoot << u"pass"_s
-                                                 << u"Well-known: Canonical Ltd. Master Certificate Authority"_s;
+                                                 << u"Canonical Ltd. Master Certificate Authority"_s;
         QTest::newRow("authorities: unknown kernel key") << sb << withEventLog(grubBoot(known, unknown)) << usedToBoot << u"fail"_s
                                                          << u"Unknown key: CN=EACheck test MOK, O=EACheck tests"_s;
         QTest::newRow("authorities: unknown kernel key, signing") << signing << withEventLog(grubBoot(known, unknown)) << kernelSigned << u"fail"_s
