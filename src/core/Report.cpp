@@ -161,7 +161,7 @@ QStringList Report::accessProblems() const
 QString Report::toText() const
 {
     QString text;
-    text += u"EACheck %1 — %2\n"_s.arg(QStringLiteral(EACHECK_VERSION_STRING), verdictLabel(verdict()));
+    text += u"EACheck %1: %2\n"_s.arg(QStringLiteral(EACHECK_VERSION_STRING), verdictLabel(verdict()));
     text += u"Generated %1 · requirements as of %2\n"_s.arg(generated.toUTC().toString(Qt::ISODate), requirementsAsOf());
     for (QString problem : accessProblems()) {
         problem[0] = problem[0].toUpper();
@@ -171,13 +171,13 @@ QString Report::toText() const
     for (const CheckResult &r : results) {
         text += u"[%1] %2"_s.arg(statusLabel(r.status), r.title);
         if (!r.detail.isEmpty()) {
-            text += u" — "_s + r.detail;
+            text += u": "_s + r.detail;
         }
         text += u'\n';
         for (const SubCheckResult &s : r.subChecks) {
             text += u"    [%1] %2"_s.arg(statusLabel(s.status), s.title);
             if (!s.detail.isEmpty()) {
-                text += u" — "_s + s.detail;
+                text += u": "_s + s.detail;
             }
             text += u'\n';
         }

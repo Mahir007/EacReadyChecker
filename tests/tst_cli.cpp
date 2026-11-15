@@ -61,7 +61,7 @@ private Q_SLOTS:
         QCOMPARE(process.exitCode, 2);
         const QString out = QString::fromUtf8(process.out);
         QVERIFY(out.contains(u"Not ready"_s));
-        QVERIFY(out.contains(u"[Fail] TPM 2.0 — No TPM found"_s));
+        QVERIFY(out.contains(u"[Fail] TPM 2.0: No TPM found"_s));
         QVERIFY(out.contains(u"[Pass] BPF LSM"_s));
     }
 
