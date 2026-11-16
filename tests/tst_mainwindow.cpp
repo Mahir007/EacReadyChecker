@@ -307,15 +307,26 @@ private Q_SLOTS:
         QPushButton *refresh = button(window, u"Refresh"_s);
         QTRY_VERIFY(refresh->isEnabled());
 
+        // The About box is open while the desktop switches. Its links follow.
+        button(window, u"About"_s)->click();
+        auto *about = window.findChild<QMessageBox *>();
+        QVERIFY(about);
+        QTRY_VERIFY(about->isVisible());
+        auto *aboutText = about->findChild<QLabel *>(u"qt_msgbox_label"_s);
+        QVERIFY(aboutText);
+
         applyColorScheme(Qt::ColorScheme::Dark);
         QVERIFY(isDarkPalette(QApplication::palette()));
         QTRY_VERIFY(isDarkPalette(window.palette()));
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
         screenshot(window, u"mainwindow-gnome-dark"_s);
+        QTRY_VERIFY(hasColour(aboutText->grab().toImage(), QApplication::palette().color(QPalette::Link)));
 
         applyColorScheme(Qt::ColorScheme::Light);
         QCOMPARE(QApplication::palette().color(QPalette::Window), lightWindow);
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
+        QTRY_VERIFY(hasColour(aboutText->grab().toImage(), QApplication::palette().color(QPalette::Link)));
+        about->close();
     }
 
     void gtkPaletteGetsListColours()
@@ -437,6 +448,18 @@ private Q_SLOTS:
     }
 
 private:
+    static bool hasColour(const QImage &image, const QColor &colour)
+    {
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y).rgb() == colour.rgb()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Breeze Dark's main colours.
     static QPalette breezeDarkPalette()
     {

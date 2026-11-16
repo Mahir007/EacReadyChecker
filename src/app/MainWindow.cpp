@@ -64,6 +64,25 @@ QWidget *separator(QWidget *parent)
 {
     return new Separator(parent);
 }
+
+// Qt picks a link's colour when it parses the text, so after a switch between light and dark the
+// links would keep the old one. Parse it again. setText() skips text it already has.
+class AboutBox : public QMessageBox
+{
+public:
+    using QMessageBox::QMessageBox;
+
+protected:
+    void changeEvent(QEvent *event) override
+    {
+        if (event->type() == QEvent::PaletteChange && !text().isEmpty()) {
+            const QString current = text();
+            setText(QString());
+            setText(current);
+        }
+        QMessageBox::changeEvent(event);
+    }
+};
 } // namespace
 
 MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
@@ -288,7 +307,7 @@ void MainWindow::copyReport(bool json)
 void MainWindow::showAbout()
 {
     // Not QMessageBox::about(): that blocks in its own event loop, so the window couldn't be tested.
-    auto *box = new QMessageBox(this);
+    auto *box = new AboutBox(this);
     box->setAttribute(Qt::WA_DeleteOnClose);
     box->setAttribute(Qt::WA_WindowPropagation); // the window's colours
     box->setWindowTitle(u"About %1"_s.arg(AppInfo::displayName()));
