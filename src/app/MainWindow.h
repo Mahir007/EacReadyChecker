@@ -25,6 +25,7 @@ protected:
     void changeEvent(QEvent *event) override;
 
 private:
+    void updateColours();
     void updateIcons();
     void updateMargins();
     void updateScrollBar();

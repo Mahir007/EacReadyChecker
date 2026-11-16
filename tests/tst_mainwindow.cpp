@@ -264,13 +264,18 @@ private Q_SLOTS:
 
     void gtkPaletteGetsListColours()
     {
-        // Qt's GTK plugin gives Base the window's colour, so the list wouldn't stand apart. The test
-        // sets such a palette as the app's, which stands in for the platform's until the app resets it.
+        // Qt's GTK plugin gives Base the window's colour, and dims text in an unfocused window except
+        // in labels, which get a palette of their own. The test sets such palettes on the app.
+        qputenv("XDG_CURRENT_DESKTOP", "GNOME");
         const QPalette platform = QApplication::palette();
-        const auto setOneColour = [](QPalette palette) {
-            palette.setColor(QPalette::Base, palette.color(QPalette::Window));
-            QApplication::setPalette(palette);
-        };
+        QPalette gtk = platform;
+        gtk.setColor(QPalette::Base, gtk.color(QPalette::Window));
+        gtk.setColor(QPalette::Inactive, QPalette::WindowText, Qt::gray);
+        QApplication::setPalette(gtk);
+        const QColor text = gtk.color(QPalette::Active, QPalette::WindowText);
+        QPalette gtkLabel = gtk;
+        gtkLabel.setColor(QPalette::Inactive, QPalette::WindowText, text);
+        QApplication::setPalette(gtkLabel, "QLabel");
 
         MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
         window.show();
@@ -278,30 +283,38 @@ private Q_SLOTS:
         window.runChecks(false);
         QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
 
-        // Ubuntu's dark style: a dark GTK theme, with the same colour for both.
-        setOneColour(breezeDarkPalette());
-        applyColorScheme(Qt::ColorScheme::Dark);
-        QVERIFY(isDarkPalette(QApplication::palette()));
-        QVERIFY(QApplication::palette().color(QPalette::Base).lightness() < QApplication::palette().color(QPalette::Window).lightness());
-
-        // Back to the platform's palette, which has its own list colour.
-        applyColorScheme(Qt::ColorScheme::Light);
-        QCOMPARE(QApplication::palette().color(QPalette::Base), platform.color(QPalette::Base));
-        QCOMPARE(QApplication::palette().color(QPalette::Window), platform.color(QPalette::Window));
-
-        // GNOME's light style: the list is white and the window around it is libadwaita's sidebar grey.
-        setOneColour(platform);
-        applyColorScheme(Qt::ColorScheme::Light);
-        QCOMPARE(QApplication::palette().color(QPalette::Base), QColor(0xff, 0xff, 0xff));
-        QCOMPARE(QApplication::palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
-        QTRY_COMPARE(window.palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
+        // GNOME's light style: libadwaita's sidebar grey around a white list, and no dimmed text.
+        QCOMPARE(window.palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
+        QCOMPARE(window.palette().color(QPalette::Base), QColor(0xff, 0xff, 0xff));
+        QCOMPARE(window.findChild<QToolButton *>()->palette().color(QPalette::Inactive, QPalette::WindowText), text);
         screenshot(window, u"mainwindow-gnome-light"_s);
+        // Set on the window, not the app, which would replace the plugin's palette for labels.
+        QCOMPARE(QApplication::palette().color(QPalette::Window), gtk.color(QPalette::Window));
+        QCOMPARE(QApplication::palette("QLabel").color(QPalette::Inactive, QPalette::WindowText), text);
 
-        // Switching to dark and back leaves the platform's palette, as it no longer has one colour.
+        button(window, u"About"_s)->click();
+        auto *about = window.findChild<QMessageBox *>();
+        QVERIFY(about);
+        QTRY_VERIFY(about->isVisible());
+        QCOMPARE(about->palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
+        about->close();
+
+        // The dark style uses the app's dark palette, and the window's own colours go.
         applyColorScheme(Qt::ColorScheme::Dark);
-        QVERIFY(isDarkPalette(QApplication::palette()));
+        QTRY_VERIFY(isDarkPalette(window.palette()));
+        QCOMPARE(window.palette().resolveMask(), 0);
+        applyColorScheme(Qt::ColorScheme::Light);
+        QTRY_COMPARE(window.palette().color(QPalette::Window), platform.color(QPalette::Window));
+
+        // A dark GTK theme gives lists the window's colour too, so the dark palette replaces it.
+        QPalette gtkDark = breezeDarkPalette();
+        gtkDark.setColor(QPalette::Base, gtkDark.color(QPalette::Window));
+        QApplication::setPalette(gtkDark);
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QVERIFY(QApplication::palette().color(QPalette::Base).lightness() < QApplication::palette().color(QPalette::Window).lightness());
         applyColorScheme(Qt::ColorScheme::Light);
         QCOMPARE(QApplication::palette().color(QPalette::Window), platform.color(QPalette::Window));
+        qunsetenv("XDG_CURRENT_DESKTOP");
     }
 
     void scrollBar()

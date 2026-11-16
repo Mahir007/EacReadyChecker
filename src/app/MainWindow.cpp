@@ -2,6 +2,7 @@
 #include "MainWindow.h"
 
 #include "CheckRow.h"
+#include "ColorScheme.h"
 #include "Icons.h"
 #include "SummaryBanner.h"
 #include "checks/AllChecks.h"
@@ -51,6 +52,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_scroll(new QScrollArea(this))
     , m_copiedReset(new QTimer(this))
 {
+    updateColours();
     syncIconThemes();
     updateIcons();
     setWindowTitle(u"EACheck"_s);
@@ -130,6 +132,9 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
 
 void MainWindow::changeEvent(QEvent *event)
 {
+    if (event->type() == QEvent::PaletteChange) {
+        updateColours();
+    }
     if (affectsIcons(event)) {
         syncIconThemes();
         updateIcons();
@@ -139,6 +144,16 @@ void MainWindow::changeEvent(QEvent *event)
         updateMargins();
     }
     QWidget::changeEvent(event);
+}
+
+void MainWindow::updateColours()
+{
+    const QPalette colours = windowColours(QGuiApplication::palette());
+    // Setting them sends another PaletteChange, which then finds them already set.
+    if (colours.resolveMask() == palette().resolveMask() && colours.resolve(palette()) == palette()) {
+        return;
+    }
+    setPalette(colours);
 }
 
 void MainWindow::updateIcons()
@@ -238,6 +253,7 @@ void MainWindow::showAbout()
     // Not QMessageBox::about(): that blocks in its own event loop, so the window couldn't be tested.
     auto *box = new QMessageBox(this);
     box->setAttribute(Qt::WA_DeleteOnClose);
+    box->setAttribute(Qt::WA_WindowPropagation); // the window's colours
     box->setWindowTitle(u"About %1"_s.arg(AppInfo::displayName()));
     box->setIconPixmap(appIcon().pixmap(QSize(64, 64), devicePixelRatio()));
     box->setTextFormat(Qt::RichText);
