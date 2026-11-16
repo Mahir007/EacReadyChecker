@@ -244,8 +244,8 @@ private Q_SLOTS:
 
     void gnomeThemesWithoutBreeze()
     {
-        // A native build on GNOME or Ubuntu: the verdict and status icons are the bundled ones, not
-        // the theme's.
+        // A native build on GNOME or Ubuntu: the verdict and status icons are the bundled ones, and
+        // the rows' arrows the style's, not the theme's.
         QFETCH(QString, theme);
         const QString previous = QIcon::themeName();
         const QStringList paths = QIcon::themeSearchPaths();
@@ -256,8 +256,42 @@ private Q_SLOTS:
         QVERIFY(verdictIcon(Verdict::NotReady).name().isEmpty());
         QVERIFY(!verdictIcon(Verdict::NotReady).pixmap(48).isNull());
         QVERIFY(statusIcon(CheckStatus::Fail).name().isEmpty());
+        CheckRow row(u"IOMMU"_s);
+        QCOMPARE(row.findChild<QToolButton *>()->arrowType(), Qt::RightArrow);
         QIcon::setThemeSearchPaths(paths);
         QIcon::setThemeName(previous);
+    }
+
+    void breezeLinesAndArrows()
+    {
+        // With every style, the separators and the rows' arrows look as Breeze draws them: a 1 px
+        // line, and chevrons rather than Fusion's triangles.
+        const QString style = QApplication::style()->name();
+        QApplication::setStyle(u"Fusion"_s);
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+
+        const QList<QWidget *> lines = window.findChildren<QWidget *>(u"separator"_s);
+        QCOMPARE(lines.size(), 2);
+        const QImage image = window.grab().toImage();
+        const QColor windowColour = window.palette().color(QPalette::Window);
+        const QColor text = window.palette().color(QPalette::WindowText);
+        for (const QWidget *line : lines) {
+            QCOMPARE(line->height(), 1);
+            const QColor drawn = image.pixelColor(line->geometry().center());
+            QVERIFY(qAbs(drawn.red() - (windowColour.red() * 4 + text.red()) / 5) <= 1);
+        }
+
+        QToolButton *arrow = window.findChildren<CheckRow *>().at(4)->findChild<QToolButton *>();
+        QCOMPARE(arrow->arrowType(), Qt::NoArrow);
+        QCOMPARE(arrow->icon().name(), u"arrow-right"_s);
+        arrow->click();
+        QCOMPARE(arrow->icon().name(), u"arrow-down"_s);
+        screenshot(window, u"mainwindow-breeze-lines"_s);
+        QApplication::setStyle(style);
     }
 
     void desktopAsksForDark()

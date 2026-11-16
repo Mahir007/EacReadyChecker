@@ -99,7 +99,6 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
 {
     // Not checkable: Breeze draws a checked tool button as pressed, which boxes the arrow.
     m_expander->setAutoRaise(true);
-    m_expander->setArrowType(Qt::RightArrow);
     m_expander->setAccessibleName(u"Show details"_s);
     // Keep the arrow's column when hidden so titles line up across rows.
     QSizePolicy policy = m_expander->sizePolicy();
@@ -215,6 +214,7 @@ void CheckRow::updateIcons()
 {
     const int size = iconSize(this);
     const QIcon icon = m_status ? statusIcon(*m_status) : themeIcon({u"view-refresh"_s});
+    updateExpander();
     m_icon->setFixedSize(size, size);
     m_icon->setIcon(icon);
     const int subSize = size * 2 / 3;
@@ -227,6 +227,23 @@ void CheckRow::updateIcons()
     const QMargins margins = m_header->layout()->contentsMargins();
     const int indent = margins.left() + m_expander->sizeHint().width() + kSpacing + size + kSpacing;
     m_subLayout->setContentsMargins(indent, 0, margins.right(), margins.bottom());
+}
+
+void CheckRow::updateExpander()
+{
+    // Breeze's chevrons, which Breeze also draws on KDE, so the arrows look the same everywhere.
+    // Fusion's own are small triangles. Adwaita's and Yaru's symbolic icons would be dark on dark,
+    // so with those (Breeze isn't installed) it's the style's arrow.
+    const QString name = m_expanded ? u"arrow-down"_s : u"arrow-right"_s;
+    if (!isGnomeIconTheme(QIcon::themeName()) && QIcon::hasThemeIcon(name)) {
+        const int size = style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, this);
+        m_expander->setArrowType(Qt::NoArrow);
+        m_expander->setIconSize(QSize(size, size));
+        m_expander->setIcon(QIcon::fromTheme(name));
+    } else {
+        m_expander->setIcon(QIcon());
+        m_expander->setArrowType(m_expanded ? Qt::DownArrow : Qt::RightArrow);
+    }
 }
 
 void CheckRow::setExpandable(bool expandable)
@@ -246,7 +263,7 @@ void CheckRow::setExpandable(bool expandable)
 void CheckRow::setExpanded(bool expanded)
 {
     m_expanded = expanded;
-    m_expander->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
+    updateExpander();
     m_expander->setAccessibleName(expanded ? u"Hide details"_s : u"Show details"_s);
     const bool show = expanded && m_subLayout->count() > 0;
     if (show == m_subChecks->isVisibleTo(this)) {

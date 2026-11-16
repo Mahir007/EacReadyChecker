@@ -35,6 +35,7 @@ protected:
 
 private:
     void updateIcons();
+    void updateExpander();
     void setExpandable(bool expandable);
     void setExpanded(bool expanded);
     void clearSubChecks();

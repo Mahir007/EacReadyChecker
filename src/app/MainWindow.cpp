@@ -16,6 +16,7 @@
 #include <QKeySequence>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -30,12 +31,38 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-QFrame *separator(QWidget *parent)
+// A 1 px line in Breeze's separator colour: the window colour with a fifth of the text colour. On
+// KDE it's the line Breeze draws. Fusion's is two lines, a dark and a light one.
+class Separator : public QWidget
 {
-    auto *line = new QFrame(parent);
-    line->setFrameShape(QFrame::HLine);
-    line->setFrameShadow(QFrame::Sunken);
-    return line;
+public:
+    explicit Separator(QWidget *parent)
+        : QWidget(parent)
+    {
+        setObjectName(u"separator"_s);
+        setFixedHeight(1);
+    }
+
+    static QColor colour(const QPalette &palette)
+    {
+        const QColor window = palette.color(QPalette::Window);
+        const QColor text = palette.color(QPalette::WindowText);
+        constexpr float textShare = 0.2F;
+        return QColor::fromRgbF(window.redF() + (text.redF() - window.redF()) * textShare,
+                                window.greenF() + (text.greenF() - window.greenF()) * textShare,
+                                window.blueF() + (text.blueF() - window.blueF()) * textShare);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter(this).fillRect(rect(), colour(palette()));
+    }
+};
+
+QWidget *separator(QWidget *parent)
+{
+    return new Separator(parent);
 }
 } // namespace
 
