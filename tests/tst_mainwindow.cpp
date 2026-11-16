@@ -262,6 +262,48 @@ private Q_SLOTS:
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
     }
 
+    void gtkPaletteGetsListColours()
+    {
+        // Qt's GTK plugin gives Base the window's colour, so the list wouldn't stand apart. The test
+        // sets such a palette as the app's, which stands in for the platform's until the app resets it.
+        const QPalette platform = QApplication::palette();
+        const auto setOneColour = [](QPalette palette) {
+            palette.setColor(QPalette::Base, palette.color(QPalette::Window));
+            QApplication::setPalette(palette);
+        };
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+
+        // Ubuntu's dark style: a dark GTK theme, with the same colour for both.
+        setOneColour(breezeDarkPalette());
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        QVERIFY(QApplication::palette().color(QPalette::Base).lightness() < QApplication::palette().color(QPalette::Window).lightness());
+
+        // Back to the platform's palette, which has its own list colour.
+        applyColorScheme(Qt::ColorScheme::Light);
+        QCOMPARE(QApplication::palette().color(QPalette::Base), platform.color(QPalette::Base));
+        QCOMPARE(QApplication::palette().color(QPalette::Window), platform.color(QPalette::Window));
+
+        // GNOME's light style: the list is white and the window around it is libadwaita's sidebar grey.
+        setOneColour(platform);
+        applyColorScheme(Qt::ColorScheme::Light);
+        QCOMPARE(QApplication::palette().color(QPalette::Base), QColor(0xff, 0xff, 0xff));
+        QCOMPARE(QApplication::palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
+        QTRY_COMPARE(window.palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
+        screenshot(window, u"mainwindow-gnome-light"_s);
+
+        // Switching to dark and back leaves the platform's palette, as it no longer has one colour.
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        applyColorScheme(Qt::ColorScheme::Light);
+        QCOMPARE(QApplication::palette().color(QPalette::Window), platform.color(QPalette::Window));
+    }
+
     void scrollBar()
     {
         // Fusion's own scroll bar is out of place on GNOME. Other styles keep theirs.

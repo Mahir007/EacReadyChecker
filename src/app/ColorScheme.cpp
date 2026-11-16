@@ -24,7 +24,13 @@ constexpr auto AppearanceNamespace = "org.freedesktop.appearance"_L1;
 constexpr auto ColorSchemeKey = "color-scheme"_L1;
 constexpr int PortalTimeoutMs = 1000;
 
-bool s_darkPaletteSet = false;
+// The palette the app has set over the platform's, if any.
+enum class OwnPalette {
+    None,
+    Dark,
+    Light,
+};
+OwnPalette s_ownPalette = OwnPalette::None;
 
 // The portal's values: 0 no preference, 1 prefer dark, 2 prefer light.
 Qt::ColorScheme schemeFromPortal(uint value)
@@ -98,18 +104,38 @@ QPalette darkPalette()
     }
     return p;
 }
+
+// libadwaita's sidebar colour for the window and its view colour for the list, the pair GNOME's
+// Files uses. Its window colour, #fafafb, is too close to white to tell from the list or the title
+// bar. The other colours stay the platform's.
+QPalette lightViewColours()
+{
+    QPalette p;
+    p.setColor(QPalette::Window, QColor(0xeb, 0xeb, 0xed));
+    p.setColor(QPalette::Base, QColor(0xff, 0xff, 0xff));
+    return p;
+}
 } // namespace
 
 void applyColorScheme(Qt::ColorScheme scheme)
 {
-    if (scheme == Qt::ColorScheme::Dark) {
-        if (!isDarkPalette(QGuiApplication::palette())) {
-            QApplication::setPalette(darkPalette());
-            s_darkPaletteSet = true;
-        }
-    } else if (s_darkPaletteSet) {
-        QApplication::setPalette(QPalette());
-        s_darkPaletteSet = false;
+    const OwnPalette wanted = scheme == Qt::ColorScheme::Dark ? OwnPalette::Dark : OwnPalette::Light;
+    if (s_ownPalette == wanted) {
+        return;
+    }
+    if (s_ownPalette != OwnPalette::None) {
+        QApplication::setPalette(QPalette()); // back to the platform's
+        s_ownPalette = OwnPalette::None;
+    }
+    const QPalette platform = QGuiApplication::palette();
+    // Qt's GTK plugin gives Base, the colour for lists, the window's colour.
+    const bool oneColour = platform.color(QPalette::Base) == platform.color(QPalette::Window);
+    if (wanted == OwnPalette::Dark && (oneColour || !isDarkPalette(platform))) {
+        QApplication::setPalette(darkPalette());
+        s_ownPalette = wanted;
+    } else if (wanted == OwnPalette::Light && oneColour) {
+        QApplication::setPalette(lightViewColours());
+        s_ownPalette = wanted;
     }
 }
 
