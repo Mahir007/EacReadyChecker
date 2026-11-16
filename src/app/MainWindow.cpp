@@ -67,6 +67,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     for (const auto &check : m_runner->checks()) {
         auto *row = new CheckRow(check->title(), m_list);
         m_rows.append(row);
+        connect(row, &CheckRow::heightChanged, this, &MainWindow::layOutList);
         listLayout->addWidget(row);
     }
     listLayout->addStretch(1);
@@ -154,6 +155,15 @@ void MainWindow::updateColours()
         return;
     }
     setPalette(colours);
+}
+
+void MainWindow::layOutList()
+{
+    // Before the next paint, so no frame shows the rows at their old positions. The scroll area
+    // resizes the list when it gets a LayoutRequest.
+    m_list->layout()->activate();
+    QEvent request(QEvent::LayoutRequest);
+    QCoreApplication::sendEvent(m_scroll, &request);
 }
 
 void MainWindow::updateIcons()

@@ -317,6 +317,36 @@ private Q_SLOTS:
         qunsetenv("XDG_CURRENT_DESKTOP");
     }
 
+    void rowsLayOutAtOnce()
+    {
+        // A row that expands or collapses is laid out with the list before anything is drawn.
+        // Otherwise a collapsed row keeps its height for a frame, its text stretched into it.
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        // Short, so that expanding makes the list scroll.
+        window.resize(window.width(), 300);
+        QTRY_VERIFY(window.height() == 300);
+
+        const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
+        QLabel *iommuTitle = rows[4]->findChildren<QLabel *>().constFirst();
+        const auto geometry = [&] {
+            QList<QRect> rects{rows[0]->parentWidget()->geometry(), iommuTitle->geometry()};
+            for (const CheckRow *row : rows) {
+                rects.append(row->geometry());
+            }
+            return rects;
+        };
+        for (int i = 0; i < 2; ++i) {
+            QTest::mouseClick(iommuTitle, Qt::LeftButton);
+            const QList<QRect> atClick = geometry();
+            QTest::qWait(50);
+            QCOMPARE(geometry(), atClick);
+        }
+    }
+
     void scrollBar()
     {
         // Fusion's own scroll bar is out of place on GNOME. Other styles keep theirs.

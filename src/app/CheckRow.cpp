@@ -248,5 +248,14 @@ void CheckRow::setExpanded(bool expanded)
     m_expanded = expanded;
     m_expander->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
     m_expander->setAccessibleName(expanded ? u"Hide details"_s : u"Show details"_s);
-    m_subChecks->setVisible(expanded && m_subLayout->count() > 0);
+    const bool show = expanded && m_subLayout->count() > 0;
+    if (show == m_subChecks->isVisibleTo(this)) {
+        return;
+    }
+    m_subChecks->setVisible(show);
+    // Qt would lay out the row, then the list, painting in between: for a frame, a collapsed row
+    // keeps its height with the title and detail stretched into it.
+    layout()->activate();
+    updateGeometry();
+    Q_EMIT heightChanged();
 }

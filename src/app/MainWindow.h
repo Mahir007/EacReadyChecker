@@ -26,6 +26,7 @@ protected:
 
 private:
     void updateColours();
+    void layOutList();
     void updateIcons();
     void updateMargins();
     void updateScrollBar();

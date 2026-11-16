@@ -26,6 +26,10 @@ public:
     void setPending();
     void setResult(const CheckResult &result);
 
+Q_SIGNALS:
+    // The row's sub-checks were shown or hidden, so the list around it needs laying out again.
+    void heightChanged();
+
 protected:
     void changeEvent(QEvent *event) override;
 
