@@ -222,20 +222,42 @@ private Q_SLOTS:
         QIcon::setThemeName(theme);
     }
 
-    void adwaitaWithoutBreeze()
+    void yaruIsReplaced()
     {
-        // A native build on GNOME: the verdict and status icons are the bundled ones, not Adwaita's.
+        // Ubuntu's Yaru, in any accent colour, is replaced by Breeze like Adwaita.
         const QString theme = QIcon::themeName();
+        const QString breeze = isDarkPalette(QApplication::palette()) ? u"breeze-dark"_s : u"breeze"_s;
+        for (const QString &yaru : {u"Yaru"_s, u"Yaru-blue-dark"_s}) {
+            QIcon::setThemeName(yaru);
+            syncIconThemes();
+            QCOMPARE(QIcon::themeName(), breeze);
+        }
+        QIcon::setThemeName(theme);
+    }
+
+    void gnomeThemesWithoutBreeze_data()
+    {
+        QTest::addColumn<QString>("theme");
+        QTest::newRow("Adwaita") << u"Adwaita"_s;
+        QTest::newRow("Yaru") << u"Yaru-blue"_s;
+    }
+
+    void gnomeThemesWithoutBreeze()
+    {
+        // A native build on GNOME or Ubuntu: the verdict and status icons are the bundled ones, not
+        // the theme's.
+        QFETCH(QString, theme);
+        const QString previous = QIcon::themeName();
         const QStringList paths = QIcon::themeSearchPaths();
         QIcon::setThemeSearchPaths({});
-        QIcon::setThemeName(u"Adwaita"_s);
+        QIcon::setThemeName(theme);
         syncIconThemes();
-        QCOMPARE(QIcon::themeName(), u"Adwaita"_s);
+        QCOMPARE(QIcon::themeName(), theme);
         QVERIFY(verdictIcon(Verdict::NotReady).name().isEmpty());
         QVERIFY(!verdictIcon(Verdict::NotReady).pixmap(48).isNull());
         QVERIFY(statusIcon(CheckStatus::Fail).name().isEmpty());
         QIcon::setThemeSearchPaths(paths);
-        QIcon::setThemeName(theme);
+        QIcon::setThemeName(previous);
     }
 
     void desktopAsksForDark()
