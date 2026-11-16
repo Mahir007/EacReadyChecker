@@ -13,6 +13,7 @@ class IconWidget;
 class QLabel;
 class QToolButton;
 class QVBoxLayout;
+class Revealer;
 
 // One requirement: status icon, title and, when it adds something, a detail line. Rows with
 // sub-checks expand to show them, by clicking the row or its arrow.
@@ -34,10 +35,11 @@ protected:
     void changeEvent(QEvent *event) override;
 
 private:
-    void updateIcons();
+    enum class IconChange { AtOnce, Fade };
+    void updateIcons(IconChange change = IconChange::AtOnce);
     void updateExpander();
     void setExpandable(bool expandable);
-    void setExpanded(bool expanded);
+    void setExpanded(bool expanded, bool animate);
     void clearSubChecks();
 
     CheckRowHeader *m_header;
@@ -47,6 +49,7 @@ private:
     QLabel *m_detail;
     QWidget *m_subChecks;
     QVBoxLayout *m_subLayout;
+    Revealer *m_reveal;
     bool m_expanded = false;
     std::optional<CheckStatus> m_status; // empty while checking
     QList<std::pair<IconWidget *, CheckStatus>> m_subIcons;

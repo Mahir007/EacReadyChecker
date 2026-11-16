@@ -3,6 +3,8 @@
 
 #include "IconWidget.h"
 #include "Icons.h"
+#include "Motion.h"
+#include "Revealer.h"
 
 #include <QGridLayout>
 #include <QHBoxLayout>
@@ -14,23 +16,33 @@
 #include <QStyleOptionViewItem>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QVariantAnimation>
 
+#include <cmath>
 #include <functional>
 
 using namespace Qt::StringLiterals;
 
 // The part of a row above its sub-checks. While the row can expand, a click anywhere on it
-// toggles them, and it shows a hover like an item view's.
+// toggles them, and it shows a hover like an item view's. The hover fades in and out.
 class CheckRowHeader : public QWidget
 {
 public:
-    using QWidget::QWidget;
+    explicit CheckRowHeader(QWidget *parent)
+        : QWidget(parent)
+        , m_hover(new QVariantAnimation(this))
+    {
+        connect(m_hover, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            m_level = value.toReal();
+            update();
+        });
+    }
 
     std::function<void()> toggle; // empty while the row can't expand
 
 protected:
-    void enterEvent(QEnterEvent *) override { update(); }
-    void leaveEvent(QEvent *) override { update(); }
+    void enterEvent(QEnterEvent *) override { fadeHover(1); }
+    void leaveEvent(QEvent *) override { fadeHover(0); }
 
     void mousePressEvent(QMouseEvent *event) override
     {
@@ -47,10 +59,11 @@ protected:
 
     void paintEvent(QPaintEvent *) override
     {
-        if (!toggle || !underMouse()) {
+        if (!toggle || m_level == 0) {
             return;
         }
         QPainter painter(this);
+        painter.setOpacity(m_level);
         if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) == 0) {
             // Fusion draws no hover in item views. Shade the row like GNOME's lists do.
             QColor colour = palette().color(foregroundRole());
@@ -66,6 +79,26 @@ protected:
         option.state |= QStyle::State_MouseOver;
         style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &option, &painter, this);
     }
+
+private:
+    // From where it is, so a quick pass over the row doesn't flash.
+    void fadeHover(qreal target)
+    {
+        m_hover->stop();
+        const int ms = Motion::duration(int(std::lround(Motion::Short * std::abs(target - m_level))));
+        if (ms == 0) {
+            m_level = target;
+            update();
+            return;
+        }
+        m_hover->setDuration(ms);
+        m_hover->setStartValue(m_level);
+        m_hover->setEndValue(target);
+        m_hover->start();
+    }
+
+    QVariantAnimation *m_hover;
+    qreal m_level = 0; // 0 no hover, 1 full
 };
 
 namespace
@@ -85,6 +118,22 @@ QLabel *secondaryLabel(QWidget *parent)
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
     return label;
 }
+
+// `icon` turned clockwise, for the arrow while it turns.
+QIcon turned(const QIcon &icon, int size, qreal scale, qreal degrees)
+{
+    QPixmap pixmap(QSize(size, size) * scale);
+    pixmap.setDevicePixelRatio(scale);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    const QPointF centre(size / 2.0, size / 2.0);
+    painter.translate(centre);
+    painter.rotate(degrees);
+    painter.translate(-centre);
+    painter.drawPixmap(0, 0, icon.pixmap(QSize(size, size), scale));
+    return QIcon(pixmap);
+}
 } // namespace
 
 CheckRow::CheckRow(const QString &title, QWidget *parent)
@@ -96,6 +145,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     , m_detail(secondaryLabel(m_header))
     , m_subChecks(new QWidget(this))
     , m_subLayout(new QVBoxLayout(m_subChecks))
+    , m_reveal(new Revealer(m_subChecks, this))
 {
     // Not checkable: Breeze draws a checked tool button as pressed, which boxes the arrow.
     m_expander->setAutoRaise(true);
@@ -105,7 +155,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     policy.setRetainSizeWhenHidden(true);
     m_expander->setSizePolicy(policy);
     connect(m_expander, &QToolButton::clicked, this, [this] {
-        setExpanded(!m_expanded);
+        setExpanded(!m_expanded, true);
     });
 
     m_detail->setObjectName(u"detail"_s);
@@ -116,7 +166,15 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     m_title->setWordWrap(true);
 
     m_subLayout->setSpacing(kSpacing);
-    m_subChecks->hide();
+    // Qt would lay out the row, then the list, painting in between: for a frame, a collapsed row
+    // keeps its height with the title and detail stretched into it. So lay out both at once, on
+    // each step while the sub-checks slide.
+    connect(m_reveal, &Revealer::progressChanged, this, [this] {
+        updateExpander();
+        layout()->activate();
+        updateGeometry();
+        Q_EMIT heightChanged();
+    });
 
     auto *header = new QGridLayout(m_header);
     header->setHorizontalSpacing(kSpacing);
@@ -131,7 +189,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     layout->setContentsMargins({});
     layout->setSpacing(0);
     layout->addWidget(m_header);
-    layout->addWidget(m_subChecks);
+    layout->addWidget(m_reveal);
 
     setPending();
 }
@@ -145,7 +203,7 @@ void CheckRow::setPending()
     // expanded (or not) for when the result arrives.
     clearSubChecks();
     setExpandable(false);
-    m_subChecks->hide();
+    m_reveal->setRevealed(false, false);
     updateIcons();
 }
 
@@ -196,9 +254,10 @@ void CheckRow::setResult(const CheckResult &result)
         itemLayout->addLayout(text, 1);
         m_subLayout->addWidget(item);
     }
-    updateIcons();
+    updateIcons(IconChange::Fade);
     setExpandable(!result.subChecks.isEmpty());
-    setExpanded(m_expanded && !result.subChecks.isEmpty());
+    // Only a click slides the sub-checks. Here they're back as they were before the run.
+    setExpanded(m_expanded && !result.subChecks.isEmpty(), false);
 }
 
 void CheckRow::changeEvent(QEvent *event)
@@ -210,13 +269,17 @@ void CheckRow::changeEvent(QEvent *event)
     QWidget::changeEvent(event);
 }
 
-void CheckRow::updateIcons()
+void CheckRow::updateIcons(IconChange change)
 {
     const int size = iconSize(this);
     const QIcon icon = m_status ? statusIcon(*m_status) : themeIcon({u"view-refresh"_s});
     updateExpander();
     m_icon->setFixedSize(size, size);
-    m_icon->setIcon(icon);
+    if (change == IconChange::Fade) {
+        m_icon->fadeTo(icon);
+    } else {
+        m_icon->setIcon(icon);
+    }
     const int subSize = size * 2 / 3;
     for (const auto &[subIcon, status] : std::as_const(m_subIcons)) {
         subIcon->setFixedSize(subSize, subSize);
@@ -234,15 +297,17 @@ void CheckRow::updateExpander()
     // Breeze's chevrons, which Breeze also draws on KDE, so the arrows look the same everywhere.
     // Fusion's own are small triangles. Adwaita's and Yaru's symbolic icons would be dark on dark,
     // so with those (Breeze isn't installed) it's the style's arrow.
-    const QString name = m_expanded ? u"arrow-down"_s : u"arrow-right"_s;
+    // While the sub-checks slide, the arrow turns with them.
+    const qreal progress = m_reveal->progress();
+    const QString name = progress == 1 ? u"arrow-down"_s : u"arrow-right"_s;
     if (!isGnomeIconTheme(QIcon::themeName()) && QIcon::hasThemeIcon(name)) {
         const int size = style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, this);
         m_expander->setArrowType(Qt::NoArrow);
         m_expander->setIconSize(QSize(size, size));
-        m_expander->setIcon(QIcon::fromTheme(name));
+        m_expander->setIcon(progress == 0 || progress == 1 ? QIcon::fromTheme(name) : turned(QIcon::fromTheme(name), size, devicePixelRatio(), progress * 90));
     } else {
         m_expander->setIcon(QIcon());
-        m_expander->setArrowType(m_expanded ? Qt::DownArrow : Qt::RightArrow);
+        m_expander->setArrowType(progress >= 0.5 ? Qt::DownArrow : Qt::RightArrow);
     }
 }
 
@@ -254,25 +319,16 @@ void CheckRow::setExpandable(bool expandable)
     m_header->toggle = nullptr;
     if (expandable) {
         m_header->toggle = [this] {
-            setExpanded(!m_expanded);
+            setExpanded(!m_expanded, true);
         };
     }
     m_header->update();
 }
 
-void CheckRow::setExpanded(bool expanded)
+void CheckRow::setExpanded(bool expanded, bool animate)
 {
     m_expanded = expanded;
-    updateExpander();
     m_expander->setAccessibleName(expanded ? u"Hide details"_s : u"Show details"_s);
-    const bool show = expanded && m_subLayout->count() > 0;
-    if (show == m_subChecks->isVisibleTo(this)) {
-        return;
-    }
-    m_subChecks->setVisible(show);
-    // Qt would lay out the row, then the list, painting in between: for a frame, a collapsed row
-    // keeps its height with the title and detail stretched into it.
-    layout()->activate();
-    updateGeometry();
-    Q_EMIT heightChanged();
+    m_reveal->setRevealed(expanded && m_subLayout->count() > 0, animate);
+    updateExpander();
 }

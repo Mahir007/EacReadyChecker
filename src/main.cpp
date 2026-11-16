@@ -2,6 +2,7 @@
 #include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
+#include "app/Motion.h"
 #include "app/WindowDecoration.h"
 #include "cli/CliMain.h"
 #include "core/AppInfo.h"
@@ -45,6 +46,7 @@ int main(int argc, char **argv)
         // from icons bundled in the app.
         QApplication::setWindowIcon(appIcon());
         followDesktopColorScheme();
+        Motion::followDesktop();
         useBundledDecoration(decorationSet);
     }
     QCoreApplication::setApplicationName(AppInfo::binaryName());

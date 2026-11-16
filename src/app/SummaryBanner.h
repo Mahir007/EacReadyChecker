@@ -25,7 +25,8 @@ protected:
     void changeEvent(QEvent *event) override;
 
 private:
-    void updateIcon();
+    enum class IconChange { AtOnce, Fade };
+    void updateIcon(IconChange change = IconChange::AtOnce);
 
     IconWidget *m_icon;
     QLabel *m_title;

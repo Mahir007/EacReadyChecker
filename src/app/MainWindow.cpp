@@ -4,6 +4,7 @@
 #include "CheckRow.h"
 #include "ColorScheme.h"
 #include "Icons.h"
+#include "Motion.h"
 #include "SummaryBanner.h"
 #include "checks/AllChecks.h"
 #include "core/AppInfo.h"
@@ -149,7 +150,9 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     m_copiedReset->setSingleShot(true);
     m_copiedReset->setInterval(2000);
     connect(m_copiedReset, &QTimer::timeout, this, [this] {
-        m_copy->setText(u"Copy Report"_s);
+        Motion::crossFade(m_copy, [this] {
+            m_copy->setText(u"Copy Report"_s);
+        });
     });
 
     new QShortcut(QKeySequence::Quit, this, this, &QWidget::close);
@@ -290,8 +293,9 @@ void MainWindow::onFinished(const Report &report)
     const bool needsAdmin = std::any_of(report.results.begin(), report.results.end(), [](const CheckResult &r) {
         return r.status == CheckStatus::NeedsAdmin;
     });
-    m_runFull->setVisible(needsAdmin);
-    m_runFull->setEnabled(true);
+    // Fades out disabled, as it was during the run, so it can't be clicked on its way out.
+    Motion::fadeVisible(m_runFull, needsAdmin);
+    m_runFull->setEnabled(needsAdmin);
     m_refresh->setEnabled(true);
     m_copy->setEnabled(true);
 }
@@ -300,7 +304,9 @@ void MainWindow::copyReport(bool json)
 {
     const QString text = json ? QString::fromUtf8(QJsonDocument(m_report.toJson()).toJson(QJsonDocument::Indented)) : m_report.toText();
     QGuiApplication::clipboard()->setText(text);
-    m_copy->setText(u"Copied"_s);
+    Motion::crossFade(m_copy, [this] {
+        m_copy->setText(u"Copied"_s);
+    });
     m_copiedReset->start();
 }
 

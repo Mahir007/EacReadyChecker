@@ -3,10 +3,13 @@
 #include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
+#include "app/Motion.h"
 #include "core/AppInfo.h"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QElapsedTimer>
+#include <QGraphicsEffect>
 #include <QIcon>
 #include <QImage>
 #include <QJsonArray>
@@ -20,9 +23,12 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSet>
 #include <QStandardPaths>
 #include <QToolButton>
 #include <QTest>
+
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -60,6 +66,8 @@ private Q_SLOTS:
         QIcon::setThemeSearchPaths(QIcon::themeSearchPaths()
                                    + QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, u"icons"_s, QStandardPaths::LocateDirectory));
         QIcon::setThemeName(u"breeze"_s);
+        // Off, so each change is done when the call returns. animations() turns them on.
+        Motion::overrideFactor(0);
     }
 
     void bundledIconsWithoutTheme()
@@ -412,6 +420,77 @@ private Q_SLOTS:
             QTest::qWait(50);
             QCOMPARE(geometry(), atClick);
         }
+    }
+
+    void animations()
+    {
+        // Three times slower than normal, so each animation is still running when it's checked.
+        constexpr qreal slow = 3;
+        Motion::overrideFactor(slow);
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QPushButton *refresh = button(window, u"Refresh"_s);
+        QPushButton *runFull = button(window, u"Run Full Check"_s);
+        window.runChecks(false);
+        QTRY_VERIFY(refresh->isEnabled());
+        // Run Full Check fades in.
+        QVERIFY(runFull->isVisible() && runFull->graphicsEffect());
+        QTRY_VERIFY(!runFull->graphicsEffect());
+
+        // The IOMMU row's sub-checks slide open and closed. The row's height changes in steps, and
+        // its title stays where it is, not stretched into the new height. The arrow turns.
+        CheckRow *row = window.findChildren<CheckRow *>().at(4);
+        QLabel *title = row->findChildren<QLabel *>().constFirst();
+        QToolButton *arrow = row->findChild<QToolButton *>();
+        const QRect titleGeometry = title->geometry();
+        const int collapsed = row->height();
+        const auto slide = [&](const QString &endArrow) {
+            QList<int> heights{row->height()};
+            bool turning = false;
+            QElapsedTimer timer;
+            timer.start();
+            while (arrow->icon().name() != endArrow && timer.elapsed() < Motion::Long * slow * 3) {
+                QTest::qWait(10);
+                heights.append(row->height());
+                turning = turning || arrow->icon().name().isEmpty(); // drawn turned, not a theme icon
+                // Its width can change, when the list grows a scroll bar.
+                if (title->y() != titleGeometry.y() || title->height() != titleGeometry.height()) {
+                    return QList<int>();
+                }
+            }
+            heights.append(row->height());
+            return turning ? heights : QList<int>();
+        };
+        arrow->click();
+        const QList<int> opening = slide(u"arrow-down"_s);
+        QVERIFY(!opening.isEmpty());
+        QVERIFY(std::is_sorted(opening.begin(), opening.end()));
+        QVERIFY(QSet<int>(opening.begin(), opening.end()).size() > 3);
+        QVERIFY(opening.constLast() > collapsed);
+        QTest::mouseClick(title, Qt::LeftButton);
+        const QList<int> closing = slide(u"arrow-right"_s);
+        QVERIFY(!closing.isEmpty());
+        QVERIFY(std::is_sorted(closing.rbegin(), closing.rend()));
+        QCOMPARE(closing.constLast(), collapsed);
+        QVERIFY(!row->findChildren<QLabel *>().constLast()->isVisible());
+
+        // "Copied" fades in over the button as it was, and back.
+        QPushButton *copy = button(window, u"Copy Report"_s);
+        copy->menu()->actions().constFirst()->trigger();
+        QCOMPARE(copy->text(), u"Copied"_s);
+        QVERIFY(copy->findChild<QWidget *>(u"eacheck-cross-fade"_s));
+        QTRY_VERIFY(!copy->findChild<QWidget *>(u"eacheck-cross-fade"_s));
+
+        // After the full check nothing needs admin, so Run Full Check fades out. It can't be
+        // clicked while it does.
+        runFull->click();
+        QTRY_VERIFY(refresh->isEnabled());
+        QVERIFY(runFull->isVisible() && runFull->graphicsEffect());
+        QVERIFY(!runFull->isEnabled());
+        QTRY_VERIFY(!runFull->isVisible());
+        QVERIFY(!runFull->graphicsEffect());
+        Motion::overrideFactor(0);
     }
 
     void scrollBar()

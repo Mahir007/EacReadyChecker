@@ -56,7 +56,7 @@ void SummaryBanner::setReport(const Report &report)
 {
     const Verdict verdict = report.verdict();
     m_verdict = verdict;
-    updateIcon();
+    updateIcon(IconChange::Fade);
     m_title->setText(verdictLabel(verdict));
 
     const auto met = std::count_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
@@ -79,8 +79,12 @@ void SummaryBanner::changeEvent(QEvent *event)
     QWidget::changeEvent(event);
 }
 
-void SummaryBanner::updateIcon()
+void SummaryBanner::updateIcon(IconChange change)
 {
     const QIcon icon = m_verdict ? verdictIcon(*m_verdict) : themeIcon({u"view-refresh"_s});
-    m_icon->setIcon(icon);
+    if (change == IconChange::Fade) {
+        m_icon->fadeTo(icon);
+    } else {
+        m_icon->setIcon(icon);
+    }
 }

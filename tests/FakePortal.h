@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusMetaType>
+#include <QDBusVariant>
+#include <QMap>
+#include <QObject>
+#include <QPointer>
+#include <QThread>
+#include <QVariantMap>
+
+#include <memory>
+
+using PortalSettings = QMap<QString, QVariantMap>;
+
+// Stand-in for the settings portal.
+class FakePortal : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.portal.Settings")
+
+public:
+    using QObject::QObject;
+    PortalSettings settings;
+
+public Q_SLOTS:
+    PortalSettings ReadAll(const QStringList &namespaces)
+    {
+        PortalSettings result;
+        for (const QString &name : namespaces) {
+            if (settings.contains(name)) {
+                result[name] = settings[name];
+            }
+        }
+        return result;
+    }
+};
+
+// Runs a FakePortal on its own connection and thread, because the app may block on its call to it.
+class FakePortalService
+{
+public:
+    static inline const QString Service = QStringLiteral("org.freedesktop.portal.Desktop");
+    static inline const QString Path = QStringLiteral("/org/freedesktop/portal/desktop");
+    static inline const QString Interface = QStringLiteral("org.freedesktop.portal.Settings");
+
+    // Empty if it's running, otherwise why it isn't.
+    QString start()
+    {
+        if (!QDBusConnection::sessionBus().isConnected()) {
+            return QStringLiteral("No session bus");
+        }
+        qDBusRegisterMetaType<PortalSettings>();
+        m_thread.start();
+        m_portal = new FakePortal;
+        m_portal->moveToThread(&m_thread);
+        m_bus = std::make_unique<QDBusConnection>(QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-portal")));
+        // Fails on a desktop whose real portal holds the name. CMake runs these tests on a private bus.
+        if (!m_bus->registerService(Service)) {
+            return QStringLiteral("The portal's name is taken");
+        }
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this] {
+                m_bus->registerObject(Path, m_portal, QDBusConnection::ExportAllSlots);
+            },
+            Qt::BlockingQueuedConnection);
+        return {};
+    }
+
+    void stop()
+    {
+        if (m_portal) {
+            QMetaObject::invokeMethod(m_portal, &QObject::deleteLater);
+        }
+        m_thread.quit();
+        m_thread.wait();
+    }
+
+    // What ReadAll returns from now on.
+    void set(const QString &group, const QString &key, const QVariant &value)
+    {
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this, group, key, value] {
+                m_portal->settings[group][key] = value;
+            },
+            Qt::BlockingQueuedConnection);
+    }
+
+    // Sends SettingChanged, without changing what ReadAll returns.
+    bool emitChanged(const QString &group, const QString &key, const QVariant &value)
+    {
+        QDBusMessage signal = QDBusMessage::createSignal(Path, Interface, QStringLiteral("SettingChanged"));
+        signal << group << key << QVariant::fromValue(QDBusVariant(value));
+        return m_bus->send(signal);
+    }
+
+    // set() and emitChanged(), as when the user changes the setting.
+    bool change(const QString &group, const QString &key, const QVariant &value)
+    {
+        set(group, key, value);
+        return emitChanged(group, key, value);
+    }
+
+private:
+    QThread m_thread;
+    QPointer<FakePortal> m_portal;
+    std::unique_ptr<QDBusConnection> m_bus;
+};
