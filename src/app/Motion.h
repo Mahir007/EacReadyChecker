@@ -29,9 +29,6 @@ void followDesktop();
 // Replaces the desktop's factor, or with nullopt goes back to it. Tests use 0 to turn animations off.
 void overrideFactor(std::optional<qreal> factor);
 
-// Shows or hides `widget` with a fade.
-void fadeVisible(QWidget *widget, bool visible);
-
 // Runs `change`, then fades from how `widget` looked before it to how it looks after.
 void crossFade(QWidget *widget, const std::function<void()> &change);
 } // namespace Motion

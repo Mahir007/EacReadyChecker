@@ -63,9 +63,9 @@ void SummaryBanner::setReport(const Report &report)
         return r.status == CheckStatus::Pass || r.status == CheckStatus::NotRequired;
     });
     QString subtitle = u"%1 of %2 requirements met"_s.arg(met).arg(report.results.size());
-    const QStringList problems = report.accessProblems();
-    for (const QString &problem : problems) {
-        subtitle += u" · "_s + problem;
+    // Admin access problems are in the message under the banner.
+    if (!report.hostReadError.isEmpty()) {
+        subtitle += u" · couldn't read system state: "_s + report.hostReadError;
     }
     m_subtitle->setText(subtitle);
 }

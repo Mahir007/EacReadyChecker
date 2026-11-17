@@ -7,7 +7,6 @@
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusVariant>
-#include <QGraphicsOpacityEffect>
 #include <QPainter>
 #include <QPixmap>
 #include <QStyle>
@@ -39,7 +38,6 @@ constexpr auto AnimationDurationFactor = "AnimationDurationFactor"_L1;
 // Breeze's own duration at normal speed. It reports KDE's speed as a multiple of this.
 constexpr int BreezeDurationMs = 100;
 
-constexpr auto FadeName = "eacheck-fade"_L1;
 constexpr auto CrossFadeName = "eacheck-cross-fade"_L1;
 
 struct DesktopSetting
@@ -180,46 +178,6 @@ void followDesktop()
 void overrideFactor(std::optional<qreal> factor)
 {
     s_override = factor;
-}
-
-void fadeVisible(QWidget *widget, bool visible)
-{
-    // A fade that's still running stops, and this one starts from where it got to.
-    auto *running = widget->findChild<QVariantAnimation *>(FadeName, Qt::FindDirectChildrenOnly);
-    if (!running && visible == widget->isVisibleTo(widget->parentWidget())) {
-        return;
-    }
-    qreal from = visible ? 0 : 1;
-    if (running) {
-        from = running->currentValue().toReal();
-        delete running;
-    }
-    widget->setGraphicsEffect(nullptr);
-
-    const qreal to = visible ? 1 : 0;
-    const int ms = duration(int(std::lround(Long * std::abs(to - from))));
-    if (ms == 0 || !widget->window()->isVisible()) {
-        widget->setVisible(visible);
-        return;
-    }
-    auto *effect = new QGraphicsOpacityEffect(widget);
-    effect->setOpacity(from);
-    widget->setGraphicsEffect(effect);
-    widget->show();
-
-    auto *animation = new QVariantAnimation(widget);
-    animation->setObjectName(FadeName);
-    animation->setDuration(ms);
-    animation->setStartValue(from);
-    animation->setEndValue(to);
-    QObject::connect(animation, &QVariantAnimation::valueChanged, effect, [effect](const QVariant &value) {
-        effect->setOpacity(value.toReal());
-    });
-    QObject::connect(animation, &QVariantAnimation::finished, widget, [widget, visible] {
-        widget->setGraphicsEffect(nullptr);
-        widget->setVisible(visible);
-    });
-    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void crossFade(QWidget *widget, const std::function<void()> &change)

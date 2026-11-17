@@ -3,7 +3,9 @@
 #include "app/ColorScheme.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
+#include "app/MessageBar.h"
 #include "app/Motion.h"
+#include "app/Revealer.h"
 #include "core/AppInfo.h"
 
 #include <QApplication>
@@ -51,6 +53,27 @@ private:
         return nullptr;
     }
 
+    // A run has finished when Copy Report is enabled again. Found by its menu, since it may say
+    // "Copied".
+    static bool finished(const QWidget &window)
+    {
+        const auto buttons = window.findChildren<QPushButton *>();
+        return std::any_of(buttons.begin(), buttons.end(), [](const QPushButton *b) {
+            return b->menu() && b->isEnabled();
+        });
+    }
+
+    static QString message(const QWidget &window)
+    {
+        return window.findChild<MessageBar *>()->findChild<QLabel *>()->text();
+    }
+
+    // The message bar's Revealer.
+    static Revealer *messageReveal(const QWidget &window)
+    {
+        return qobject_cast<Revealer *>(window.findChild<MessageBar *>()->parentWidget()->parentWidget());
+    }
+
     static void screenshot(QWidget &window, const QString &name)
     {
         const QString dir = qEnvironmentVariable("EACHECK_SCREENSHOT_DIR");
@@ -95,16 +118,17 @@ private Q_SLOTS:
         QVERIFY(QTest::qWaitForWindowExposed(&window));
 
         QCOMPARE(window.findChildren<CheckRow *>().size(), 8);
-        QPushButton *runFull = button(window, u"Run Full Check"_s);
-        QPushButton *refresh = button(window, u"Refresh"_s);
-        QVERIFY(runFull);
-        QVERIFY(refresh);
-        QCOMPARE(refresh->shortcut(), QKeySequence(Qt::Key_F5));
+        QPushButton *runFull = window.findChild<MessageBar *>()->button();
+        // No Refresh button: F5 runs the checks again.
+        QVERIFY(!button(window, u"Refresh"_s));
+        QVERIFY(!runFull->isVisible());
 
         window.runChecks(false);
-        QTRY_VERIFY(refresh->isEnabled());
-        // Checks that need the event log show Needs admin, so the button appears.
-        QVERIFY(runFull->isVisible());
+        QTRY_VERIFY(finished(window));
+        // Checks that need the event log show Needs admin, so the message and its button appear.
+        QVERIFY(runFull->isVisible() && runFull->isEnabled());
+        QCOMPARE(runFull->text(), u"Run Full Check"_s);
+        QCOMPARE(message(window), u"3 checks need admin access to read the TPM event log."_s);
 
         // The list is on the View colours (Base), not the window's.
         const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
@@ -151,17 +175,22 @@ private Q_SLOTS:
         QVERIFY(!kernelExpander->isVisible());
         QCOMPARE(rows[0]->findChildren<QLabel *>().size(), 2); // title, detail: no sub-checks
         QCOMPARE(detail(1), tpmDetail);
-        QTRY_VERIFY(refresh->isEnabled());
+        // The message stays while the password dialog is open, so it's clear what it's for.
+        QVERIFY(runFull->isVisible() && !runFull->isEnabled());
+        QTRY_VERIFY(finished(window));
         QVERIFY(kernelExpander->isVisible());
         QTRY_VERIFY(rows[0]->findChildren<QLabel *>().constLast()->isVisible());
         QVERIFY(!runFull->isVisible());
         screenshot(window, u"mainwindow-elevated"_s);
 
-        // Refreshing with admin access asks for the password again. Same rows wait.
-        refresh->click();
+        // F5 with admin access asks for the password again. Same rows wait.
+        QTest::keyClick(&window, Qt::Key_F5);
         QCOMPARE(detail(0), u"Checking…"_s);
         QCOMPARE(detail(1), tpmDetail);
-        QTRY_VERIFY(refresh->isEnabled());
+        // F5 again during the run doesn't start another.
+        QTest::keyClick(&window, Qt::Key_F5);
+        QTRY_VERIFY(finished(window));
+        QVERIFY(!runFull->isVisible());
     }
 
     void copyReportAndAbout()
@@ -211,20 +240,20 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QPushButton *refresh = button(window, u"Refresh"_s);
-        QTRY_VERIFY(refresh->isEnabled());
+        QPushButton *copy = button(window, u"Copy Report"_s);
+        QTRY_VERIFY(finished(window));
         screenshot(window, u"mainwindow-dark"_s);
         QCOMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
         QCOMPARE(QIcon::themeName(), u"breeze-dark"_s);
-        QVERIFY(glyphLightness(refresh->icon()) > 128);
+        QVERIFY(glyphLightness(copy->icon()) > 128);
 
         QApplication::setPalette(QApplication::style()->standardPalette());
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
         QCOMPARE(QIcon::themeName(), u"breeze"_s);
-        QVERIFY(glyphLightness(refresh->icon()) < 128);
+        QVERIFY(glyphLightness(copy->icon()) < 128);
         QApplication::setPalette(breezeDarkPalette());
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze-dark"_s);
-        QVERIFY(glyphLightness(refresh->icon()) > 128);
+        QVERIFY(glyphLightness(copy->icon()) > 128);
 
         QApplication::setPalette(palette);
         QIcon::setThemeName(theme);
@@ -280,7 +309,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        QTRY_VERIFY(finished(window));
 
         const QList<QWidget *> lines = window.findChildren<QWidget *>(u"separator"_s);
         QCOMPARE(lines.size(), 2);
@@ -312,8 +341,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QPushButton *refresh = button(window, u"Refresh"_s);
-        QTRY_VERIFY(refresh->isEnabled());
+        QTRY_VERIFY(finished(window));
 
         // The About box is open while the desktop switches. Its links follow.
         button(window, u"About"_s)->click();
@@ -356,7 +384,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        QTRY_VERIFY(finished(window));
 
         // GNOME's light style: libadwaita's sidebar grey around a white list, and no dimmed text.
         QCOMPARE(window.palette().color(QPalette::Window), QColor(0xeb, 0xeb, 0xed));
@@ -400,7 +428,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        QTRY_VERIFY(finished(window));
         // Short, so that expanding makes the list scroll.
         window.resize(window.width(), 300);
         QTRY_VERIFY(window.height() == 300);
@@ -430,13 +458,14 @@ private Q_SLOTS:
         MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
-        QPushButton *refresh = button(window, u"Refresh"_s);
-        QPushButton *runFull = button(window, u"Run Full Check"_s);
+        QPushButton *runFull = window.findChild<MessageBar *>()->button();
+        Revealer *bar = messageReveal(window);
+        QVERIFY(bar);
         window.runChecks(false);
-        QTRY_VERIFY(refresh->isEnabled());
-        // Run Full Check fades in.
-        QVERIFY(runFull->isVisible() && runFull->graphicsEffect());
-        QTRY_VERIFY(!runFull->graphicsEffect());
+        QTRY_VERIFY(finished(window));
+        // The message slides in.
+        QVERIFY(bar->isVisible() && bar->progress() < 1);
+        QTRY_COMPARE(bar->progress(), 1.0);
 
         // The IOMMU row's sub-checks slide open and closed. The row's height changes in steps, and
         // its title stays where it is, not stretched into the new height. The arrow turns.
@@ -482,14 +511,13 @@ private Q_SLOTS:
         QVERIFY(copy->findChild<QWidget *>(u"eacheck-cross-fade"_s));
         QTRY_VERIFY(!copy->findChild<QWidget *>(u"eacheck-cross-fade"_s));
 
-        // After the full check nothing needs admin, so Run Full Check fades out. It can't be
+        // After the full check nothing needs admin, so the message slides out. Its button can't be
         // clicked while it does.
         runFull->click();
-        QTRY_VERIFY(refresh->isEnabled());
-        QVERIFY(runFull->isVisible() && runFull->graphicsEffect());
+        QTRY_VERIFY(finished(window));
+        QVERIFY(bar->isVisible() && bar->progress() > 0);
         QVERIFY(!runFull->isEnabled());
-        QTRY_VERIFY(!runFull->isVisible());
-        QVERIFY(!runFull->graphicsEffect());
+        QTRY_VERIFY(!bar->isVisible());
         Motion::overrideFactor(0);
     }
 
@@ -504,7 +532,7 @@ private Q_SLOTS:
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         window.runChecks(false);
-        QTRY_VERIFY(button(window, u"Refresh"_s)->isEnabled());
+        QTRY_VERIFY(finished(window));
         screenshot(window, u"mainwindow-fusion"_s);
         // The rows fit at the default size, so make the window short enough to need the bar.
         window.resize(window.width(), 300);

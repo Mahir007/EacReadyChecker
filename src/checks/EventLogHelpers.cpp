@@ -49,7 +49,7 @@ namespace EventLogHelpers
 Loaded load(const HostSnapshot &snapshot)
 {
     if (snapshot.privilegedState != PrivilegedState::Granted) {
-        return {std::nullopt, CheckStatus::NeedsAdmin, u"Needs admin access to read the TPM event log"_s};
+        return {std::nullopt, CheckStatus::NeedsAdmin, u"Needs admin access"_s};
     }
     const HostEntry entry = snapshot.file(HostPaths::EventLog);
     if (entry.status == HostEntry::Status::Missing) {

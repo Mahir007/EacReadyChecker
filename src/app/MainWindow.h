@@ -6,6 +6,8 @@
 #include <QWidget>
 
 class CheckRow;
+class MessageBar;
+class Revealer;
 class QPushButton;
 class QScrollArea;
 class QTimer;
@@ -32,14 +34,17 @@ private:
     void updateScrollBar();
     void onStarted();
     void onFinished(const Report &report);
+    void updateMessage(const Report &report);
     void copyReport(bool json);
     void showAbout();
 
     CheckRunner *m_runner;
     SummaryBanner *m_banner;
     QList<CheckRow *> m_rows;
-    QPushButton *m_runFull;
-    QPushButton *m_refresh;
+    MessageBar *m_message;
+    QWidget *m_messageBox;
+    Revealer *m_messageReveal;
+    QPushButton *m_runFull; // the message's button
     QPushButton *m_copy;
     QPushButton *m_about;
     QWidget *m_list;

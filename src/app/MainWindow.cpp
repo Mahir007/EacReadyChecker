@@ -4,7 +4,9 @@
 #include "CheckRow.h"
 #include "ColorScheme.h"
 #include "Icons.h"
+#include "MessageBar.h"
 #include "Motion.h"
+#include "Revealer.h"
 #include "SummaryBanner.h"
 #include "checks/AllChecks.h"
 #include "core/AppInfo.h"
@@ -90,8 +92,10 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     : QWidget(parent)
     , m_runner(new CheckRunner(host, createAllChecks(), this))
     , m_banner(new SummaryBanner(this))
-    , m_runFull(new QPushButton(u"Run Full Check"_s, this))
-    , m_refresh(new QPushButton(u"Refresh"_s, this))
+    , m_message(new MessageBar)
+    , m_messageBox(new QWidget)
+    , m_messageReveal(new Revealer(m_messageBox, this))
+    , m_runFull(m_message->button())
     , m_copy(new QPushButton(u"Copy Report"_s, this))
     , m_about(new QPushButton(u"About"_s, this))
     , m_list(new QWidget)
@@ -126,14 +130,15 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     updateScrollBar();
 
     m_runFull->setToolTip(u"Reads the TPM event log as root. You'll be asked for an admin password once."_s);
-    m_runFull->hide();
+    auto *messageLayout = new QVBoxLayout(m_messageBox);
+    messageLayout->addWidget(m_message);
     connect(m_runFull, &QPushButton::clicked, this, [this] {
         runChecks(true);
     });
+    // No Refresh button: what the checks read rarely changes without a reboot. F5 runs them again,
+    // with admin access once it's been granted.
     // Not QKeySequence::Refresh: that keeps only the platform's first binding, Ctrl+R on GNOME.
-    m_refresh->setShortcut(Qt::Key_F5);
-    connect(m_refresh, &QPushButton::clicked, this, [this] {
-        // Keep admin results once granted; otherwise a plain refresh.
+    new QShortcut(Qt::Key_F5, this, this, [this] {
         runChecks(m_report.privilegedState == PrivilegedState::Granted);
     });
 
@@ -162,19 +167,21 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     auto *buttons = new QHBoxLayout(m_footer);
     buttons->addWidget(m_about);
     buttons->addStretch(1);
-    buttons->addWidget(m_runFull);
     buttons->addWidget(m_copy);
-    buttons->addWidget(m_refresh);
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins({});
     layout->setSpacing(0);
     layout->addWidget(m_banner);
+    layout->addWidget(m_messageReveal);
     layout->addWidget(separator(this));
     layout->addWidget(m_scroll, 1);
     layout->addWidget(separator(this));
     layout->addWidget(m_footer);
     updateMargins();
+
+    // Start with the list focused, so About doesn't show a focus frame.
+    m_scroll->setFocus();
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
     connect(m_runner, &CheckRunner::finished, this, &MainWindow::onFinished);
@@ -218,7 +225,6 @@ void MainWindow::layOutList()
 void MainWindow::updateIcons()
 {
     m_runFull->setIcon(themeIcon({u"dialog-password"_s, u"security-high"_s}));
-    m_refresh->setIcon(themeIcon({u"view-refresh"_s}));
     m_copy->setIcon(themeIcon({u"edit-copy"_s}));
     m_about->setIcon(themeIcon({u"help-about"_s}));
 }
@@ -233,6 +239,7 @@ void MainWindow::updateMargins()
     const int inset = std::max(0, window - row);
     m_banner->layout()->setContentsMargins(window, window, window, window);
     m_footer->layout()->setContentsMargins(window, window, window, window);
+    m_messageBox->layout()->setContentsMargins(window, 0, window, window);
     m_list->layout()->setContentsMargins(inset, inset, inset, inset);
 }
 
@@ -262,6 +269,10 @@ void MainWindow::updateScrollBar()
 
 void MainWindow::runChecks(bool elevate)
 {
+    // F5 works during a run too, now that no disabled button stands in its way.
+    if (m_runner->isRunning()) {
+        return;
+    }
     m_elevating = elevate;
     m_runner->start(elevate);
 }
@@ -278,7 +289,6 @@ void MainWindow::onStarted()
         }
     }
     m_runFull->setEnabled(false);
-    m_refresh->setEnabled(false);
     m_copy->setEnabled(false);
 }
 
@@ -290,14 +300,41 @@ void MainWindow::onFinished(const Report &report)
         m_rows[i]->setResult(report.results[i]);
     }
 
-    const bool needsAdmin = std::any_of(report.results.begin(), report.results.end(), [](const CheckResult &r) {
+    updateMessage(report);
+    m_copy->setEnabled(true);
+}
+
+void MainWindow::updateMessage(const Report &report)
+{
+    const auto needsAdmin = std::count_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
         return r.status == CheckStatus::NeedsAdmin;
     });
-    // Fades out disabled, as it was during the run, so it can't be clicked on its way out.
-    Motion::fadeVisible(m_runFull, needsAdmin);
-    m_runFull->setEnabled(needsAdmin);
-    m_refresh->setEnabled(true);
-    m_copy->setEnabled(true);
+    const QString checks = needsAdmin == 1 ? u"1 check"_s : u"%1 checks"_s.arg(needsAdmin);
+    bool show = true;
+    switch (report.privilegedState) {
+    case PrivilegedState::NotRequested:
+        show = needsAdmin > 0;
+        m_message->setMessage(MessageBar::Type::Information,
+                              u"%1 need%2 admin access to read the TPM event log."_s.arg(checks, needsAdmin == 1 ? u"s"_s : QString()),
+                              u"Run Full Check"_s);
+        break;
+    case PrivilegedState::Cancelled:
+        m_message->setMessage(MessageBar::Type::Warning, u"Admin access wasn't granted, so %1 couldn't finish."_s.arg(checks), u"Try Again"_s);
+        break;
+    case PrivilegedState::NoAgent:
+        m_message->setMessage(MessageBar::Type::Warning,
+                              u"No polkit authentication agent is running, so admin access can't be asked for."_s,
+                              u"Try Again"_s);
+        break;
+    case PrivilegedState::Failed:
+        m_message->setMessage(MessageBar::Type::Error, u"The admin read failed: %1"_s.arg(report.privilegedError), u"Try Again"_s);
+        break;
+    case PrivilegedState::Granted:
+        show = false;
+        break;
+    }
+    m_runFull->setEnabled(show);
+    m_messageReveal->setRevealed(show, true);
 }
 
 void MainWindow::copyReport(bool json)

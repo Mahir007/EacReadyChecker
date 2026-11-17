@@ -44,6 +44,7 @@ add_library(eacheck_app STATIC
     app/ColorScheme.cpp
     app/IconWidget.cpp
     app/MainWindow.cpp
+    app/MessageBar.cpp
     app/Motion.cpp
     app/Revealer.cpp
     app/SummaryBanner.cpp
