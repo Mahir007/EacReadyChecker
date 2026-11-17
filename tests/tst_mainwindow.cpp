@@ -21,6 +21,7 @@
 #include <QStyle>
 #include <QLabel>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollArea>
@@ -222,6 +223,72 @@ private Q_SLOTS:
         QVERIFY(about->text().contains(u"EAC performs its own verification"_s));
         screenshot(*about, u"about"_s);
         about->close();
+    }
+
+    void menuBar()
+    {
+        // The menu bar is only shown as a global menu. Offscreen has none, so it stays hidden, and
+        // its shortcuts work anyway (F5 in runAndElevate).
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto *bar = window.findChild<QMenuBar *>();
+        QVERIFY(bar);
+        QVERIFY(!bar->isNativeMenuBar());
+        QVERIFY(!bar->isVisible());
+
+        const auto texts = [](const QList<QAction *> &actions) {
+            QStringList list;
+            for (const QAction *action : actions) {
+                list.append(action->text());
+            }
+            return list;
+        };
+        const QList<QAction *> menus = bar->actions();
+        QCOMPARE(texts(menus), (QStringList{u"&File"_s, u"&Edit"_s, u"&Help"_s}));
+        const QList<QAction *> file = menus[0]->menu()->actions();
+        const QList<QAction *> edit = menus[1]->menu()->actions();
+        const QList<QAction *> help = menus[2]->menu()->actions();
+        QCOMPARE(texts(file), (QStringList{u"Run &Again"_s, u"Run &Full Check…"_s, QString(), u"&Quit"_s}));
+        QCOMPARE(texts(edit), (QStringList{u"Copy Report as &Text"_s, u"Copy Report as &JSON"_s}));
+        QCOMPARE(texts(help), QStringList{u"&About EACheck"_s});
+        QAction *runAgain = file[0];
+        QAction *runFull = file[1];
+        QAction *quit = file[3];
+        QCOMPARE(runAgain->shortcut(), QKeySequence(Qt::Key_F5));
+        QCOMPARE(quit->shortcut(), QKeySequence(QKeySequence::Quit));
+        QVERIFY(!runAgain->icon().isNull() && !edit[0]->icon().isNull());
+
+        // During a run there's nothing to copy, and no second run.
+        window.runChecks(false);
+        for (const QAction *action : {runAgain, runFull, edit[0], edit[1]}) {
+            QVERIFY2(!action->isEnabled(), qPrintable(action->text()));
+        }
+        QTRY_VERIFY(finished(window));
+        QVERIFY(runAgain->isEnabled());
+        // Run Full Check is there while the message is.
+        QVERIFY(runFull->isEnabled());
+
+        edit[0]->trigger();
+        QVERIFY(QGuiApplication::clipboard()->text().startsWith(u"EACheck "_s));
+        edit[1]->trigger();
+        QCOMPARE(QJsonDocument::fromJson(QGuiApplication::clipboard()->text().toUtf8()).object().value(u"checks"_s).toArray().size(), 8);
+
+        runFull->trigger();
+        QVERIFY(!runFull->isEnabled());
+        QTRY_VERIFY(finished(window));
+        QVERIFY(!runFull->isEnabled());
+        QVERIFY(!window.findChild<MessageBar *>()->button()->isVisible());
+
+        help[0]->trigger();
+        auto *about = window.findChild<QMessageBox *>();
+        QVERIFY(about);
+        QTRY_VERIFY(about->isVisible());
+        about->close();
+
+        // Offscreen has no key for QKeySequence::Quit, so trigger it.
+        quit->trigger();
+        QTRY_VERIFY(!window.isVisible());
     }
 
     void darkColourScheme()

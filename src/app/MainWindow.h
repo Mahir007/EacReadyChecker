@@ -8,6 +8,8 @@
 class CheckRow;
 class MessageBar;
 class Revealer;
+class QAction;
+class QMenuBar;
 class QPushButton;
 class QScrollArea;
 class QTimer;
@@ -27,6 +29,7 @@ protected:
     void changeEvent(QEvent *event) override;
 
 private:
+    void createMenuBar();
     void updateColours();
     void layOutList();
     void updateIcons();
@@ -47,6 +50,13 @@ private:
     QPushButton *m_runFull; // the message's button
     QPushButton *m_copy;
     QPushButton *m_about;
+    QMenuBar *m_menuBar = nullptr;
+    QAction *m_runAgainAction = nullptr;
+    QAction *m_runFullAction = nullptr;
+    QAction *m_quitAction = nullptr;
+    QAction *m_copyTextAction = nullptr;
+    QAction *m_copyJsonAction = nullptr;
+    QAction *m_aboutAction = nullptr;
     QWidget *m_list;
     QWidget *m_footer;
     QScrollArea *m_scroll;

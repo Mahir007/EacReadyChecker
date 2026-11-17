@@ -18,12 +18,12 @@
 #include <QJsonDocument>
 #include <QKeySequence>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
-#include <QShortcut>
 #include <QStyle>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -103,6 +103,8 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     , m_scroll(new QScrollArea(this))
     , m_copiedReset(new QTimer(this))
 {
+    // First: setting the colours can already update the icons, its actions' too.
+    createMenuBar();
     updateColours();
     syncIconThemes();
     updateIcons();
@@ -135,12 +137,6 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     connect(m_runFull, &QPushButton::clicked, this, [this] {
         runChecks(true);
     });
-    // No Refresh button: what the checks read rarely changes without a reboot. F5 runs them again,
-    // with admin access once it's been granted.
-    // Not QKeySequence::Refresh: that keeps only the platform's first binding, Ctrl+R on GNOME.
-    new QShortcut(Qt::Key_F5, this, this, [this] {
-        runChecks(m_report.privilegedState == PrivilegedState::Granted);
-    });
 
     auto *copyMenu = new QMenu(m_copy);
     copyMenu->addAction(u"Copy as Text"_s, this, [this] {
@@ -160,8 +156,6 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
         });
     });
 
-    new QShortcut(QKeySequence::Quit, this, this, &QWidget::close);
-
     connect(m_about, &QPushButton::clicked, this, &MainWindow::showAbout);
 
     auto *buttons = new QHBoxLayout(m_footer);
@@ -172,6 +166,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins({});
     layout->setSpacing(0);
+    layout->setMenuBar(m_menuBar);
     layout->addWidget(m_banner);
     layout->addWidget(m_messageReveal);
     layout->addWidget(separator(this));
@@ -185,6 +180,45 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
 
     connect(m_runner, &CheckRunner::started, this, &MainWindow::onStarted);
     connect(m_runner, &CheckRunner::finished, this, &MainWindow::onFinished);
+}
+
+void MainWindow::createMenuBar()
+{
+    // For a global menu: Plasma's Global Menu widget or the title bar's application menu button.
+    // Qt exports the bar over D-Bus when a menu registrar is running, and then hides it. Without
+    // one, it stays hidden too: the footer and the message have the same actions.
+    m_menuBar = new QMenuBar(this);
+    m_menuBar->hide();
+
+    QMenu *file = m_menuBar->addMenu(u"&File"_s);
+    // No Refresh button: what the checks read rarely changes without a reboot. F5 runs them again,
+    // with admin access once it's been granted.
+    m_runAgainAction = file->addAction(u"Run &Again"_s, this, [this] {
+        runChecks(m_report.privilegedState == PrivilegedState::Granted);
+    });
+    // Not QKeySequence::Refresh: that keeps only the platform's first binding, Ctrl+R on GNOME.
+    m_runAgainAction->setShortcut(Qt::Key_F5);
+    m_runFullAction = file->addAction(u"Run &Full Check…"_s, this, [this] {
+        runChecks(true);
+    });
+    m_runFullAction->setEnabled(false);
+    file->addSeparator();
+    m_quitAction = file->addAction(u"&Quit"_s, this, &QWidget::close);
+    m_quitAction->setShortcut(QKeySequence::Quit);
+
+    QMenu *edit = m_menuBar->addMenu(u"&Edit"_s);
+    m_copyTextAction = edit->addAction(u"Copy Report as &Text"_s, this, [this] {
+        copyReport(false);
+    });
+    m_copyJsonAction = edit->addAction(u"Copy Report as &JSON"_s, this, [this] {
+        copyReport(true);
+    });
+
+    QMenu *help = m_menuBar->addMenu(u"&Help"_s);
+    m_aboutAction = help->addAction(u"&About %1"_s.arg(AppInfo::displayName()), this, &MainWindow::showAbout);
+
+    // A hidden menu bar's shortcuts don't fire. The window's do.
+    addActions({m_runAgainAction, m_quitAction});
 }
 
 void MainWindow::changeEvent(QEvent *event)
@@ -227,6 +261,12 @@ void MainWindow::updateIcons()
     m_runFull->setIcon(themeIcon({u"dialog-password"_s, u"security-high"_s}));
     m_copy->setIcon(themeIcon({u"edit-copy"_s}));
     m_about->setIcon(themeIcon({u"help-about"_s}));
+    m_runAgainAction->setIcon(themeIcon({u"view-refresh"_s}));
+    m_runFullAction->setIcon(m_runFull->icon());
+    m_quitAction->setIcon(themeIcon({u"application-exit"_s}));
+    m_copyTextAction->setIcon(m_copy->icon());
+    m_copyJsonAction->setIcon(m_copy->icon());
+    m_aboutAction->setIcon(m_about->icon());
 }
 
 void MainWindow::updateMargins()
@@ -269,7 +309,7 @@ void MainWindow::updateScrollBar()
 
 void MainWindow::runChecks(bool elevate)
 {
-    // F5 works during a run too, now that no disabled button stands in its way.
+    // Run Again and Run Full Check are disabled during a run, but --elevate and tests call this too.
     if (m_runner->isRunning()) {
         return;
     }
@@ -290,6 +330,9 @@ void MainWindow::onStarted()
     }
     m_runFull->setEnabled(false);
     m_copy->setEnabled(false);
+    for (QAction *action : {m_runAgainAction, m_runFullAction, m_copyTextAction, m_copyJsonAction}) {
+        action->setEnabled(false);
+    }
 }
 
 void MainWindow::onFinished(const Report &report)
@@ -302,6 +345,9 @@ void MainWindow::onFinished(const Report &report)
 
     updateMessage(report);
     m_copy->setEnabled(true);
+    for (QAction *action : {m_runAgainAction, m_copyTextAction, m_copyJsonAction}) {
+        action->setEnabled(true);
+    }
 }
 
 void MainWindow::updateMessage(const Report &report)
@@ -329,6 +375,7 @@ void MainWindow::updateMessage(const Report &report)
         break;
     }
     m_runFull->setEnabled(show);
+    m_runFullAction->setEnabled(show);
     m_messageReveal->setRevealed(show, true);
 }
 
