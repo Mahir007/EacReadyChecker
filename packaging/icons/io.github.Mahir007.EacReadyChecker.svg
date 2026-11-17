@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Placeholder app icon: a shield with a check mark. -->
-  <path d="M64 6 L114 23 V60 C114 93 93 113 64 123 C35 113 14 93 14 60 V23 Z" fill="#1d99f3"/>
-  <path d="M64 16 L104 29.6 V60 C104 87 87 104 64 113 C41 104 24 87 24 60 V29.6 Z" fill="#232629"/>
-  <path d="M43 64 L58 79 L87 49" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="64,7 113,35 113,93 64,121 15,93 15,35" fill="#0d3b66" stroke="#2bb3ec" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="64,10 17.5,36.5 17.5,91.5 64,118" fill="#2a9fdc"/>
+  <polygon points="64,18 82,64 64,110 46,64" fill="#1e7cc4"/>
+  <polygon points="64,18 82,64 64,110" fill="#14588f"/>
+  <path d="M37 66 L56 85 L92 45" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
