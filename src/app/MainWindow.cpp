@@ -107,7 +107,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     syncIconThemes();
     updateIcons();
     setWindowTitle(u"EACheck"_s);
-    resize(560, 640);
+    resize(460, 640);
 
     // Rows, in the article's order. The list is a content view: it uses the View colours (Base)
     // and runs to the window's edges, like Dolphin's. The banner and footer keep the Window colours.
@@ -306,28 +306,23 @@ void MainWindow::onFinished(const Report &report)
 
 void MainWindow::updateMessage(const Report &report)
 {
-    const auto needsAdmin = std::count_if(report.results.begin(), report.results.end(), [](const CheckResult &r) {
-        return r.status == CheckStatus::NeedsAdmin;
-    });
-    const QString checks = needsAdmin == 1 ? u"1 check"_s : u"%1 checks"_s.arg(needsAdmin);
+    // Short: the rows already show which checks need it.
     bool show = true;
     switch (report.privilegedState) {
     case PrivilegedState::NotRequested:
-        show = needsAdmin > 0;
-        m_message->setMessage(MessageBar::Type::Information,
-                              u"%1 need%2 admin access to read the TPM event log."_s.arg(checks, needsAdmin == 1 ? u"s"_s : QString()),
-                              u"Run Full Check"_s);
+        show = std::any_of(report.results.begin(), report.results.end(), [](const CheckResult &r) {
+            return r.status == CheckStatus::NeedsAdmin;
+        });
+        m_message->setMessage(MessageBar::Type::Information, u"Some checks need admin access."_s, u"Run Full Check"_s);
         break;
     case PrivilegedState::Cancelled:
-        m_message->setMessage(MessageBar::Type::Warning, u"Admin access wasn't granted, so %1 couldn't finish."_s.arg(checks), u"Try Again"_s);
+        m_message->setMessage(MessageBar::Type::Warning, u"Admin access wasn't granted."_s, u"Try Again"_s);
         break;
     case PrivilegedState::NoAgent:
-        m_message->setMessage(MessageBar::Type::Warning,
-                              u"No polkit authentication agent is running, so admin access can't be asked for."_s,
-                              u"Try Again"_s);
+        m_message->setMessage(MessageBar::Type::Warning, u"No polkit authentication agent is running."_s, u"Try Again"_s);
         break;
     case PrivilegedState::Failed:
-        m_message->setMessage(MessageBar::Type::Error, u"The admin read failed: %1"_s.arg(report.privilegedError), u"Try Again"_s);
+        m_message->setMessage(MessageBar::Type::Error, u"Admin read failed: %1"_s.arg(report.privilegedError), u"Try Again"_s);
         break;
     case PrivilegedState::Granted:
         show = false;

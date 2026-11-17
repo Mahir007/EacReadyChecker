@@ -128,7 +128,7 @@ private Q_SLOTS:
         // Checks that need the event log show Needs admin, so the message and its button appear.
         QVERIFY(runFull->isVisible() && runFull->isEnabled());
         QCOMPARE(runFull->text(), u"Run Full Check"_s);
-        QCOMPARE(message(window), u"3 checks need admin access to read the TPM event log."_s);
+        QCOMPARE(message(window), u"Some checks need admin access."_s);
 
         // The list is on the View colours (Base), not the window's.
         const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
