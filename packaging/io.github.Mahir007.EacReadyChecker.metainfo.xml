@@ -42,6 +42,30 @@
   <url type="bugtracker">https://github.com/Mahir007/EacReadyChecker/issues</url>
   <url type="vcs-browser">https://github.com/Mahir007/EacReadyChecker</url>
 
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/a63a9fe5063de534efae10fd42adf20e77e0de66/docs/screenshots/not-ready.png</image>
+      <caption>A machine that isn't ready, with the failing requirement opened</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/a63a9fe5063de534efae10fd42adf20e77e0de66/docs/screenshots/ready.png</image>
+      <caption>A machine that meets every requirement</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/a63a9fe5063de534efae10fd42adf20e77e0de66/docs/screenshots/needs-admin.png</image>
+      <caption>Before admin access, the checks that need it are marked</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/a63a9fe5063de534efae10fd42adf20e77e0de66/docs/screenshots/not-ready-dark.png</image>
+      <caption>The same machine that isn't ready, in a dark colour scheme</caption>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f6c98b</color>
+    <color type="primary" scheme_preference="dark">#6b4a22</color>
+  </branding>
+
   <content_rating type="oars-1.1"/>
 
   <supports>
