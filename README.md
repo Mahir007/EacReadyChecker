@@ -1,3 +1,5 @@
+<img src="packaging/icons/io.github.Mahir007.EacReadyChecker.svg" width="96" align="right" alt="">
+
 # EACheck
 
 EACheck checks whether a Linux machine meets the
@@ -5,6 +7,8 @@ EACheck checks whether a Linux machine meets the
 It only reads system state, and asks for an admin password only to read the TPM event log.
 
 Status: early development.
+
+![EACheck on a Fedora machine with an unknown module-signing key](docs/screenshots/not-ready.png)
 
 ## Layout
 
@@ -17,9 +21,9 @@ Status: early development.
 | `src/app` | The Qt Widgets window (`eacheck_app`). |
 | `src/cli` | `--json` and `--text` output. |
 | `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
-| `tools` | `capture-fixture.sh`, `shim-vendor-certs.py` and `compare-qt-releases.py`. |
+| `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
 | `packaging` | Flatpak manifest, desktop file, metainfo and icon. |
-| `docs` | Where each well-known key came from. |
+| `docs` | Where each well-known key came from, and screenshots. |
 | `third_party` | QAdwaitaDecorations, the title bar plugin used on GNOME. |
 
 ## Requirements
@@ -199,6 +203,20 @@ tools/compare-qt-releases.py ~/qt-compare 6.12.0 6.12.1
 It downloads each release from qt.io, builds the plugin against it and compares what the plugin
 uses of the private API. Releases it reports as the same go in one entry. It needs `aqtinstall` and
 `pyelftools` from pip, and the build tools above.
+
+## Updating the screenshots
+
+The README and the metainfo use the screenshots in `docs/screenshots`. To take them again after a UI
+change:
+
+```sh
+tools/take-screenshots.sh build
+```
+
+Each one runs the window on a fixture in a KWin session on Xvfb, with Plasma's default settings, so
+it needs no desktop or GPU. The packages it needs are listed at the top of the script. The metainfo
+links to the images at a commit, so after committing new ones, update that commit in its screenshot
+URLs.
 
 ## Contributing
 
