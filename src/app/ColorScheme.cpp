@@ -220,17 +220,51 @@ QPalette darkPalette()
     }
     return p;
 }
+
+// Fusion's light colours, the ones Qt's generic theme gives (qt_fusionPalette in Qt 6.11).
+QPalette lightPalette()
+{
+    const QColor window(0xef, 0xef, 0xef);
+    const QColor dark = window.darker(150);
+    const QColor mid = window.darker(130);
+    const QColor shadow = dark.darker(135);
+    const QColor highlight(0x30, 0x8c, 0xc6);
+    const QColor disabled(0xbe, 0xbe, 0xbe);
+
+    QPalette p(Qt::black, window, window.lighter(150), dark, mid, Qt::black, Qt::white);
+    p.setColor(QPalette::Midlight, mid.lighter(110));
+    p.setColor(QPalette::Button, window);
+    p.setColor(QPalette::Shadow, shadow);
+    p.setColor(QPalette::HighlightedText, Qt::white);
+    p.setColor(QPalette::Highlight, highlight);
+    p.setColor(QPalette::Accent, highlight);
+    p.setColor(QPalette::PlaceholderText, QColor(0, 0, 0, 128));
+    for (const QPalette::ColorRole role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText}) {
+        p.setColor(QPalette::Disabled, role, disabled);
+    }
+    p.setColor(QPalette::Disabled, QPalette::Base, window);
+    p.setColor(QPalette::Disabled, QPalette::Dark, QColor(0xd1, 0xd1, 0xd1).darker(110));
+    p.setColor(QPalette::Disabled, QPalette::Shadow, shadow.lighter(150));
+    p.setColor(QPalette::Disabled, QPalette::Highlight, QColor(0x91, 0x91, 0x91));
+    p.setColor(QPalette::Disabled, QPalette::Accent, QColor(0x91, 0x91, 0x91));
+    return p;
+}
 } // namespace
 
 void applyColorScheme(Qt::ColorScheme scheme)
 {
+    // Without a Qt theme, both palettes are set here. In the Flatpak, Qt's portal theme reports the
+    // scheme, but its palette is Fusion's in the scheme the app started in, and stays so.
     if (scheme == Qt::ColorScheme::Dark) {
         // A dark GTK theme still gives lists the window's colour.
         const QPalette palette = QGuiApplication::palette();
-        if (!isDarkPalette(palette) || hasOneColour(palette)) {
+        if (!hasQtTheme() || !isDarkPalette(palette) || hasOneColour(palette)) {
             QApplication::setPalette(darkPalette());
             s_darkPaletteSet = true;
         }
+    } else if (!hasQtTheme()) {
+        QApplication::setPalette(lightPalette());
+        s_darkPaletteSet = false;
     } else if (s_darkPaletteSet) {
         QApplication::setPalette(QPalette());
         s_darkPaletteSet = false;

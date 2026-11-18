@@ -148,6 +148,28 @@ private Q_SLOTS:
         m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1}));
     }
 
+    void replacesTheSandboxPalette()
+    {
+        // In the Flatpak, Qt's portal theme gives Fusion's dark palette when the app starts in dark,
+        // and keeps it after a switch to light.
+        qputenv("XDG_CURRENT_DESKTOP", "COSMIC");
+        QPalette fusionDark(QColor(0x32, 0x32, 0x32), QColor(0x32, 0x32, 0x32));
+        fusionDark.setColor(QPalette::WindowText, QColor(0xf0, 0xf0, 0xf0));
+        fusionDark.setColor(QPalette::Text, QColor(0xf0, 0xf0, 0xf0));
+        fusionDark.setColor(QPalette::Base, QColor(0x24, 0x24, 0x24));
+        QApplication::setPalette(fusionDark);
+        setScheme(PreferDark);
+        followDesktopColorScheme();
+        QCOMPARE(QApplication::palette().color(QPalette::Window), QColor(0x24, 0x24, 0x24));
+
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+        changeScheme(PreferDark);
+        QTRY_VERIFY(isDarkPalette(QApplication::palette()));
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
     void linksFollowTheAccent()
     {
         // libadwaita's blue, and the colours its documentation gives for blue text and links.
