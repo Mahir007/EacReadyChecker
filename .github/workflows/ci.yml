@@ -428,6 +428,25 @@ jobs:
           out=$("$app" --version)
           echo "$out"
           [ "$out" = "eac-ready-checker ${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" ]
+      # Only a release has it (build-appimage.sh). Its .zsync file has to describe this AppImage.
+      - name: Check the update information
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          info=$("$APP" --appimage-updateinformation)
+          echo "$info"
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            [ -z "$info" ] && [ ! -e "$APP.zsync" ]
+            exit
+          fi
+          [ "$info" = 'gh-releases-zsync|Mahir007|EacReadyChecker|latest|eac-ready-checker-*-x86_64.AppImage.zsync' ]
+          name=$(basename "$APP")
+          header=$(sed '/^$/q' "$APP.zsync")
+          echo "$header"
+          grep -qx "Filename: $name" <<< "$header"
+          grep -qx "URL: $name" <<< "$header"
+          grep -qx "Length: $(stat -c %s "$APP")" <<< "$header"
+          grep -qx "SHA-1: $(sha1sum "$APP" | cut -d' ' -f1)" <<< "$header"
       - name: Open the window
         run: |
           export XDG_RUNTIME_DIR=$RUNNER_TEMP/run XDG_CURRENT_DESKTOP=GNOME WAYLAND_DISPLAY=wayland-check

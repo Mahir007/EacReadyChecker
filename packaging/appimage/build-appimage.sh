@@ -71,6 +71,12 @@ mkdir -p "$cache"
 fetch "$runtime_url" "$runtime_sha256" "$cache/runtime-x86_64"
 fetch "$appimagetool_url" "$appimagetool_sha256" "$cache/appimagetool-x86_64.AppImage"
 chmod +x "$cache/appimagetool-x86_64.AppImage"
+# Its zsyncmake, for the .zsync file.
+if [ ! -x "$cache/zsyncmake" ]; then
+    (cd "$cache" && rm -rf squashfs-root && APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool-x86_64.AppImage --appimage-extract usr/bin/zsyncmake >/dev/null)
+    mv "$cache/squashfs-root/usr/bin/zsyncmake" "$cache/zsyncmake"
+    rm -rf "$cache/squashfs-root"
+fi
 
 # No RPATH from CMake: it pads the installed one to the length of the build tree's, which holds the
 # Qt prefix, so the file would depend on where Qt is. patchelf sets it below.
@@ -121,10 +127,25 @@ cp "$appdir/usr/share/applications/$id.desktop" "$appdir/"
 cp "$appdir/usr/share/icons/hicolor/scalable/apps/$id.svg" "$appdir/"
 ln -sf "$id.svg" "$appdir/.DirIcon"
 
+# A release lets AppImageUpdate and the tools that use it update to the latest release, downloading
+# only the blocks that changed. Not a pre-release or a development build: "latest" is the newest
+# release, which may be older than them.
+update=()
+if [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    update=(--updateinformation "gh-releases-zsync|Mahir007|EacReadyChecker|latest|eac-ready-checker-*-x86_64.AppImage.zsync")
+fi
+
 # The metainfo is checked by the tests on newer distributions. AlmaLinux 9's appstreamcli is older
 # than some of what it uses.
-rm -f "$out/$name"
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$cache/appimagetool-x86_64.AppImage" --no-appstream \
-    --runtime-file "$cache/runtime-x86_64" "$appdir" "$out/$name"
+rm -f "$out/$name" "$out/$name.zsync"
+# appimagetool writes a .zsync file into the folder it runs in. It has the time it was made in it,
+# so it's made again below.
+(cd "$build" && ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$cache/appimagetool-x86_64.AppImage" --no-appstream \
+    "${update[@]}" --runtime-file "$cache/runtime-x86_64" "$appdir" "$out/$name")
+rm -f "$build/$name.zsync"
+touch -d "@$SOURCE_DATE_EPOCH" "$out/$name"
+if [ ${#update[@]} -gt 0 ]; then
+    (cd "$out" && "$cache/zsyncmake" -u "$name" -o "$name.zsync" "$name" >/dev/null)
+fi
 (cd "$out" && sha256sum "$name" >"$name.sha256")
 echo "$out/$name"
