@@ -30,6 +30,7 @@
 #include <QStandardPaths>
 #include <QToolButton>
 #include <QTest>
+#include <QVariantAnimation>
 
 #include <algorithm>
 
@@ -548,10 +549,19 @@ private Q_SLOTS:
         QPushButton *runFull = window.findChild<MessageBar *>()->button();
         Revealer *bar = messageReveal(window);
         QVERIFY(bar);
+        auto *reveal = bar->findChild<QVariantAnimation *>();
+        QVERIFY(reveal);
+        bool slid = false;
+        connect(reveal, &QAbstractAnimation::stateChanged, this, [&](QAbstractAnimation::State state) {
+            slid = slid || state == QAbstractAnimation::Running;
+        });
         window.runChecks(false);
         QTRY_VERIFY(finished(window));
-        // The message slides in.
-        QVERIFY(bar->isVisible() && bar->progress() < 1);
+        // The message slides in. Whether it's still moving isn't checked: the first paint after the
+        // checks can take longer than the slide on a busy CI runner, and the animation then ends at
+        // its next step.
+        QVERIFY(slid);
+        QCOMPARE(reveal->duration(), int(Motion::Long * slow));
         QTRY_COMPARE(bar->progress(), 1.0);
 
         // The IOMMU row's sub-checks slide open and closed. The row's height changes in steps, and
