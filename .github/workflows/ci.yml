@@ -54,7 +54,7 @@ jobs:
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
               g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils
               qt6-base-private-dev qt6-wayland-private-dev qt6-svg-dev
-              dbus-daemon
+              dbus-daemon ca-certificates
           - name: Fedora 45
             image: registry.fedoraproject.org/fedora:45
             install: >-
@@ -68,7 +68,8 @@ jobs:
               pacman -Syu --noconfirm --needed
               gcc git cmake ninja qt6-base qt6-svg breeze-icons appstream desktop-file-utils
     steps:
-      # dbus-daemon gives the colour scheme and motion tests a private session bus.
+      # dbus-daemon gives the colour scheme and motion tests a private session bus. On Debian, the
+      # checkout needs ca-certificates, which git only recommends.
       - name: Install packages
         run: ${{ matrix.install }}
       - uses: actions/checkout@v7
