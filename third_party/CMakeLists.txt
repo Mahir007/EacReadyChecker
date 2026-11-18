@@ -53,8 +53,10 @@ message(STATUS "GNOME title bar plugin: on")
 
 add_library(qadwaitadecorations MODULE
     qadwaitadecorations/src/qadwaitadecorations.cpp
-    qadwaitadecorations/src/qadwaitadecorationsplugin.cpp
+    # In place of upstream's qadwaitadecorationsplugin.cpp, to add a shadow to unfocused windows
+    ${PROJECT_SOURCE_DIR}/src/decoration/DecorationPlugin.cpp
 )
+target_include_directories(qadwaitadecorations PRIVATE qadwaitadecorations/src)
 # HAS_QT6_SUPPORT turns on the shadow. Upstream's CMakeLists.txt sets it for every Qt 6 build.
 target_compile_definitions(qadwaitadecorations PRIVATE HAS_QT6_SUPPORT)
 target_link_libraries(qadwaitadecorations PRIVATE

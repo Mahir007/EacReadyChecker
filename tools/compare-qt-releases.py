@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Finds the Qt patch releases that can share a build of the GNOME title bar plugin
-# (third_party/qadwaitadecorations), for samePrivateApi in src/app/WindowDecoration.cpp.
+# (third_party/qadwaitadecorations and src/decoration), for samePrivateApi in src/app/WindowDecoration.cpp.
 #
 #   tools/compare-qt-releases.py <work-dir> <release>... [--objects <label>=<dir>]...
 #
@@ -140,7 +140,7 @@ def view(objects):
                                        "DW_TAG_enumeration_type") or "DW_AT_declaration" in a:
                         continue
                     df = decl_file(die)
-                    own = df is not None and "/third_party/" in df
+                    own = df is not None and ("/third_party/" in df or "/src/decoration/" in df)
                     if not (own or private(df)):
                         continue
                     name = qualified(die)
