@@ -282,7 +282,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
         with:
-          name: release
+          name: release-flatpak
           path: dist/
           retention-days: 1
           if-no-files-found: error
@@ -296,7 +296,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: release
+          name: release-flatpak
       - name: Install flatpak
         run: |
           sudo apt-get update
@@ -314,4 +314,104 @@ jobs:
             [ "$out" = "eac-ready-checker $VERSION" ]
           else
             [ "$out" = "eac-ready-checker 0.0.0-dev+${GITHUB_SHA::7}" ]
+          fi
+
+  # The AppImage, with Qt from qt.io, built on AlmaLinux 9 so it runs on glibc 2.34 or later.
+  # Like the bundle, the same commit gives the same file.
+  build-appimage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QT_VERSION: 6.11.3
+      AQT_VERSION: 3.3.0
+      QT_ARCHIVES: qtbase qtwayland qtsvg icu
+    steps:
+      - uses: actions/checkout@v7
+      - name: Version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          echo "VERSION=${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v6
+        with:
+          path: ~/qt
+          key: qt-${{ env.QT_VERSION }}-aqt-${{ env.AQT_VERSION }}-${{ env.QT_ARCHIVES }}
+      - name: Install Qt
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          # QT_ARCHIVES is a list, so it's split on purpose.
+          # shellcheck disable=SC2086
+          pipx run --spec "aqtinstall==$AQT_VERSION" aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 \
+            --archives $QT_ARCHIVES --outputdir ~/qt
+      - name: Cache the AppImage tools
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/eacheck-appimage
+          key: appimage-tools-${{ hashFiles('packaging/appimage/build-appimage.sh') }}
+      - name: Build
+        run: |
+          appimage=eac-ready-checker-$VERSION-x86_64.AppImage
+          packaging/appimage/build-in-container.sh ~/qt/"$QT_VERSION"/gcc_64 dist
+          {
+            echo '| Archive | Size | SHA-256 |'
+            echo '| --- | --- | --- |'
+            echo "| $appimage | $(numfmt --to=iec-i --suffix=B "$(stat -c %s "dist/$appimage")") | \`$(cut -d' ' -f1 "dist/$appimage.sha256")\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-appimage
+          path: dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Runs the AppImage on a stock system through FUSE, the way a user would. Then opens the window in
+  # Weston with GNOME's settings, which loads the plugins the app needs there, the title bar plugin too.
+  check-appimage:
+    needs: build-appimage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-appimage
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends fuse3 weston dbus-daemon
+      - name: Check the version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sha256sum -c ./*.AppImage.sha256
+          files=(*.AppImage)
+          app=$PWD/${files[0]}
+          echo "APP=$app" >> "$GITHUB_ENV"
+          chmod +x "$app"
+          out=$("$app" --version)
+          echo "$out"
+          [ "$out" = "eac-ready-checker ${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" ]
+      - name: Open the window
+        run: |
+          export XDG_RUNTIME_DIR=$RUNNER_TEMP/run XDG_CURRENT_DESKTOP=GNOME WAYLAND_DISPLAY=wayland-check
+          mkdir -m 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless --socket="$WAYLAND_DISPLAY" > weston.log 2>&1 &
+          for _ in $(seq 50); do
+            [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] && break
+            sleep 0.1
+          done
+          # Still open after 5 seconds, so timeout stops it.
+          status=0
+          QT_DEBUG_PLUGINS=1 dbus-run-session -- timeout 5 "$APP" > app.log 2>&1 || status=$?
+          kill %1
+          if [ "$status" != 124 ]; then
+            cat app.log
+            exit 1
+          fi
+          grep 'loaded library' app.log
+          grep -q 'libqadwaitadecorations.so" loaded library' app.log
+          if grep -E "Cannot load library|Using Qt's title bar|Title bar shadow off" app.log; then
+            exit 1
           fi

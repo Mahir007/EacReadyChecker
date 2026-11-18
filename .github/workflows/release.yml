@@ -49,8 +49,9 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
-          name: release
+          pattern: release-*
           path: release
+          merge-multiple: true
       - name: Write the release notes
         run: |
           python3 .github/scripts/release-notes.py "$TAG" > notes.md
@@ -58,7 +59,9 @@ jobs:
       - uses: actions/attest@v4
         if: ${{ !github.event.repository.private }}
         with:
-          subject-path: release/*.flatpak
+          subject-path: |
+            release/*.flatpak
+            release/*.AppImage
       - name: Publish
         run: |
           prerelease=false
@@ -71,8 +74,10 @@ jobs:
             gh release create "$TAG" release/* --title "$TAG" --notes-file notes.md \
               --prerelease="$prerelease" --verify-tag
           fi
-      - name: Delete the release artifact
+      - name: Delete the release artifacts
         run: |
-          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
-            -q '.artifacts[] | select(.name == "release") | .id')
-          gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            -q '.artifacts[] | select(.name | startswith("release-")) | .id')
+          for id in $ids; do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          done
