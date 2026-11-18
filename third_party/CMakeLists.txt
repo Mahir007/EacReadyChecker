@@ -64,6 +64,8 @@ cmake_path(ABSOLUTE_PATH EACHECK_PLUGIN_DIR_FROM_BIN BASE_DIRECTORY "${CMAKE_RUN
     OUTPUT_VARIABLE build_plugin_dir)
 set_target_properties(qadwaitadecorations PROPERTIES
     CXX_STANDARD 17
+    # It's upstream's code, unchanged, and newer Qt deprecates some of what it calls.
+    COMPILE_WARNING_AS_ERROR OFF
     LIBRARY_OUTPUT_DIRECTORY "${build_plugin_dir}/wayland-decoration-client"
 )
 install(TARGETS qadwaitadecorations LIBRARY DESTINATION "${EACHECK_PLUGIN_INSTALL_DIR}/wayland-decoration-client")
