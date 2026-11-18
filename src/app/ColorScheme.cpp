@@ -237,7 +237,6 @@ QPalette lightPalette()
     p.setColor(QPalette::Shadow, shadow);
     p.setColor(QPalette::HighlightedText, Qt::white);
     p.setColor(QPalette::Highlight, highlight);
-    p.setColor(QPalette::Accent, highlight);
     p.setColor(QPalette::PlaceholderText, QColor(0, 0, 0, 128));
     for (const QPalette::ColorRole role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText}) {
         p.setColor(QPalette::Disabled, role, disabled);
@@ -246,7 +245,10 @@ QPalette lightPalette()
     p.setColor(QPalette::Disabled, QPalette::Dark, QColor(0xd1, 0xd1, 0xd1).darker(110));
     p.setColor(QPalette::Disabled, QPalette::Shadow, shadow.lighter(150));
     p.setColor(QPalette::Disabled, QPalette::Highlight, QColor(0x91, 0x91, 0x91));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    p.setColor(QPalette::Accent, highlight);
     p.setColor(QPalette::Disabled, QPalette::Accent, QColor(0x91, 0x91, 0x91));
+#endif
     return p;
 }
 } // namespace
