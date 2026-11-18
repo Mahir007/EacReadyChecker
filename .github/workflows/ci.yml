@@ -46,37 +46,99 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # packages: where the package manager keeps what it downloads. prune: drops the versions
+        # that are no longer installed, so the cache doesn't grow.
         include:
           - name: Debian 13
+            id: debian13
             image: debian:13
+            packages: /var/cache/apt/archives/*.deb
+            # The image deletes downloaded packages after each install.
             install: >-
+              rm -f /etc/apt/apt.conf.d/docker-clean &&
               apt-get update &&
               DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
               g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils
               qt6-base-private-dev qt6-wayland-private-dev qt6-svg-dev
-              dbus-daemon ca-certificates
+              dbus-daemon ca-certificates ccache
+            prune: apt-get autoclean
           - name: Fedora 45
+            id: fedora45
             image: registry.fedoraproject.org/fedora:45
+            packages: /var/cache/libdnf5
             install: >-
-              dnf install -y --setopt=install_weak_deps=False
+              dnf install -y --setopt=install_weak_deps=False --setopt=keepcache=True
               gcc-c++ git cmake ninja-build qt6-qtbase-devel qt6-qtsvg breeze-icon-theme appstream desktop-file-utils
               qt6-qtbase-private-devel qt6-qtsvg-devel
-              dbus-daemon
+              dbus-daemon ccache
+            prune: |
+              rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm\n' > /tmp/installed
+              find /var/cache/libdnf5 -name '*.rpm' | while read -r f; do
+                grep -qxF "${f##*/}" /tmp/installed || rm -- "$f"
+              done
           - name: Arch
+            id: arch
             image: archlinux:latest
+            packages: /var/cache/pacman/pkg
             install: >-
               pacman -Syu --noconfirm --needed
               gcc git cmake ninja qt6-base qt6-svg breeze-icons appstream desktop-file-utils
+              ccache
+            prune: pacman -Sc --noconfirm
+    env:
+      CCACHE_MAXSIZE: 500M
     steps:
+      # A new package cache each week, and when the package list changes. Each one starts from the
+      # last, so only updated packages are downloaded.
+      - name: Cache keys
+        id: packages
+        env:
+          INSTALL: ${{ matrix.install }}
+        run: |
+          echo "key=packages-${{ matrix.id }}-$(echo "$INSTALL" | sha256sum | cut -c1-8)-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+      - name: Restore the package cache
+        id: restore-packages
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ matrix.packages }}
+          key: ${{ steps.packages.outputs.key }}
+          restore-keys: packages-${{ matrix.id }}-
       # dbus-daemon gives the colour scheme and motion tests a private session bus. On Debian, the
       # checkout needs ca-certificates, which git only recommends.
       - name: Install packages
         run: ${{ matrix.install }}
+      - name: Prune the package cache
+        if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
+        run: ${{ matrix.prune }}
+      - name: Save the package cache
+        if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ matrix.packages }}
+          key: ${{ steps.packages.outputs.key }}
       - uses: actions/checkout@v7
+      - name: Restore the compiler cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.id }}-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.id }}-
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+        run: >-
+          cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
-        run: cmake --build build
+        run: |
+          ccache --zero-stats
+          cmake --build build
+          ccache --show-stats
+      - name: Save the compiler cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.id }}-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
@@ -89,14 +151,50 @@ jobs:
       QT_VERSION: 6.5.3
       AQT_VERSION: 3.3.0
       QT_ARCHIVES: qtbase qtwayland qtsvg icu
+      PACKAGES: >-
+        ninja-build libgl-dev libegl-dev libxkbcommon-dev libwayland-dev
+        breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
+      # As in the test job. apt downloads into the home folder, where the cache action can read
+      # the packages.
+      - name: Cache keys
+        id: packages
+        run: |
+          echo "key=packages-qt-minimum-$(echo "$PACKAGES" | sha256sum | cut -c1-8)-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "APT_ARCHIVES=$HOME/apt-archives" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+      - name: Restore the package cache
+        id: restore-packages
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/apt-archives/*.deb
+          key: ${{ steps.packages.outputs.key }}
+          restore-keys: packages-qt-minimum-
       - name: Install packages
         run: |
+          mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
+          # PACKAGES is a list, so it's split on purpose.
+          # shellcheck disable=SC2086
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ninja-build libgl-dev libegl-dev libxkbcommon-dev libwayland-dev \
-            breeze-icon-theme appstream desktop-file-utils dbus-daemon
+            -o Dir::Cache::Archives="$APT_ARCHIVES" -o APT::Keep-Downloaded-Packages=true $PACKAGES
+      - name: Prune the package cache
+        if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
+        run: sudo apt-get autoclean -o Dir::Cache::Archives="$APT_ARCHIVES"
+      - name: Save the package cache
+        if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/apt-archives/*.deb
+          key: ${{ steps.packages.outputs.key }}
+      - name: Restore the compiler cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.ccache
+          key: ccache-qt-minimum-${{ github.sha }}
+          restore-keys: ccache-qt-minimum-
       - name: Cache Qt
         id: cache-qt
         uses: actions/cache@v6
@@ -113,9 +211,18 @@ jobs:
       - name: Configure
         run: >-
           cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$HOME/qt/$QT_VERSION/gcc_64"
-          -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
-        run: cmake --build build
+        run: |
+          ccache --zero-stats
+          cmake --build build
+          ccache --show-stats
+      - name: Save the compiler cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ccache
+          key: ccache-qt-minimum-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
