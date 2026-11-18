@@ -125,7 +125,9 @@ packaging/appimage/build-in-container.sh ~/qt/6.11.3/gcc_64 dist
 ./dist/eac-ready-checker-0.0.0-dev-x86_64.AppImage
 ```
 
-The same commit gives the same file. `VERSION` sets the version it reports.
+The same commit gives the same file. `VERSION` sets the version it reports. With a release version
+such as `1.2.0`, the build also writes a `.zsync` file and embeds update information, so
+AppImageUpdate, Gear Lever and AppImageLauncher can update it from the latest GitHub release.
 
 ## Tests
 
