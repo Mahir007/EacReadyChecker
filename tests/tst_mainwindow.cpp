@@ -291,6 +291,26 @@ private Q_SLOTS:
         QTRY_VERIFY(!window.isVisible());
     }
 
+    void breezeWithoutPlasma()
+    {
+        // The AppImage on Plasma: Breeze icons under Fusion, with nothing to recolour them. Before
+        // darkColourScheme, which replaces Adwaita, after which Breeze always follows the palette.
+        const QString style = QApplication::style()->name();
+        const QPalette palette = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+        QIcon::setThemeName(u"breeze"_s);
+        QApplication::setPalette(breezeDarkPalette());
+        syncIconThemes();
+        QCOMPARE(QIcon::themeName(), u"breeze-dark"_s);
+        QApplication::setPalette(QApplication::style()->standardPalette());
+        syncIconThemes();
+        QCOMPARE(QIcon::themeName(), u"breeze"_s);
+
+        QApplication::setPalette(palette);
+        QApplication::setStyle(style);
+        QIcon::setThemeName(u"breeze"_s);
+    }
+
     void darkColourScheme()
     {
         // GNOME: Adwaita is replaced by Breeze. With a dark palette that has to be breeze-dark, or

@@ -4,12 +4,13 @@
 #include "core/AppInfo.h"
 #include "core/CheckResult.h"
 
+#include <QApplication>
 #include <QEvent>
 #include <QFile>
-#include <QGuiApplication>
 #include <QIcon>
 #include <QPalette>
 #include <QStringList>
+#include <QStyle>
 
 inline bool isDarkPalette(const QPalette &palette)
 {
@@ -36,9 +37,16 @@ inline bool isBreezeInstalled()
     return false;
 }
 
+inline bool isBreezeStyle()
+{
+    return QApplication::style()->name().compare(QStringLiteral("breeze"), Qt::CaseInsensitive) == 0;
+}
+
 // Icons the current theme lacks come from Breeze. Breeze's glyphs are drawn for one background, so
-// use Breeze Dark when the palette has light text on a dark window. Adwaita and Yaru are replaced
-// outright: Adwaita inherits AdwaitaLegacy's old full-colour icons, and Yaru has its own.
+// use Breeze Dark when the palette has light text on a dark window. On Plasma, KDE's platform theme
+// recolours them instead, and the style is Breeze. Without it, as in the AppImage, the style is
+// Fusion and Breeze is switched here too. Adwaita and Yaru are replaced outright: Adwaita inherits
+// AdwaitaLegacy's old full-colour icons, and Yaru has its own.
 // Call it before (re)loading icons. It only changes anything when the palette has changed.
 inline void syncIconThemes()
 {
@@ -55,7 +63,8 @@ inline void syncIconThemes()
         }
         replaced = true;
     }
-    if (replaced && theme != name && (isGnomeIconTheme(theme) || theme.startsWith(QStringLiteral("breeze")))) {
+    const bool breeze = theme.startsWith(QStringLiteral("breeze")) && (replaced || !isBreezeStyle());
+    if (theme != name && (isGnomeIconTheme(theme) || breeze)) {
         QIcon::setThemeName(name);
     }
 }
