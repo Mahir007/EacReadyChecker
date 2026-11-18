@@ -86,6 +86,7 @@ fi
 {
     echo "captured: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "kernel: $(uname -r)"
+    # shellcheck source=/dev/null
     [ -r /etc/os-release ] && . /etc/os-release && echo "os: ${PRETTY_NAME:-unknown}"
     [ -r /sys/class/dmi/id/sys_vendor ] && echo "vendor: $(cat /sys/class/dmi/id/sys_vendor)"
     [ -r /sys/class/dmi/id/product_name ] && echo "product: $(cat /sys/class/dmi/id/product_name)"

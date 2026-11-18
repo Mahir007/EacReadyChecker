@@ -1,0 +1,4 @@
+# Pyflakes, plus pycodestyle's import and syntax errors. Ruff's default set mostly flags deliberate
+# choices in these scripts, such as reading a command's output without checking its exit code.
+[lint]
+select = ["E4", "E9", "F"]

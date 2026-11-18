@@ -1,0 +1,209 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore: ['**.md', LICENSE]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to build, without the v
+        required: true
+        type: string
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' && !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: io.github.Mahir007.EacReadyChecker
+  # Qt warns and switches to UTF-8 under the containers' default C locale.
+  LANG: C.UTF-8
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+      - name: shellcheck
+        run: git ls-files -z '*.sh' | xargs -0 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0
+      - name: ruff
+        run: docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/astral-sh/ruff:0.17.5 check --no-cache .
+
+  # The README's packages on each distribution it lists. Each one has a different Qt and compiler.
+  test:
+    name: test (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 13
+            image: debian:13
+            install: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
+              g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils
+              qt6-base-private-dev qt6-wayland-private-dev qt6-svg-dev
+              dbus-daemon
+          - name: Fedora 45
+            image: registry.fedoraproject.org/fedora:45
+            install: >-
+              dnf install -y --setopt=install_weak_deps=False
+              gcc-c++ git cmake ninja-build qt6-qtbase-devel qt6-qtsvg breeze-icon-theme appstream desktop-file-utils
+              qt6-qtbase-private-devel qt6-qtsvg-devel
+              dbus-daemon
+          - name: Arch
+            image: archlinux:latest
+            install: >-
+              pacman -Syu --noconfirm --needed
+              gcc git cmake ninja qt6-base qt6-svg breeze-icons appstream desktop-file-utils
+    steps:
+      # dbus-daemon gives the colour scheme and motion tests a private session bus.
+      - name: Install packages
+        run: ${{ matrix.install }}
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # The oldest Qt the build accepts (QT_MIN_VERSION), from qt.io. No distribution still ships it.
+  test-qt-minimum:
+    name: test (Qt 6.5.3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      QT_VERSION: 6.5.3
+      AQT_VERSION: 3.3.0
+      QT_ARCHIVES: qtbase qtwayland qtsvg icu
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ninja-build libgl-dev libegl-dev libxkbcommon-dev libwayland-dev \
+            breeze-icon-theme appstream desktop-file-utils dbus-daemon
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v6
+        with:
+          path: ~/qt
+          key: qt-${{ env.QT_VERSION }}-aqt-${{ env.AQT_VERSION }}-${{ env.QT_ARCHIVES }}
+      - name: Install Qt
+        if: steps.cache-qt.outputs.cache-hit != 'true'
+        run: |
+          # QT_ARCHIVES is a list, so it's split on purpose.
+          # shellcheck disable=SC2086
+          pipx run --spec "aqtinstall==$AQT_VERSION" aqt install-qt linux desktop "$QT_VERSION" gcc_64 \
+            --archives $QT_ARCHIVES --outputdir ~/qt
+      - name: Configure
+        run: >-
+          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$HOME/qt/$QT_VERSION/gcc_64"
+          -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # The Flatpak, built in the KDE SDK the manifest names. The bundle is the same file for the same
+  # commit: the build and the OSTree commit use the commit's time, and so does the bundle's own
+  # timestamp, which fix-bundle-time.py sets.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
+      # bubblewrap, which flatpak-builder runs the build in, needs it.
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+      - name: Version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          echo "VERSION=${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" >> "$GITHUB_ENV"
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - name: Restore the build cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .flatpak-builder
+          key: flatpak-builder-kde-6.11-${{ github.sha }}
+          restore-keys: flatpak-builder-kde-6.11-
+      - name: Build
+        run: |
+          manifest=packaging/flatpak/$APP_ID.yml
+          stamped=packaging/flatpak/stamped.yml
+          sed "s/^\(      - -DBUILD_TESTING=OFF\)$/\1\n      - -DEACHECK_VERSION=$VERSION/" "$manifest" > "$stamped"
+          grep -q -- "-DEACHECK_VERSION=$VERSION$" "$stamped"
+          flatpak-builder --disable-rofiles-fuse --ccache --force-clean --default-branch=stable \
+            --override-source-date-epoch="$SOURCE_DATE_EPOCH" "$RUNNER_TEMP/build" "$stamped"
+      - name: Save the build cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
+        with:
+          path: .flatpak-builder
+          key: flatpak-builder-kde-6.11-${{ github.sha }}
+      - name: Bundle
+        run: |
+          bundle=eac-ready-checker-$VERSION-x86_64.flatpak
+          mkdir dist
+          flatpak build-export --timestamp="@$SOURCE_DATE_EPOCH" --exclude='/lib/debug/*' \
+            "$RUNNER_TEMP/repo" "$RUNNER_TEMP/build" stable
+          flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            "$RUNNER_TEMP/repo" "dist/$bundle" "$APP_ID" stable
+          python3 .github/scripts/fix-bundle-time.py "dist/$bundle"
+          (cd dist && sha256sum "$bundle" > "$bundle.sha256")
+          {
+            echo '| Archive | Size | SHA-256 |'
+            echo '| --- | --- | --- |'
+            echo "| $bundle | $(numfmt --to=iec-i --suffix=B "$(stat -c %s "dist/$bundle")") | \`$(cut -d' ' -f1 "dist/$bundle.sha256")\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Installs the bundle on a stock system, the way a user would, so the KDE runtime comes from
+  # Flathub through the bundle's runtime repo. The build container already has it.
+  check:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+      - name: Install flatpak
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends flatpak dbus-daemon
+      - name: Check the bundle
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          sha256sum -c ./*.flatpak.sha256
+          flatpak install --user -y --noninteractive ./*.flatpak
+          # The runner has no session bus, and flatpak needs one for the app's D-Bus proxy.
+          out=$(dbus-run-session -- flatpak run "$APP_ID" --version)
+          echo "$out"
+          if [ -n "$VERSION" ]; then
+            [ "$out" = "eac-ready-checker $VERSION" ]
+          else
+            [ "$out" = "eac-ready-checker 0.0.0-dev+${GITHUB_SHA::7}" ]
+          fi
