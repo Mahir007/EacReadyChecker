@@ -31,6 +31,11 @@ bool isGnome()
     return qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':').contains(u"GNOME"_s, Qt::CaseInsensitive);
 }
 
+bool isKde()
+{
+    return qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':').contains(u"KDE"_s, Qt::CaseInsensitive);
+}
+
 // Qt's GTK plugin takes Window and Base from the same GTK colour, so a list has the window's colour.
 bool hasOneColour(const QPalette &palette)
 {
@@ -129,6 +134,21 @@ void applyColorScheme(Qt::ColorScheme scheme)
 QPalette windowColours(const QPalette &appPalette)
 {
     QPalette p;
+    if (isKde() && !isBreezeStyle()) {
+        // Qt's own KDE theme, as in the AppImage, gives an unfocused window the focused window's
+        // highlight. Plasma tints the window colour with it, in its own colour space, and 29% of
+        // the highlight comes within a few shades of that.
+        const QColor highlight = appPalette.color(QPalette::Active, QPalette::Highlight);
+        if (appPalette.color(QPalette::Inactive, QPalette::Highlight) == highlight) {
+            const QColor window = appPalette.color(QPalette::Inactive, QPalette::Window);
+            const auto mix = [](int a, int b) { return qRound(a + (b - a) * 0.29); };
+            p.setColor(QPalette::Inactive,
+                       QPalette::Highlight,
+                       QColor(mix(window.red(), highlight.red()), mix(window.green(), highlight.green()), mix(window.blue(), highlight.blue())));
+            p.setColor(QPalette::Inactive, QPalette::HighlightedText, appPalette.color(QPalette::Inactive, QPalette::WindowText));
+        }
+        return p;
+    }
     if (!isGnome() || isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
         return p;
     }

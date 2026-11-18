@@ -17,6 +17,7 @@ void applyColorScheme(Qt::ColorScheme scheme);
 
 // The colours to set on a window over the app's palette, for GNOME's light style.
 // There, Qt's GTK plugin gives lists the window's colour and dims some text while the window isn't
-// focused. Otherwise it's an empty palette, which changes nothing. Set it on the window, not the app:
-// an app palette replaces the plugin's palettes for labels and buttons.
+// focused. On Plasma without KDE's platform theme, as in the AppImage, it's the highlight of an
+// unfocused window. Otherwise it's an empty palette, which changes nothing. Set it on
+// the window, not the app: an app palette replaces the plugin's palettes for labels and buttons.
 QPalette windowColours(const QPalette &appPalette);

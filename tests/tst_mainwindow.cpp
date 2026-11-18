@@ -508,6 +508,33 @@ private Q_SLOTS:
         qunsetenv("XDG_CURRENT_DESKTOP");
     }
 
+    void kdeThemeGetsInactiveHighlight()
+    {
+        // Qt's own KDE theme, as in the AppImage on Plasma: Fusion, and the same highlight for an
+        // unfocused window. The window gets 29% of it over Breeze Light's window colour.
+        qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        const QString style = QApplication::style()->name();
+        const QPalette platform = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+        QPalette kde = platform;
+        kde.setColor(QPalette::Window, QColor(239, 240, 241));
+        kde.setColor(QPalette::Highlight, QColor(61, 174, 233));
+        QApplication::setPalette(kde);
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QCOMPARE(window.palette().color(QPalette::Inactive, QPalette::Highlight), QColor(187, 221, 239));
+        QCOMPARE(window.palette().color(QPalette::Active, QPalette::Highlight), QColor(61, 174, 233));
+        QCOMPARE(window.palette().color(QPalette::Inactive, QPalette::HighlightedText), kde.color(QPalette::Inactive, QPalette::WindowText));
+        // Set on the window, so the app's palette keeps the theme's.
+        QCOMPARE(QApplication::palette().color(QPalette::Inactive, QPalette::Highlight), QColor(61, 174, 233));
+
+        QApplication::setPalette(platform);
+        QApplication::setStyle(style);
+        qunsetenv("XDG_CURRENT_DESKTOP");
+    }
+
     void rowsLayOutAtOnce()
     {
         // A row that expands or collapses is laid out with the list before anything is drawn.
