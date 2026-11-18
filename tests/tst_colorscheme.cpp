@@ -129,9 +129,13 @@ private Q_SLOTS:
         const QColor cyan = QColor::fromRgbF(0.39f, 0.82f, 0.87f);
         m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{0.39, 0.82, 0.87}));
         setScheme(PreferDark);
+        // Pop!_OS's portal also lists GTK's backend, after COSMIC's, with no accent. Each setting
+        // comes from the first backend that has it.
+        m_portal.setOtherBackend({{Appearance, {{SchemeKey, QVariant::fromValue(PreferLight)}}}});
         followDesktopColorScheme();
         QVERIFY(isDarkPalette(QApplication::palette()));
         QCOMPARE(QApplication::palette().color(QPalette::Highlight), cyan);
+        m_portal.setOtherBackend({});
 
         // In light the accent is in the windows' own colours, and nothing else is.
         changeScheme(PreferLight);

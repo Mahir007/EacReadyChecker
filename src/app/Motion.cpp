@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "Motion.h"
 
+#include "PortalSettings.h"
+
 #include <QApplication>
 #include <QDBusArgument>
 #include <QDBusConnection>
@@ -156,11 +158,7 @@ void followDesktop()
     auto *watcher = new QDBusPendingCallWatcher(bus.asyncCall(message, PortalTimeoutMs), qApp);
     QObject::connect(watcher, &QDBusPendingCallWatcher::finished, qApp, [](QDBusPendingCallWatcher *call) {
         call->deleteLater();
-        const QDBusMessage reply = call->reply();
-        if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty()) {
-            return;
-        }
-        const auto settings = qdbus_cast<QMap<QString, QVariantMap>>(reply.arguments().constFirst());
+        const auto settings = portalSettings(call->reply());
         for (auto group = settings.begin(); group != settings.end(); ++group) {
             for (auto entry = group->begin(); entry != group->end(); ++entry) {
                 applySetting(group.key(), entry.key(), entry.value());

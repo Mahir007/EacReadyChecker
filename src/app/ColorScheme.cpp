@@ -2,6 +2,7 @@
 #include "ColorScheme.h"
 
 #include "Icons.h"
+#include "PortalSettings.h"
 
 #include <QApplication>
 #include <QDBusArgument>
@@ -99,13 +100,9 @@ std::optional<Qt::ColorScheme> readPortalAppearance()
 {
     QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, u"ReadAll"_s);
     message << QStringList{AppearanceNamespace};
-    const QDBusMessage reply = QDBusConnection::sessionBus().call(message, QDBus::Block, PortalTimeoutMs);
-    if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty()) {
-        return std::nullopt;
-    }
-    const auto settings = qdbus_cast<QMap<QString, QVariantMap>>(reply.arguments().constFirst());
-    s_accent = accentFromPortal(settings.value(AppearanceNamespace).value(AccentColorKey));
-    const QVariant value = settings.value(AppearanceNamespace).value(ColorSchemeKey);
+    const QVariantMap appearance = portalSettings(QDBusConnection::sessionBus().call(message, QDBus::Block, PortalTimeoutMs)).value(AppearanceNamespace);
+    s_accent = accentFromPortal(appearance.value(AccentColorKey));
+    const QVariant value = appearance.value(ColorSchemeKey);
     if (!value.isValid()) {
         return std::nullopt;
     }

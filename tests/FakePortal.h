@@ -6,6 +6,7 @@
 #include <QDBusMessage>
 #include <QDBusMetaType>
 #include <QDBusVariant>
+#include <QList>
 #include <QMap>
 #include <QObject>
 #include <QPointer>
@@ -13,6 +14,7 @@
 #include <QVariantMap>
 
 #include <memory>
+#include <utility>
 
 using PortalSettings = QMap<QString, QVariantMap>;
 
@@ -40,6 +42,39 @@ inline const QDBusArgument &operator>>(const QDBusArgument &argument, PortalColo
     return argument;
 }
 
+// ReadAll's reply as xdg-desktop-portal 1.18 builds it: each backend's namespaces in turn, so the
+// same namespace can come more than once.
+struct PortalReply {
+    QList<std::pair<QString, QVariantMap>> groups;
+};
+Q_DECLARE_METATYPE(PortalReply)
+
+inline QDBusArgument &operator<<(QDBusArgument &argument, const PortalReply &reply)
+{
+    argument.beginMap(QMetaType::fromType<QString>(), QMetaType::fromType<QVariantMap>());
+    for (const auto &[group, values] : reply.groups) {
+        argument.beginMapEntry();
+        argument << group << values;
+        argument.endMapEntry();
+    }
+    argument.endMap();
+    return argument;
+}
+
+inline const QDBusArgument &operator>>(const QDBusArgument &argument, PortalReply &reply)
+{
+    argument.beginMap();
+    while (!argument.atEnd()) {
+        std::pair<QString, QVariantMap> group;
+        argument.beginMapEntry();
+        argument >> group.first >> group.second;
+        argument.endMapEntry();
+        reply.groups.append(group);
+    }
+    argument.endMap();
+    return argument;
+}
+
 // Stand-in for the settings portal.
 class FakePortal : public QObject
 {
@@ -49,14 +84,18 @@ class FakePortal : public QObject
 public:
     using QObject::QObject;
     PortalSettings settings;
+    // A second backend's settings, listed after the first's, as GTK's after COSMIC's on Pop!_OS.
+    PortalSettings otherBackend;
 
 public Q_SLOTS:
-    PortalSettings ReadAll(const QStringList &namespaces)
+    PortalReply ReadAll(const QStringList &namespaces)
     {
-        PortalSettings result;
-        for (const QString &name : namespaces) {
-            if (settings.contains(name)) {
-                result[name] = settings[name];
+        PortalReply result;
+        for (const PortalSettings *backend : {&settings, &otherBackend}) {
+            for (const QString &name : namespaces) {
+                if (backend->contains(name)) {
+                    result.groups.append({name, backend->value(name)});
+                }
             }
         }
         return result;
@@ -79,6 +118,7 @@ public:
         }
         qDBusRegisterMetaType<PortalSettings>();
         qDBusRegisterMetaType<PortalColour>();
+        qDBusRegisterMetaType<PortalReply>();
         m_thread.start();
         m_portal = new FakePortal;
         m_portal->moveToThread(&m_thread);
@@ -112,6 +152,17 @@ public:
             m_portal,
             [this, group, key, value] {
                 m_portal->settings[group][key] = value;
+            },
+            Qt::BlockingQueuedConnection);
+    }
+
+    // What the second backend's ReadAll returns from now on.
+    void setOtherBackend(const PortalSettings &settings)
+    {
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this, settings] {
+                m_portal->otherBackend = settings;
             },
             Qt::BlockingQueuedConnection);
     }
