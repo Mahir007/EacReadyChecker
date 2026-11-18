@@ -2,9 +2,9 @@
 Type=Application
 Name=EACheck
 GenericName=Anti-Cheat Readiness Checker
-Comment=Check whether this PC meets the Easy Anti-Cheat Linux v2 requirements
+Comment=Check if your PC is ready for Easy Anti-Cheat
 Exec=eac-ready-checker
 Icon=io.github.Mahir007.EacReadyChecker
 Terminal=false
-Categories=System;
+Categories=Game;System;
 Keywords=EAC;Easy Anti-Cheat;anti-cheat;Secure Boot;TPM;IOMMU;lockdown;games;
