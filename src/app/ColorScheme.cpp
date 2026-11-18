@@ -12,6 +12,7 @@
 #include <QStyleHints>
 #include <QWidget>
 
+#include <algorithm>
 #include <optional>
 
 using namespace Qt::StringLiterals;
@@ -38,6 +39,25 @@ bool isGnome()
 bool isKde()
 {
     return qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':').contains(u"KDE"_s, Qt::CaseInsensitive);
+}
+
+// Desktops Qt loads a theme for: KDE, and the GTK desktops in Qt 6.11's qgenericunixtheme.cpp. On
+// any other, such as COSMIC, Hyprland or Sway, Qt uses its generic theme, which only has a light
+// palette and doesn't ask the portal. Unless the user picked a theme, such as qt6ct.
+bool hasQtTheme()
+{
+    if (!qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME")) {
+        return true;
+    }
+    static const QStringList qtDesktops{u"KDE"_s, u"GNOME"_s, u"X-CINNAMON"_s, u"PANTHEON"_s, u"UNITY"_s, u"MATE"_s, u"XFCE"_s, u"LXDE"_s};
+    const QStringList names = qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':');
+    return std::ranges::any_of(names, [](const QString &name) { return qtDesktops.contains(name, Qt::CaseInsensitive); });
+}
+
+// GNOME, and desktops Qt has no theme for. Elsewhere Qt's theme follows the desktop's colours.
+bool followsPortal()
+{
+    return isGnome() || !hasQtTheme();
 }
 
 // Qt's GTK plugin takes Window and Base from the same GTK colour, so a list has the window's colour.
@@ -193,7 +213,7 @@ QPalette windowColours(const QPalette &appPalette)
         }
         return p;
     }
-    if (!isGnome()) {
+    if (!followsPortal()) {
         return p;
     }
     // The desktop's accent, which GTK 3's palette may not have. The app's dark palette
@@ -201,7 +221,7 @@ QPalette windowColours(const QPalette &appPalette)
     if (s_accent && appPalette.color(QPalette::Highlight) != *s_accent) {
         p.setColor(QPalette::Highlight, *s_accent);
     }
-    if (isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
+    if (!isGnome() || isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
         return p;
     }
     // libadwaita's sidebar colour for the window and its view colour for lists, the pair GNOME's
@@ -216,7 +236,7 @@ QPalette windowColours(const QPalette &appPalette)
 
 void followDesktopColorScheme()
 {
-    if (!isGnome()) {
+    if (!followsPortal()) {
         return;
     }
     if (const auto scheme = readPortalAppearance()) {

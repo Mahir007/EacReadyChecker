@@ -36,14 +36,35 @@ private Q_SLOTS:
     {
         m_portal.stop();
         qunsetenv("XDG_CURRENT_DESKTOP");
+        qunsetenv("QT_QPA_PLATFORMTHEME");
+    }
+
+    void otherDesktopsAreLeftAlone_data()
+    {
+        QTest::addColumn<QByteArray>("desktop");
+        QTest::addColumn<QByteArray>("platformTheme");
+        // Qt's KDE theme or Plasma's follows the colour scheme, and Qt's GTK plugin gives the GTK
+        // theme's own dark palette.
+        QTest::newRow("KDE") << QByteArray("KDE") << QByteArray();
+        QTest::newRow("Cinnamon") << QByteArray("X-Cinnamon") << QByteArray();
+        QTest::newRow("XFCE") << QByteArray("XFCE") << QByteArray();
+        // The user picked their colours.
+        QTest::newRow("qt6ct") << QByteArray("COSMIC") << QByteArray("qt6ct");
     }
 
     void otherDesktopsAreLeftAlone()
     {
+        QFETCH(QByteArray, desktop);
+        QFETCH(QByteArray, platformTheme);
         setScheme(PreferDark);
-        qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{0.57, 0.38, 0.77}));
+        qputenv("XDG_CURRENT_DESKTOP", desktop);
+        qputenv("QT_QPA_PLATFORMTHEME", platformTheme);
         followDesktopColorScheme();
         QVERIFY(!isDarkPalette(QApplication::palette()));
+        QVERIFY(!windowColours(QApplication::palette()).isBrushSet(QPalette::Active, QPalette::Highlight));
+        qunsetenv("QT_QPA_PLATFORMTHEME");
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1}));
     }
 
     void followsThePortalOnGnome()
@@ -99,6 +120,28 @@ private Q_SLOTS:
         QTRY_COMPARE(QApplication::palette().color(QPalette::Highlight), QColor(0x35, 0x84, 0xe4));
         changeScheme(PreferLight);
         QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
+    void followsThePortalWhereQtHasNoTheme()
+    {
+        // As on COSMIC, Hyprland or Sway: Qt's generic theme only has a light palette.
+        qputenv("XDG_CURRENT_DESKTOP", "COSMIC");
+        const QColor cyan = QColor::fromRgbF(0.39f, 0.82f, 0.87f);
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{0.39, 0.82, 0.87}));
+        setScheme(PreferDark);
+        followDesktopColorScheme();
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        QCOMPARE(QApplication::palette().color(QPalette::Highlight), cyan);
+
+        // In light the accent is in the windows' own colours, and nothing else is.
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+        const QPalette colours = windowColours(QApplication::palette());
+        QCOMPARE(colours.color(QPalette::Highlight), cyan);
+        QVERIFY(!colours.isBrushSet(QPalette::Active, QPalette::Window));
+        QVERIFY(!colours.isBrushSet(QPalette::Active, QPalette::Base));
+
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1}));
     }
 
 private:
