@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(EacReadyChecker VERSION 0.1.0 LANGUAGES CXX)
+project(EacReadyChecker LANGUAGES CXX)
+
+# Only built copies get a real version: CI passes the tag's, or 0.0.0-dev+<commit> without one.
+set(EACHECK_VERSION "0.0.0-dev" CACHE STRING "Version the app reports")
 
 set(QT_MIN_VERSION "6.5.0")
 set(EACHECK_APP_ID "io.github.Mahir007.EacReadyChecker")

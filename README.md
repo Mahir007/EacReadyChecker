@@ -88,7 +88,8 @@ cmake --build build
 ```
 
 The default build type is `RelWithDebInfo`. Add `-DCMAKE_BUILD_TYPE=Debug` for a debug build, or
-`-DBUILD_TESTING=OFF` to skip the tests.
+`-DBUILD_TESTING=OFF` to skip the tests. The app reports version `0.0.0-dev` unless
+`-DEACHECK_VERSION=1.2.3` sets one.
 
 CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app.
 The app uses it on that Qt release and on the patch releases checked to share its build (see
