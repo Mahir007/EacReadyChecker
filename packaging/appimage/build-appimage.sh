@@ -123,7 +123,11 @@ printf '[Paths]\nPrefix = ..\n' >"$appdir/usr/bin/qt.conf"
 
 install -m 755 "$here/AppRun" "$appdir/AppRun"
 install -D -m 644 "$here/kdeglobals" "$appdir/usr/share/eac-ready-checker/xdg/kdeglobals"
+# Tools that add an AppImage to the menu rename its desktop file, and then the app doesn't set its
+# ID as the Wayland app ID (main.cpp), so Qt uses the binary's name. StartupWMClass ties the window
+# to the renamed file.
 cp "$appdir/usr/share/applications/$id.desktop" "$appdir/"
+echo 'StartupWMClass=eac-ready-checker' >>"$appdir/$id.desktop"
 cp "$appdir/usr/share/icons/hicolor/scalable/apps/$id.svg" "$appdir/"
 ln -sf "$id.svg" "$appdir/.DirIcon"
 
