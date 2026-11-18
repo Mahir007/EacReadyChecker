@@ -68,23 +68,38 @@ QWidget *separator(QWidget *parent)
     return new Separator(parent);
 }
 
-// Qt picks a link's colour when it parses the text, so after a switch between light and dark the
-// links would keep the old one. Parse it again. setText() skips text it already has.
+// Qt colours links from the app's palette when it parses the text. So they'd miss the window's own
+// colours, which have the accent in light, and keep the old colour after a
+// switch between light and dark. The links get the box's own colour instead, set again when its
+// palette changes. setText() skips text it already has.
 class AboutBox : public QMessageBox
 {
 public:
     using QMessageBox::QMessageBox;
 
+    void setLinkedText(const QString &html)
+    {
+        m_html = html;
+        updateText();
+    }
+
 protected:
     void changeEvent(QEvent *event) override
     {
-        if (event->type() == QEvent::PaletteChange && !text().isEmpty()) {
-            const QString current = text();
-            setText(QString());
-            setText(current);
+        if (event->type() == QEvent::PaletteChange) {
+            updateText();
         }
         QMessageBox::changeEvent(event);
     }
+
+private:
+    void updateText()
+    {
+        QString html = m_html;
+        setText(html.replace(u"<a href="_s, u"<a style=\"color: %1\" href="_s.arg(palette().color(QPalette::Link).name())));
+    }
+
+    QString m_html;
 };
 } // namespace
 
@@ -398,7 +413,7 @@ void MainWindow::showAbout()
     box->setWindowTitle(u"About %1"_s.arg(AppInfo::displayName()));
     box->setIconPixmap(appIcon().pixmap(QSize(64, 64), devicePixelRatio()));
     box->setTextFormat(Qt::RichText);
-    box->setText(u"<h3>%1 %2</h3>"
+    box->setLinkedText(u"<h3>%1 %2</h3>"
                  "<p>%3.</p>"
                  "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5. EAC performs its own verification at game launch.</p>"
                  "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"

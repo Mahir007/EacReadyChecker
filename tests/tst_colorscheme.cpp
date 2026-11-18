@@ -148,7 +148,38 @@ private Q_SLOTS:
         m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1}));
     }
 
+    void linksFollowTheAccent()
+    {
+        // libadwaita's blue, and the colours its documentation gives for blue text and links.
+        qputenv("XDG_CURRENT_DESKTOP", "GNOME");
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{0x35 / 255.0, 0x84 / 255.0, 0xe4 / 255.0}));
+        setScheme(PreferDark);
+        followDesktopColorScheme();
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        QVERIFY(near(QApplication::palette().color(QPalette::Link), QColor(0x81, 0xd0, 0xff)));
+
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+        const QPalette colours = windowColours(QApplication::palette());
+        QVERIFY(near(colours.color(QPalette::Link), QColor(0x04, 0x61, 0xbe)));
+        QVERIFY(colours.isBrushSet(QPalette::Active, QPalette::LinkVisited));
+
+        // Without an accent, links keep their colours.
+        QVERIFY(m_portal.change(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1})));
+        QTRY_VERIFY(!windowColours(QApplication::palette()).isBrushSet(QPalette::Active, QPalette::Link));
+        changeScheme(PreferDark);
+        QTRY_COMPARE(QApplication::palette().color(QPalette::Link), QColor(0x78, 0xae, 0xed));
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
 private:
+    // Within a shade per channel: libadwaita's values are rounded from OKLab.
+    static bool near(const QColor &a, const QColor &b)
+    {
+        return std::abs(a.red() - b.red()) <= 1 && std::abs(a.green() - b.green()) <= 1 && std::abs(a.blue() - b.blue()) <= 1;
+    }
+
     void setScheme(uint scheme) { m_portal.set(Appearance, SchemeKey, QVariant::fromValue(scheme)); }
 
     void changeScheme(uint scheme) { QVERIFY(m_portal.change(Appearance, SchemeKey, QVariant::fromValue(scheme))); }

@@ -14,6 +14,7 @@
 #include <QWidget>
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 
 using namespace Qt::StringLiterals;
@@ -109,6 +110,47 @@ std::optional<Qt::ColorScheme> readPortalAppearance()
     return schemeFromPortal(value.toUInt());
 }
 
+// The accent as libadwaita uses it for text and links: the same hue, with OKLab lightness at most
+// 0.5 in light and at least 0.85 in dark, so it reads on either background. Clipped to sRGB, as
+// libadwaita does.
+QColor accentText(const QColor &accent, bool dark)
+{
+    const auto toLinear = [](float c) { return c <= 0.04045F ? c / 12.92F : std::pow((c + 0.055F) / 1.055F, 2.4F); };
+    const auto toSrgb = [](float c) {
+        c = std::clamp(c, 0.0F, 1.0F);
+        return c <= 0.0031308F ? c * 12.92F : 1.055F * std::pow(c, 1 / 2.4F) - 0.055F;
+    };
+    const float r = toLinear(accent.redF());
+    const float g = toLinear(accent.greenF());
+    const float b = toLinear(accent.blueF());
+    // Björn Ottosson's sRGB to OKLab.
+    const float l = std::cbrt(0.4122214708F * r + 0.5363325363F * g + 0.0514459929F * b);
+    const float m = std::cbrt(0.2119034982F * r + 0.6806995451F * g + 0.1073969566F * b);
+    const float s = std::cbrt(0.0883024619F * r + 0.2817188376F * g + 0.6299787005F * b);
+    float lightness = 0.2104542553F * l + 0.7936177850F * m - 0.0040720468F * s;
+    const float a = 1.9779984951F * l - 2.4285922050F * m + 0.4505937099F * s;
+    const float bb = 0.0259040371F * l + 0.7827717662F * m - 0.8086757660F * s;
+    lightness = dark ? std::max(lightness, 0.85F) : std::min(lightness, 0.5F);
+    const auto cube = [](float v) { return v * v * v; };
+    const float l2 = cube(lightness + 0.3963377774F * a + 0.2158037573F * bb);
+    const float m2 = cube(lightness - 0.1055613458F * a - 0.0638541728F * bb);
+    const float s2 = cube(lightness - 0.0894841775F * a - 1.2914855480F * bb);
+    return QColor::fromRgbF(toSrgb(4.0767416621F * l2 - 3.3077115913F * m2 + 0.2309699292F * s2),
+                            toSrgb(-1.2684380046F * l2 + 2.6097574011F * m2 - 0.3413193965F * s2),
+                            toSrgb(-0.0041960863F * l2 - 0.7034186147F * m2 + 1.7076147010F * s2));
+}
+
+// Links in the accent, and visited ones 80% of that over the text colour, as in libadwaita.
+void setAccentLinks(QPalette &palette, const QColor &accent, bool dark)
+{
+    const QColor link = accentText(accent, dark);
+    const QColor text = palette.color(QPalette::Text);
+    const auto mix = [](float a, float b) { return a * 0.8F + b * 0.2F; };
+    palette.setColor(QPalette::Link, link);
+    palette.setColor(QPalette::LinkVisited,
+                     QColor::fromRgbF(mix(link.redF(), text.redF()), mix(link.greenF(), text.greenF()), mix(link.blueF(), text.blueF())));
+}
+
 QPalette darkPalette();
 
 class PortalListener : public QObject
@@ -165,6 +207,9 @@ QPalette darkPalette()
     p.setColor(QPalette::HighlightedText, text);
     p.setColor(QPalette::Link, QColor(0x78, 0xae, 0xed));
     p.setColor(QPalette::LinkVisited, QColor(0xc0, 0x61, 0xcb));
+    if (s_accent) {
+        setAccentLinks(p, *s_accent, true);
+    }
     p.setColor(QPalette::Light, QColor(0x50, 0x50, 0x50));
     p.setColor(QPalette::Midlight, QColor(0x42, 0x42, 0x42));
     p.setColor(QPalette::Mid, QColor(0x2e, 0x2e, 0x2e));
@@ -213,10 +258,18 @@ QPalette windowColours(const QPalette &appPalette)
     if (!followsPortal()) {
         return p;
     }
-    // The desktop's accent, which GTK 3's palette may not have. The app's dark palette
-    // has it already.
-    if (s_accent && appPalette.color(QPalette::Highlight) != *s_accent) {
-        p.setColor(QPalette::Highlight, *s_accent);
+    // The desktop's accent, which GTK 3's palette may not have, also for links.
+    // The app's dark palette has it already.
+    if (s_accent) {
+        if (appPalette.color(QPalette::Highlight) != *s_accent) {
+            p.setColor(QPalette::Highlight, *s_accent);
+        }
+        QPalette links = appPalette;
+        setAccentLinks(links, *s_accent, isDarkPalette(appPalette));
+        if (links.color(QPalette::Link) != appPalette.color(QPalette::Link)) {
+            p.setColor(QPalette::Link, links.color(QPalette::Link));
+            p.setColor(QPalette::LinkVisited, links.color(QPalette::LinkVisited));
+        }
     }
     if (!isGnome() || isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
         return p;

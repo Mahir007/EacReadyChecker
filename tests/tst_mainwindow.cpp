@@ -451,6 +451,12 @@ private Q_SLOTS:
         QCOMPARE(QApplication::palette().color(QPalette::Window), lightWindow);
         QTRY_COMPARE(QIcon::fallbackThemeName(), u"breeze"_s);
         QTRY_VERIFY(hasColour(aboutText->grab().toImage(), QApplication::palette().color(QPalette::Link)));
+
+        // The links follow the box's own colours, such as the accent the window gets in light.
+        QPalette accentLinks = about->palette();
+        accentLinks.setColor(QPalette::Link, QColor(0xc8, 0x00, 0x88));
+        about->setPalette(accentLinks);
+        QTRY_VERIFY(hasColour(aboutText->grab().toImage(), QColor(0xc8, 0x00, 0x88)));
         about->close();
     }
 
