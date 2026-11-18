@@ -6,5 +6,5 @@ Comment=Check if your PC is ready for Easy Anti-Cheat
 Exec=eac-ready-checker
 Icon=io.github.Mahir007.EacReadyChecker
 Terminal=false
-Categories=Game;System;
+Categories=Game;
 Keywords=EAC;Easy Anti-Cheat;anti-cheat;Secure Boot;TPM;IOMMU;lockdown;games;
