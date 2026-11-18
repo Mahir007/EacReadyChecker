@@ -74,9 +74,12 @@ chmod +x "$cache/appimagetool-x86_64.AppImage"
 
 # No RPATH from CMake: it pads the installed one to the length of the build tree's, which holds the
 # Qt prefix, so the file would depend on where Qt is. patchelf sets it below.
+# Qt's CMake files link OpenGL into the app, and CMake picks GLVND's libOpenGL.so.0 and libGLX.so.0,
+# which aren't installed everywhere. qt.io's Qt links libGL.so.1, so use that.
 cmake -S "$src" -B "$build/cmake" -G Ninja \
     -DCMAKE_PREFIX_PATH="$qt" \
     -DCMAKE_SKIP_RPATH=ON \
+    -DOpenGL_GL_PREFERENCE=LEGACY \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
