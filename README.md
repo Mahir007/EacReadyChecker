@@ -22,7 +22,7 @@ Status: early development.
 | `src/cli` | `--json` and `--text` output. |
 | `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
 | `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
-| `packaging` | Flatpak manifest, desktop file, metainfo and icon. |
+| `packaging` | Flatpak manifest, AppImage build scripts, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from, and screenshots. |
 | `third_party` | QAdwaitaDecorations, the title bar plugin used on GNOME. |
 
@@ -113,6 +113,19 @@ flatpak run io.github.Mahir007.EacReadyChecker
 The sandbox can't see `/sys/firmware`, `/sys/kernel/security` or `/sys/kernel/iommu_groups`, so
 reads go through `flatpak-spawn --host`. Test host access changes in the Flatpak as well as
 natively.
+
+## AppImage
+
+The AppImage runs on distributions with glibc 2.34 or later. It's built in an AlmaLinux 9 container
+with Qt from qt.io, and needs podman or docker, and `aqtinstall` from pip:
+
+```sh
+aqt install-qt linux desktop 6.11.3 linux_gcc_64 --archives qtbase qtwayland qtsvg icu --outputdir ~/qt
+packaging/appimage/build-in-container.sh ~/qt/6.11.3/gcc_64 dist
+./dist/eac-ready-checker-0.0.0-dev-x86_64.AppImage
+```
+
+The same commit gives the same file. `VERSION` sets the version it reports.
 
 ## Tests
 

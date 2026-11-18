@@ -1,0 +1,11 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The AppImage's entry point.
+here=$(dirname "$(readlink -f "$0")")
+# QT_PLUGIN_PATH can point at plugins built for the host's Qt, such as Plasma's platform theme. Those
+# use Qt's private API and can crash with the bundled Qt.
+unset QT_PLUGIN_PATH
+# Plasma's defaults for Qt's KDE theme, after the user's and the distribution's settings.
+export XDG_CONFIG_DIRS="${XDG_CONFIG_DIRS:-/etc/xdg}:$here/usr/share/eac-ready-checker/xdg"
+exec "$here/usr/bin/eac-ready-checker" "$@"

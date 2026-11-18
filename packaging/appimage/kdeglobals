@@ -1,0 +1,33 @@
+; SPDX-License-Identifier: CC0-1.0
+;
+; Plasma's defaults for the settings Qt's own KDE theme reads: Breeze Light's colours and Plasma's
+; font. Plasma only writes a setting to ~/.config/kdeglobals once it's changed, and without them Qt
+; uses KDE 3's grey and a 9 pt font. AppRun puts this folder last in XDG_CONFIG_DIRS, so each
+; setting the user's kdeglobals has, or the distribution's, comes from there.
+
+[General]
+font=Noto Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+[Colors:Button]
+BackgroundNormal=252,252,252
+ForegroundNormal=35,38,41
+
+[Colors:Selection]
+BackgroundNormal=61,174,233
+ForegroundNormal=255,255,255
+
+[Colors:Tooltip]
+BackgroundNormal=247,247,247
+ForegroundNormal=35,38,41
+
+[Colors:View]
+BackgroundAlternate=247,247,247
+BackgroundNormal=255,255,255
+ForegroundInactive=112,125,138
+ForegroundLink=41,128,185
+ForegroundNormal=35,38,41
+ForegroundVisited=155,89,182
+
+[Colors:Window]
+BackgroundNormal=239,240,241
+ForegroundNormal=35,38,41
