@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusMetaType>
@@ -14,6 +15,30 @@
 #include <memory>
 
 using PortalSettings = QMap<QString, QVariantMap>;
+
+// The portal's accent-color: red, green and blue from 0 to 1, as a D-Bus structure (ddd).
+struct PortalColour {
+    double r;
+    double g;
+    double b;
+};
+Q_DECLARE_METATYPE(PortalColour)
+
+inline QDBusArgument &operator<<(QDBusArgument &argument, const PortalColour &colour)
+{
+    argument.beginStructure();
+    argument << colour.r << colour.g << colour.b;
+    argument.endStructure();
+    return argument;
+}
+
+inline const QDBusArgument &operator>>(const QDBusArgument &argument, PortalColour &colour)
+{
+    argument.beginStructure();
+    argument >> colour.r >> colour.g >> colour.b;
+    argument.endStructure();
+    return argument;
+}
 
 // Stand-in for the settings portal.
 class FakePortal : public QObject
@@ -53,6 +78,7 @@ public:
             return QStringLiteral("No session bus");
         }
         qDBusRegisterMetaType<PortalSettings>();
+        qDBusRegisterMetaType<PortalColour>();
         m_thread.start();
         m_portal = new FakePortal;
         m_portal->moveToThread(&m_thread);

@@ -10,6 +10,7 @@
 #include <QDBusVariant>
 #include <QPalette>
 #include <QStyleHints>
+#include <QWidget>
 
 #include <optional>
 
@@ -22,9 +23,12 @@ constexpr auto PortalPath = "/org/freedesktop/portal/desktop"_L1;
 constexpr auto PortalInterface = "org.freedesktop.portal.Settings"_L1;
 constexpr auto AppearanceNamespace = "org.freedesktop.appearance"_L1;
 constexpr auto ColorSchemeKey = "color-scheme"_L1;
+constexpr auto AccentColorKey = "accent-color"_L1;
 constexpr int PortalTimeoutMs = 1000;
 
 bool s_darkPaletteSet = false;
+// The desktop's accent, if the portal reports one (GNOME 47 and later).
+std::optional<QColor> s_accent;
 
 bool isGnome()
 {
@@ -48,8 +52,30 @@ Qt::ColorScheme schemeFromPortal(uint value)
     return value == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light;
 }
 
-// Blocks, so the first frame already has the right colours.
-std::optional<Qt::ColorScheme> readPortalColorScheme()
+// The portal's accent: red, green and blue from 0 to 1. A value out of range means there's none.
+std::optional<QColor> accentFromPortal(const QVariant &value)
+{
+    if (value.userType() != qMetaTypeId<QDBusArgument>()) {
+        return std::nullopt;
+    }
+    const auto argument = value.value<QDBusArgument>();
+    double r = -1;
+    double g = -1;
+    double b = -1;
+    argument.beginStructure();
+    argument >> r >> g >> b;
+    argument.endStructure();
+    for (const double c : {r, g, b}) {
+        if (c < 0 || c > 1) {
+            return std::nullopt;
+        }
+    }
+    return QColor::fromRgbF(float(r), float(g), float(b));
+}
+
+// Reads the accent into s_accent and returns the colour scheme. Blocks, so the first frame already
+// has the right colours.
+std::optional<Qt::ColorScheme> readPortalAppearance()
 {
     QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, u"ReadAll"_s);
     message << QStringList{AppearanceNamespace};
@@ -58,12 +84,15 @@ std::optional<Qt::ColorScheme> readPortalColorScheme()
         return std::nullopt;
     }
     const auto settings = qdbus_cast<QMap<QString, QVariantMap>>(reply.arguments().constFirst());
+    s_accent = accentFromPortal(settings.value(AppearanceNamespace).value(AccentColorKey));
     const QVariant value = settings.value(AppearanceNamespace).value(ColorSchemeKey);
     if (!value.isValid()) {
         return std::nullopt;
     }
     return schemeFromPortal(value.toUInt());
 }
+
+QPalette darkPalette();
 
 class PortalListener : public QObject
 {
@@ -75,8 +104,22 @@ public:
 public Q_SLOTS:
     void settingChanged(const QString &group, const QString &key, const QDBusVariant &value)
     {
-        if (group == AppearanceNamespace && key == ColorSchemeKey) {
+        if (group != AppearanceNamespace) {
+            return;
+        }
+        if (key == ColorSchemeKey) {
             applyColorScheme(schemeFromPortal(value.variant().toUInt()));
+        } else if (key == AccentColorKey) {
+            s_accent = accentFromPortal(value.variant());
+            if (s_darkPaletteSet) {
+                QApplication::setPalette(darkPalette());
+            }
+            // In light, the accent is in the windows' own colours, which they set again on a palette
+            // change (windowColours).
+            const QWidgetList windows = QApplication::topLevelWidgets();
+            for (QWidget *window : windows) {
+                QCoreApplication::postEvent(window, new QEvent(QEvent::PaletteChange));
+            }
         }
     }
 };
@@ -100,7 +143,8 @@ QPalette darkPalette()
     p.setColor(QPalette::PlaceholderText, dimmed);
     p.setColor(QPalette::ToolTipBase, QColor(0x38, 0x38, 0x38));
     p.setColor(QPalette::ToolTipText, text);
-    p.setColor(QPalette::Highlight, QColor(0x35, 0x84, 0xe4));
+    // The desktop's accent, or libadwaita's default blue.
+    p.setColor(QPalette::Highlight, s_accent.value_or(QColor(0x35, 0x84, 0xe4)));
     p.setColor(QPalette::HighlightedText, text);
     p.setColor(QPalette::Link, QColor(0x78, 0xae, 0xed));
     p.setColor(QPalette::LinkVisited, QColor(0xc0, 0x61, 0xcb));
@@ -149,7 +193,15 @@ QPalette windowColours(const QPalette &appPalette)
         }
         return p;
     }
-    if (!isGnome() || isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
+    if (!isGnome()) {
+        return p;
+    }
+    // The desktop's accent, which GTK 3's palette may not have. The app's dark palette
+    // has it already.
+    if (s_accent && appPalette.color(QPalette::Highlight) != *s_accent) {
+        p.setColor(QPalette::Highlight, *s_accent);
+    }
+    if (isDarkPalette(appPalette) || !hasOneColour(appPalette)) {
         return p;
     }
     // libadwaita's sidebar colour for the window and its view colour for lists, the pair GNOME's
@@ -167,7 +219,7 @@ void followDesktopColorScheme()
     if (!isGnome()) {
         return;
     }
-    if (const auto scheme = readPortalColorScheme()) {
+    if (const auto scheme = readPortalAppearance()) {
         applyColorScheme(*scheme);
         QDBusConnection::sessionBus().connect(PortalService,
                                               PortalPath,

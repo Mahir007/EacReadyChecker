@@ -14,6 +14,7 @@ namespace
 {
 const QString Appearance = u"org.freedesktop.appearance"_s;
 const QString SchemeKey = u"color-scheme"_s;
+const QString AccentKey = u"accent-color"_s;
 constexpr uint PreferDark = 1;
 constexpr uint PreferLight = 2;
 } // namespace
@@ -68,6 +69,35 @@ private Q_SLOTS:
 
         constexpr uint noPreference = 0;
         changeScheme(noPreference);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
+    void followsTheAccentOnGnome()
+    {
+        // The accent GNOME 47 reports: in the app's dark palette, and in light over GTK's palette in
+        // the windows' own colours.
+        qputenv("XDG_CURRENT_DESKTOP", "GNOME");
+        const QColor purple = QColor::fromRgbF(0.57f, 0.38f, 0.77f);
+        const QColor green = QColor::fromRgbF(0.15f, 0.64f, 0.41f);
+        m_portal.set(Appearance, AccentKey, QVariant::fromValue(PortalColour{0.57, 0.38, 0.77}));
+        setScheme(PreferDark);
+        followDesktopColorScheme();
+        QCOMPARE(QApplication::palette().color(QPalette::Highlight), purple);
+
+        // Picked while the app runs.
+        QVERIFY(m_portal.change(Appearance, AccentKey, QVariant::fromValue(PortalColour{0.15, 0.64, 0.41})));
+        QTRY_COMPARE(QApplication::palette().color(QPalette::Highlight), green);
+
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+        QCOMPARE(windowColours(QApplication::palette()).color(QPalette::Highlight), green);
+
+        // Out of range: no accent, so GTK's highlight in light and libadwaita's blue in dark.
+        QVERIFY(m_portal.change(Appearance, AccentKey, QVariant::fromValue(PortalColour{-1, -1, -1})));
+        QTRY_VERIFY(!windowColours(QApplication::palette()).isBrushSet(QPalette::Active, QPalette::Highlight));
+        changeScheme(PreferDark);
+        QTRY_COMPARE(QApplication::palette().color(QPalette::Highlight), QColor(0x35, 0x84, 0xe4));
+        changeScheme(PreferLight);
         QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
     }
 
