@@ -49,6 +49,7 @@ shim_lock=605dab50-e046-4300-abb6-3dd810dd8b23
 
 copy /proc/cmdline
 copy /proc/sys/kernel/tainted
+copy /proc/modules
 copy /proc/sys/kernel/kexec_load_disabled
 
 copy /sys/firmware/efi/efivars/SecureBoot-$efi_global

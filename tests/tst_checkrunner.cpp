@@ -70,6 +70,7 @@ private Q_SLOTS:
         m_root.write(u"/zero"_s, "0\n");
         m_root.write(u"/proc/sys/kernel/kexec_load_disabled"_s, "1\n");
         m_root.write(u"/sys/kernel/security/lsm"_s, "capability,bpf");
+        m_root.write(u"/proc/modules"_s, "intree 16384 0 - Live 0x0000000000000000\nvmmon 20480 0 - Live 0x0000000000000000 (OE)\n");
         m_root.write(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s, QByteArray(1024, '\0'));
         m_root.write(u"/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"_s, QByteArray("\x06\x00\x00\x00\x01", 5));
     }
@@ -131,6 +132,8 @@ private Q_SLOTS:
         QCOMPARE(report.results[1].raw.value(u"/sys/class/tpm/tpm0/tpm_version_major"_s).toString(), u"<missing>"_s);
         QCOMPARE(report.results[4].raw.value(u"/sys/class/iommu/*"_s).toArray().size(), 0);
         QCOMPARE(report.results[0].raw.value(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s).toString(), u"<not read>"_s);
+        // Only the modules that tainted the kernel.
+        QCOMPARE(report.results[0].raw.value(u"/proc/modules"_s).toArray(), QJsonArray{u"vmmon (OE)"_s});
 
         // Large binaries are summarised, small ones (EFI variables) shown as hex.
         const Report elevated = CheckRunner::run(host, checks, true);

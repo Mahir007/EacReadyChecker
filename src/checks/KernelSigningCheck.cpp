@@ -29,9 +29,45 @@ QString taintLetters(quint64 taint)
     return letters.join(u", "_s);
 }
 
-SubCheckResult unsignedModules(const HostSnapshot &snapshot)
+// "name (flags)" for each loaded module that tainted the kernel. /proc/modules ends such a line
+// with its taint letters in parentheses, plus '+' or '-' while it loads or unloads.
+QStringList taintedModules(const QByteArray &modules)
+{
+    QStringList tainted;
+    const QList<QByteArray> lines = modules.split('\n');
+    for (const QByteArray &line : lines) {
+        const QList<QByteArray> fields = line.simplified().split(' ');
+        const QByteArray &last = fields.last();
+        if (fields.size() < 2 || !last.startsWith('(') || !last.endsWith(')')) {
+            continue;
+        }
+        QByteArray flags = last.mid(1, last.size() - 2);
+        flags.replace('+', "").replace('-', "");
+        if (!flags.isEmpty()) {
+            tainted.append(u"%1 (%2)"_s.arg(QString::fromUtf8(fields.first()), QString::fromLatin1(flags)));
+        }
+    }
+    return tainted;
+}
+
+// The kernel's E flag stays set after the module that set it is unloaded. Each module's own flags
+// in /proc/modules tell whether it's still loaded.
+SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModules)
 {
     const QString title = u"No unsigned modules loaded"_s;
+    const HostEntry modules = snapshot.file(HostPaths::Modules);
+    QStringList unsignedNames;
+    if (modules.ok()) {
+        const QStringList tainted = taintedModules(modules.data);
+        for (const QString &module : tainted) {
+            rawModules.append(module);
+            const QString flags = module.section(u'(', 1);
+            if (flags.contains(u'E')) {
+                unsignedNames.append(module.section(u' ', 0, 0));
+            }
+        }
+    }
+
     const HostEntry tainted = snapshot.file(HostPaths::Tainted);
     if (!tainted.ok()) {
         return {title, CheckStatus::Unknown, CheckHelpers::unreadable(tainted)};
@@ -41,11 +77,19 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot)
     if (!ok) {
         return {title, CheckStatus::Unknown, u"Unexpected taint value “%1”"_s.arg(QString::fromUtf8(tainted.trimmed()))};
     }
-    if (taint & (quint64(1) << kTaintUnsignedModule)) {
-        return {title, CheckStatus::Fail, u"An unsigned module is loaded (taint flags: %1)"_s.arg(taintLetters(taint))};
+    if (!(taint & (quint64(1) << kTaintUnsignedModule))) {
+        // Out-of-tree modules (O) alone are fine as long as they're signed.
+        return {title, CheckStatus::Pass, taint == 0 ? QString() : u"Taint flags: %1"_s.arg(taintLetters(taint))};
     }
-    // Out-of-tree modules (O) alone are fine as long as they're signed.
-    return {title, CheckStatus::Pass, taint == 0 ? QString() : u"Taint flags: %1"_s.arg(taintLetters(taint))};
+    if (!unsignedNames.isEmpty()) {
+        return {title, CheckStatus::Fail, u"%1: %2"_s.arg(unsignedNames.size() == 1 ? u"Unsigned module loaded"_s : u"Unsigned modules loaded"_s,
+                                                          unsignedNames.join(u", "_s))};
+    }
+    if (modules.ok()) {
+        // The flag can't be cleared, so this still fails until a reboot.
+        return {title, CheckStatus::Fail, u"An unsigned module was loaded and later unloaded. The kernel stays tainted until a reboot"_s};
+    }
+    return {title, CheckStatus::Fail, u"An unsigned module has been loaded since boot (taint flags: %1)"_s.arg(taintLetters(taint))};
 }
 
 // "MokListRT", "MokListRT1", … from an efivars path.
@@ -115,6 +159,7 @@ QList<HostRequest> KernelSigningCheck::requests() const
 {
     return {
         HostRequest::read(HostPaths::Tainted),
+        HostRequest::read(HostPaths::Modules),
         HostRequest::read(HostPaths::MokListRt),
     };
 }
@@ -124,15 +169,20 @@ CheckResult KernelSigningCheck::evaluate(const HostSnapshot &snapshot) const
     CheckResult result;
     QJsonArray authorities;
     QJsonArray moks;
+    QJsonArray modules;
     result.subChecks = {
         // shim logs each certificate once, so the authorities that verified GRUB and the kernel
         // can't be told apart. Every authority of the boot chain is judged.
         EventLogHelpers::authoritiesWellKnown(snapshot, u"Kernel signed by a well-known key"_s, authorities),
-        unsignedModules(snapshot),
+        unsignedModules(snapshot, modules),
         moksWellKnown(snapshot, moks),
     };
     result.raw.insert(u"bootAuthorities"_s, authorities);
     result.raw.insert(u"mokList"_s, moks);
+    // Only the modules that tainted the kernel, not the whole list.
+    if (snapshot.file(HostPaths::Modules).ok()) {
+        result.raw.insert(HostPaths::Modules, modules);
+    }
     CheckHelpers::finishFromSubChecks(result);
     return result;
 }

@@ -217,6 +217,22 @@ private Q_SLOTS:
         QTest::newRow("taint: proprietary + out-of-tree") << signing << Files{{HostPaths::Tainted, "4097\n"}} << modules << u"pass"_s << u"P, O"_s;
         QTest::newRow("taint: unsigned") << signing << Files{{HostPaths::Tainted, "8192\n"}} << modules << u"fail"_s << u"taint flags: E"_s;
         QTest::newRow("taint: unsigned, parent") << signing << Files{{HostPaths::Tainted, "12288\n"}} << QString() << u"fail"_s << u"O, E"_s;
+        {
+            const QByteArray loaded = "vmw_vsock_vmci_transport 45056 1 - Live 0x0000000000000000\n"
+                                      "acer_wmi 36864 0 - Live 0x0000000000000000 (OE)\n"
+                                      "nvidia 9945088 2 - Live 0x0000000000000000 (PO)\n";
+            const QByteArray two = loaded + "vmmon 20480 0 - Live 0x0000000000000000 (OE+)\n";
+            const QByteArray none = "nvidia 9945088 2 - Live 0x0000000000000000 (PO)\n"
+                                    "leaving 16384 0 - Unloading 0x0000000000000000 (-)\n";
+            QTest::newRow("taint: unsigned module named") << signing << Files{{HostPaths::Tainted, "12289\n"}, {HostPaths::Modules, loaded}} << modules
+                                                          << u"fail"_s << u"Unsigned module loaded: acer_wmi"_s;
+            QTest::newRow("taint: unsigned modules named") << signing << Files{{HostPaths::Tainted, "12289\n"}, {HostPaths::Modules, two}} << modules
+                                                           << u"fail"_s << u"Unsigned modules loaded: acer_wmi, vmmon"_s;
+            QTest::newRow("taint: unsigned module unloaded") << signing << Files{{HostPaths::Tainted, "12289\n"}, {HostPaths::Modules, none}} << modules
+                                                             << u"fail"_s << u"later unloaded"_s;
+            QTest::newRow("taint: no unsigned flag, modules ignored") << signing << Files{{HostPaths::Tainted, "4096\n"}, {HostPaths::Modules, loaded}}
+                                                                      << modules << u"pass"_s << u"Taint flags: O"_s;
+        }
         QTest::newRow("taint: garbage") << signing << Files{{HostPaths::Tainted, "abc\n"}} << modules << u"unknown"_s << u"Unexpected"_s;
         QTest::newRow("taint: missing") << signing << Files{} << modules << u"unknown"_s << u"Couldn't read"_s;
         QTest::newRow("signing: event log pending") << signing << Files{{HostPaths::Tainted, "0\n"}} << QString() << u"needs-admin"_s << QString();

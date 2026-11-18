@@ -32,5 +32,6 @@ inline const QString IommuGroupTypes = QStringLiteral("/sys/kernel/iommu_groups/
 
 inline const QString Cmdline = QStringLiteral("/proc/cmdline");
 inline const QString Tainted = QStringLiteral("/proc/sys/kernel/tainted");
+inline const QString Modules = QStringLiteral("/proc/modules");
 inline const QString KexecLoadDisabled = QStringLiteral("/proc/sys/kernel/kexec_load_disabled");
 } // namespace HostPaths
