@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "app/CheckRow.h"
 #include "app/ColorScheme.h"
+#include "app/IconWidget.h"
 #include "app/Icons.h"
 #include "app/MainWindow.h"
 #include "app/MessageBar.h"
@@ -533,6 +534,43 @@ private Q_SLOTS:
         QApplication::setPalette(platform);
         QApplication::setStyle(style);
         qunsetenv("XDG_CURRENT_DESKTOP");
+    }
+
+    void infoIconFollowsAccent()
+    {
+        // Breeze icons under Fusion, as in the AppImage: nothing recolours Breeze's information icon,
+        // so the message bar draws it in the accent. Other icon themes keep their own.
+        const QString style = QApplication::style()->name();
+        const QPalette platform = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(finished(window));
+        auto *icon = window.findChild<MessageBar *>()->findChild<IconWidget *>();
+        // Inside the square, beside the "i".
+        const QPoint inside(icon->width() / 4, icon->height() / 2);
+        const auto drawn = [&] { return icon->grab().toImage().pixelColor(inside); };
+
+        // An accent picked while the app runs.
+        const QColor green(49, 156, 35);
+        QPalette accent = platform;
+        accent.setColor(QPalette::Highlight, green);
+        QApplication::setPalette(accent);
+        QTRY_COMPARE(drawn(), green);
+
+        const QColor red(218, 68, 83);
+        QIcon::setThemeName(u"hicolor"_s);
+        accent.setColor(QPalette::Highlight, red);
+        QApplication::setPalette(accent);
+        QTRY_VERIFY(drawn() != green);
+        QVERIFY(drawn() != red);
+
+        QIcon::setThemeName(u"breeze"_s);
+        QApplication::setPalette(platform);
+        QApplication::setStyle(style);
     }
 
     void rowsLayOutAtOnce()

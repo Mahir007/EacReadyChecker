@@ -5,12 +5,64 @@
 #include "Icons.h"
 
 #include <QHBoxLayout>
+#include <QIconEngine>
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
 #include <QStyle>
 
 using namespace Qt::StringLiterals;
+
+namespace
+{
+// An information icon in the shape of Breeze's: a rounded square in `colour` with a white "i", on a
+// 16-unit grid scaled to the size asked for.
+class InfoIconEngine : public QIconEngine
+{
+public:
+    explicit InfoIconEngine(const QColor &colour)
+        : m_colour(colour)
+    {
+    }
+
+    void paint(QPainter *painter, const QRect &rect, QIcon::Mode, QIcon::State) override
+    {
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->translate(rect.topLeft());
+        painter->scale(rect.width() / 16.0, rect.height() / 16.0);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(m_colour);
+        painter->drawRoundedRect(QRectF(2, 2, 12, 12), 2, 2);
+        painter->setBrush(Qt::white);
+        painter->drawRect(QRectF(7, 4, 2, 2));
+        painter->drawRect(QRectF(7, 7, 2, 5));
+        painter->restore();
+    }
+
+    QPixmap pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state) override
+    {
+        QPixmap pixmap(size);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        paint(&painter, QRect(QPoint(), size), mode, state);
+        return pixmap;
+    }
+
+    QIconEngine *clone() const override { return new InfoIconEngine(m_colour); }
+
+private:
+    QColor m_colour;
+};
+
+// Breeze draws its information icon in the colour scheme's highlight, and on Plasma KDE's platform
+// theme recolours it to match, with Breeze as the style. Without it, as in the AppImage, or with
+// Breeze replacing GNOME's icons, it stays Breeze's blue whatever the accent.
+bool needsOwnInfoIcon()
+{
+    return QIcon::themeName().startsWith(u"breeze"_s) && !isBreezeStyle();
+}
+} // namespace
 
 MessageBar::MessageBar(QWidget *parent)
     : QWidget(parent)
@@ -59,7 +111,9 @@ void MessageBar::updateIcon()
     m_icon->setFixedSize(size, size);
     switch (m_type) {
     case Type::Information:
-        m_icon->setIcon(themeIcon({u"dialog-information"_s}));
+        // The accent, as Plasma shows it, also while the window isn't focused.
+        m_icon->setIcon(needsOwnInfoIcon() ? QIcon(new InfoIconEngine(palette().color(QPalette::Active, QPalette::Highlight)))
+                                           : themeIcon({u"dialog-information"_s}));
         break;
     case Type::Warning:
         m_icon->setIcon(themeIcon({u"dialog-warning"_s}));
