@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QLoggingCategory>
 #include <QStandardPaths>
 
 #include <memory>
@@ -30,6 +31,9 @@ int main(int argc, char **argv)
         // Qt adds fake bold on top of a variable font's real Bold (QTBUG-112136), which smears
         // Adwaita Sans. A font with no bold at all stays regular instead.
         qputenv("QT_NO_SYNTHESIZED_BOLD", "1");
+        // Qt's Wayland plugin warns "Trying to disable … but 0x0 is focused" when focus moves, on
+        // GNOME and COSMIC alike, and nothing goes wrong. QT_LOGGING_RULES still turns it back on.
+        QLoggingCategory::setFilterRules(u"qt.qpa.wayland.textinput.warning=false"_s);
         // Wayland app_id: lets the compositor match the window to the .desktop file and icon.
         // Only when that file is installed. Qt registers the name with the host portal, which
         // refuses an ID it has no desktop file for, as when the app runs from its build folder.
