@@ -351,15 +351,50 @@ jobs:
         with:
           path: ~/.cache/eacheck-appimage
           key: appimage-tools-${{ hashFiles('packaging/appimage/build-appimage.sh') }}
+      # As in the test job: a new package cache each week and when the package list changes, and a
+      # compiler cache. build-in-container.sh mounts both into the container.
+      - name: Cache keys
+        id: packages
+        run: |
+          echo "key=packages-almalinux9-${{ hashFiles('packaging/appimage/build-in-container.sh') }}-$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_CACHE=$HOME/.cache/appimage-dnf" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$HOME/.cache/appimage-ccache" >> "$GITHUB_ENV"
+      - name: Restore the package cache
+        id: restore-packages
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/appimage-dnf
+          key: ${{ steps.packages.outputs.key }}
+          restore-keys: packages-almalinux9-
+      - name: Restore the compiler cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/appimage-ccache
+          key: ccache-appimage-${{ github.sha }}
+          restore-keys: ccache-appimage-
       - name: Build
         run: |
           appimage=eac-ready-checker-$VERSION-x86_64.AppImage
           packaging/appimage/build-in-container.sh ~/qt/"$QT_VERSION"/gcc_64 dist
+          # The container writes as root.
+          sudo chown -R "$(id -u):$(id -g)" ~/.cache dist
           {
             echo '| Archive | Size | SHA-256 |'
             echo '| --- | --- | --- |'
             echo "| $appimage | $(numfmt --to=iec-i --suffix=B "$(stat -c %s "dist/$appimage")") | \`$(cut -d' ' -f1 "dist/$appimage.sha256")\` |"
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the package cache
+        if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/appimage-dnf
+          key: ${{ steps.packages.outputs.key }}
+      - name: Save the compiler cache
+        if: github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/appimage-ccache
+          key: ccache-appimage-${{ github.sha }}
       - uses: actions/upload-artifact@v7
         with:
           name: release-appimage
