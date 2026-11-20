@@ -47,9 +47,6 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
     const QString title = u"No passthrough (group types)"_s;
     const qsizetype groupCount = names(snapshot.matches(HostRequest::list(HostPaths::IommuGroups))).size();
     const QList<HostEntry> types = snapshot.matches(HostPaths::IommuGroupTypes);
-    if (groupCount == 0) {
-        return {title, CheckStatus::Fail, u"No IOMMU groups"_s};
-    }
     if (types.size() < groupCount) {
         // The type attribute appeared in Linux 5.11.
         return {title, CheckStatus::Unknown, u"This kernel doesn't report IOMMU group types"_s};
@@ -153,7 +150,17 @@ CheckResult IommuCheck::evaluate(const HostSnapshot &snapshot) const
         return result;
     }
 
-    result.subChecks = {enabled(snapshot), groups(snapshot), groupTypes(snapshot), cmdlinePassthrough(snapshot)};
+    // Groups need an IOMMU, and group types need groups. A sub-check whose precondition failed is
+    // left out rather than failed again for the same reason. The command line is checked anyway:
+    // passthrough there is a separate problem.
+    result.subChecks = {enabled(snapshot)};
+    if (result.subChecks.last().status == CheckStatus::Pass) {
+        result.subChecks.append(groups(snapshot));
+        if (result.subChecks.last().status == CheckStatus::Pass) {
+            result.subChecks.append(groupTypes(snapshot));
+        }
+    }
+    result.subChecks.append(cmdlinePassthrough(snapshot));
     CheckHelpers::finishFromSubChecks(result);
     return result;
 }

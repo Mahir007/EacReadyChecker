@@ -70,12 +70,13 @@ CheckResult SecureBootCheck::evaluate(const HostSnapshot &snapshot) const
 {
     CheckResult result;
     QJsonArray authorities;
-    result.subChecks = {
-        enabled(snapshot),
-        notInSetupMode(snapshot),
-        // Only the keys used for this boot count. db may hold others.
-        EventLogHelpers::authoritiesWellKnown(snapshot, u"Only well-known keys used to boot"_s, authorities),
-    };
+    result.subChecks = {enabled(snapshot)};
+    // Setup Mode is a UEFI variable. On a legacy boot, Enabled already fails for that reason.
+    if (bootedWithUefi(snapshot)) {
+        result.subChecks.append(notInSetupMode(snapshot));
+    }
+    // Only the keys used for this boot count. db may hold others.
+    result.subChecks.append(EventLogHelpers::authoritiesWellKnown(snapshot, u"Only well-known keys used to boot"_s, authorities));
     result.raw.insert(u"bootAuthorities"_s, authorities);
     CheckHelpers::finishFromSubChecks(result);
     return result;

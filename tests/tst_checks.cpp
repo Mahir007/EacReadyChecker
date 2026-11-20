@@ -78,6 +78,19 @@ class TestChecks : public QObject
     Q_OBJECT
 
 private:
+    static Report run(const Files &files, bool elevate)
+    {
+        TestSysroot root;
+        for (auto it = files.begin(); it != files.end(); ++it) {
+            if (it.key().endsWith(u'/')) {
+                root.mkdir(it.key());
+            } else {
+                root.write(it.key(), it.value());
+            }
+        }
+        return CheckRunner::run(HostAccess(HostAccess::Transport::Direct, {}, root.path()), createAllChecks(), elevate);
+    }
+
     // Runs the checks on the current row's files and compares one check or sub-check.
     static void verify(bool elevate)
     {
@@ -87,16 +100,7 @@ private:
         QFETCH(QString, status);
         QFETCH(QString, detail);
 
-        TestSysroot root;
-        for (auto it = files.begin(); it != files.end(); ++it) {
-            if (it.key().endsWith(u'/')) {
-                root.mkdir(it.key());
-            } else {
-                root.write(it.key(), it.value());
-            }
-        }
-
-        const Report report = CheckRunner::run(HostAccess(HostAccess::Transport::Direct, {}, root.path()), createAllChecks(), elevate);
+        const Report report = run(files, elevate);
         const auto result = std::find_if(report.results.begin(), report.results.end(), [&](const CheckResult &r) {
             return r.id == check;
         });
@@ -213,8 +217,8 @@ private Q_SLOTS:
         const QString signing = u"kernel-signing"_s;
         const QString modules = u"No unsigned modules loaded"_s;
         QTest::newRow("taint: clean") << signing << Files{{HostPaths::Tainted, "0\n"}} << modules << u"pass"_s << QString();
-        QTest::newRow("taint: out-of-tree") << signing << Files{{HostPaths::Tainted, "4096\n"}} << modules << u"pass"_s << u"Taint flags: O"_s;
-        QTest::newRow("taint: proprietary + out-of-tree") << signing << Files{{HostPaths::Tainted, "4097\n"}} << modules << u"pass"_s << u"P, O"_s;
+        // Without /proc/modules there's nothing to name.
+        QTest::newRow("taint: out-of-tree") << signing << Files{{HostPaths::Tainted, "4096\n"}} << modules << u"pass"_s << QString();
         QTest::newRow("taint: unsigned") << signing << Files{{HostPaths::Tainted, "8192\n"}} << modules << u"fail"_s << u"An unsigned module has been loaded since boot"_s;
         QTest::newRow("taint: unsigned, parent") << signing << Files{{HostPaths::Tainted, "12288\n"}} << QString() << u"fail"_s << u"An unsigned module has been loaded since boot"_s;
         {
@@ -230,8 +234,11 @@ private Q_SLOTS:
                                                            << u"fail"_s << u"Unsigned modules loaded: acer_wmi, vmmon"_s;
             QTest::newRow("taint: unsigned module unloaded") << signing << Files{{HostPaths::Tainted, "12289\n"}, {HostPaths::Modules, none}} << modules
                                                              << u"fail"_s << u"An unsigned module has been loaded and unloaded since boot"_s;
-            QTest::newRow("taint: no unsigned flag, modules ignored") << signing << Files{{HostPaths::Tainted, "4096\n"}, {HostPaths::Modules, loaded}}
-                                                                      << modules << u"pass"_s << u"Taint flags: O"_s;
+            const QByteArray signedOnly = "vmw_vsock_vmci_transport 45056 1 - Live 0x0000000000000000\n"
+                                          "nvidia 9945088 2 - Live 0x0000000000000000 (PO)\n"
+                                          "nvidia_modeset 1638400 1 nvidia, Live 0x0000000000000000 (PO)\n";
+            QTest::newRow("taint: out-of-tree named") << signing << Files{{HostPaths::Tainted, "4097\n"}, {HostPaths::Modules, signedOnly}} << modules
+                                                      << u"pass"_s << u"Out-of-tree: nvidia, nvidia_modeset"_s;
         }
         QTest::newRow("taint: garbage") << signing << Files{{HostPaths::Tainted, "abc\n"}} << modules << u"unknown"_s << u"Unexpected"_s;
         QTest::newRow("taint: missing") << signing << Files{} << modules << u"unknown"_s << u"Couldn't read"_s;
@@ -400,6 +407,49 @@ private Q_SLOTS:
                                                  << u"old SHA-1-only format"_s;
     }
     void evaluateElevated() { verify(true); }
+
+    // A sub-check whose precondition failed is left out, not failed again.
+    void dependentSubChecks_data()
+    {
+        QTest::addColumn<QString>("check");
+        QTest::addColumn<Files>("files");
+        QTest::addColumn<QStringList>("titles");
+
+        const QString iommu = u"iommu"_s;
+        const QString active = u"IOMMU active"_s;
+        const QString groups = u"IOMMU groups exist"_s;
+        const QString types = u"No passthrough (group types)"_s;
+        const QString cmdline = u"No passthrough (kernel command line)"_s;
+        QTest::newRow("iommu: on") << iommu << withIommu({}) << QStringList{active, groups, types, cmdline};
+        QTest::newRow("iommu: none") << iommu << Files{{HostPaths::Cmdline, "iommu=pt\n"}} << QStringList{active, cmdline};
+        QTest::newRow("iommu: no groups") << iommu << Files{{u"/sys/class/iommu/dmar0/"_s, {}}, {HostPaths::Cmdline, "quiet\n"}}
+                                          << QStringList{active, groups, cmdline};
+
+        const QString sb = u"secure-boot"_s;
+        const QString enabled = u"Enabled"_s;
+        const QString setupMode = u"Not in Setup Mode"_s;
+        const QString keys = u"Only well-known keys used to boot"_s;
+        QTest::newRow("sb: uefi") << sb << withSecureBoot({}) << QStringList{enabled, setupMode, keys};
+        QTest::newRow("sb: legacy boot") << sb << Files{} << QStringList{enabled, keys};
+    }
+
+    void dependentSubChecks()
+    {
+        QFETCH(QString, check);
+        QFETCH(Files, files);
+        QFETCH(QStringList, titles);
+
+        const Report report = run(files, false);
+        const auto result = std::find_if(report.results.begin(), report.results.end(), [&](const CheckResult &r) {
+            return r.id == check;
+        });
+        QVERIFY(result != report.results.end());
+        QStringList got;
+        for (const SubCheckResult &sub : result->subChecks) {
+            got.append(sub.title);
+        }
+        QCOMPARE(got, titles);
+    }
 
     void combineStatus_data()
     {

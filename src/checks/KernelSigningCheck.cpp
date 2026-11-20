@@ -13,21 +13,8 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-// Documentation/admin-guide/tainted-kernels.rst, bit 0 upwards.
-constexpr char kTaintLetters[] = "PFSRMBUDAWCIOELKXTN";
+// Documentation/admin-guide/tainted-kernels.rst
 constexpr int kTaintUnsignedModule = 13; // 'E'
-
-QString taintLetters(quint64 taint)
-{
-    QStringList letters;
-    for (int bit = 0; bit < 64; ++bit) {
-        if (!(taint & (quint64(1) << bit))) {
-            continue;
-        }
-        letters.append(bit < int(sizeof(kTaintLetters)) - 1 ? QString(QLatin1Char(kTaintLetters[bit])) : u"bit %1"_s.arg(bit));
-    }
-    return letters.join(u", "_s);
-}
 
 // "name (flags)" for each loaded module that tainted the kernel. /proc/modules ends such a line
 // with its taint letters in parentheses, plus '+' or '-' while it loads or unloads.
@@ -57,13 +44,18 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
     const QString title = u"No unsigned modules loaded"_s;
     const HostEntry modules = snapshot.file(HostPaths::Modules);
     QStringList unsignedNames;
+    QStringList outOfTree;
     if (modules.ok()) {
         const QStringList tainted = taintedModules(modules.data);
         for (const QString &module : tainted) {
             rawModules.append(module);
             const QString flags = module.section(u'(', 1);
+            const QString name = module.section(u' ', 0, 0);
             if (flags.contains(u'E')) {
-                unsignedNames.append(module.section(u' ', 0, 0));
+                unsignedNames.append(name);
+            }
+            if (flags.contains(u'O')) {
+                outOfTree.append(name);
             }
         }
     }
@@ -78,8 +70,9 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
         return {title, CheckStatus::Unknown, u"Unexpected taint value “%1”"_s.arg(QString::fromUtf8(tainted.trimmed()))};
     }
     if (!(taint & (quint64(1) << kTaintUnsignedModule))) {
-        // Out-of-tree modules (O) alone are fine as long as they're signed.
-        return {title, CheckStatus::Pass, taint == 0 ? QString() : u"Taint flags: %1"_s.arg(taintLetters(taint))};
+        // Out-of-tree modules (O) are fine as long as they're signed. Name them, since they're the
+        // ones whose keys the MOK sub-check is about. Other taint flags don't concern signing.
+        return {title, CheckStatus::Pass, outOfTree.isEmpty() ? QString() : u"Out-of-tree: %1"_s.arg(outOfTree.join(u", "_s))};
     }
     if (!unsignedNames.isEmpty()) {
         return {title, CheckStatus::Fail, u"%1: %2"_s.arg(unsignedNames.size() == 1 ? u"Unsigned module loaded"_s : u"Unsigned modules loaded"_s,
