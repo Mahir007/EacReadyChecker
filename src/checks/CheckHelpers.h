@@ -30,13 +30,13 @@ inline QString unreadable(const HostEntry &entry)
     return QStringLiteral("Couldn't read %1").arg(entry.path);
 }
 
-// "Unknown key: <first>" or "Unknown keys: <first> (+n more)". `keys` must not be empty.
-inline QString unknownKeys(const QStringList &keys)
+// "Unrecognised key: <first>" or "Unrecognised keys: <first> (+n more)". `keys` must not be empty.
+inline QString unrecognisedKeys(const QStringList &keys)
 {
     if (keys.size() == 1) {
-        return QStringLiteral("Unknown key: %1").arg(keys.first());
+        return QStringLiteral("Unrecognised key: %1").arg(keys.first());
     }
-    return QStringLiteral("Unknown keys: %1 (+%2 more)").arg(keys.first()).arg(keys.size() - 1);
+    return QStringLiteral("Unrecognised keys: %1 (+%2 more)").arg(keys.first()).arg(keys.size() - 1);
 }
 
 // Comma-separated list from a sysfs file such as /sys/kernel/security/lsm.

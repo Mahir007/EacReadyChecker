@@ -26,10 +26,10 @@ CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
         // isn't built in, or an lsm= on the command line leaves it out.
         if (snapshot.file(HostPaths::Lsm).ok()) {
             result.status = CheckStatus::Fail;
-            result.detail = u"The lockdown LSM isn't active"_s;
+            result.detail = u"Lockdown LSM isn't active"_s;
         } else {
             result.status = CheckStatus::Unknown;
-            result.detail = u"securityfs isn't mounted at /sys/kernel/security"_s;
+            result.detail = u"securityfs isn't mounted"_s;
         }
         return result;
     }

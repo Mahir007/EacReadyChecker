@@ -80,13 +80,10 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
         return {title, CheckStatus::Fail, u"Unexpected group types: %1"_s.arg(other.join(u", "_s))};
     }
     if (!identity.isEmpty()) {
-        const qsizetype translated = types.size() - identity.size();
-        const QString which = identity.size() == 1 ? u"group %1 uses"_s.arg(identity[0]) : u"groups %1 use"_s.arg(identity.join(u", "_s));
         return {title,
                 CheckStatus::Pass,
-                u"%1 of %2 groups %3 DMA; %4 identity (a single device, not system-wide)"_s.arg(translated)
-                    .arg(types.size())
-                    .arg(translated == 1 ? u"translates"_s : u"translate"_s, which)};
+                identity.size() == 1 ? u"Only group %1 uses passthrough"_s.arg(identity[0])
+                                     : u"Only groups %1 use passthrough"_s.arg(identity.join(u", "_s))};
     }
     return {title, CheckStatus::Pass, {}};
 }
@@ -151,9 +148,8 @@ CheckResult IommuCheck::evaluate(const HostSnapshot &snapshot) const
     bool isNumber = false;
     const int chassisType = chassis.ok() ? chassis.trimmed().toInt(&isNumber) : 0;
     if (isNumber && (chassisType == kChassisHandHeld || chassisType == kChassisTablet)) {
-        const QString kind = chassisType == kChassisHandHeld ? u"Handheld"_s : u"Tablet"_s;
         result.status = CheckStatus::NotRequired;
-        result.detail = u"Not required on this device (%1, chassis type %2)"_s.arg(kind).arg(chassisType);
+        result.detail = chassisType == kChassisHandHeld ? u"Not required on handhelds"_s : u"Not required on tablets"_s;
         return result;
     }
 

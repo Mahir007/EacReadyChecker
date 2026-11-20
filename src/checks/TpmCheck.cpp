@@ -33,7 +33,7 @@ CheckResult TpmCheck::evaluate(const HostSnapshot &snapshot) const
     } else if (version.status == HostEntry::Status::Missing && deviceStatus == HostEntry::Status::Present) {
         // tpm_version_major appeared in Linux 5.6.
         result.status = CheckStatus::Unknown;
-        result.detail = u"Found a TPM, but this kernel doesn't report its version"_s;
+        result.detail = u"This kernel doesn't report the TPM version"_s;
     } else {
         result.status = CheckStatus::Unknown;
         result.detail = CheckHelpers::unreadable(version);

@@ -65,7 +65,7 @@ QString statusLabel(CheckStatus status)
     case CheckStatus::Unknown:
         break;
     }
-    return QStringLiteral("Unknown");
+    return QStringLiteral("Couldn't check");
 }
 
 QString verdictKey(Verdict verdict)

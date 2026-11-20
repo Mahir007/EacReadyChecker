@@ -15,7 +15,7 @@ CheckResult KexecCheck::evaluate(const HostSnapshot &snapshot) const
             result.status = CheckStatus::Pass;
         } else if (value == "0") {
             result.status = CheckStatus::Fail;
-            result.detail = u"Kexec is allowed (kexec_load_disabled = 0)"_s;
+            result.detail = u"Kexec is allowed"_s;
         } else {
             result.status = CheckStatus::Unknown;
             result.detail = u"Unexpected kexec_load_disabled value “%1”"_s.arg(QString::fromUtf8(value));

@@ -63,7 +63,7 @@ Loaded load(const HostSnapshot &snapshot)
     case TcgEventLog::ParseResult::Error::None:
         return {std::move(parsed.log), CheckStatus::Pass, {}};
     case TcgEventLog::ParseResult::Error::NotCryptoAgile:
-        return {std::nullopt, CheckStatus::Fail, u"The TPM event log isn't in the TCG2 crypto-agile format"_s};
+        return {std::nullopt, CheckStatus::Fail, u"TPM event log is in the old SHA-1-only format"_s};
     case TcgEventLog::ParseResult::Error::Malformed:
         break;
     }
@@ -90,7 +90,7 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
         }
         const auto variable = TcgEventLog::variableData(event);
         if (!variable) {
-            return {title, CheckStatus::Unknown, u"Couldn't parse a Secure Boot authority in the TPM event log"_s};
+            return {title, CheckStatus::Unknown, u"Couldn't parse the TPM event log"_s};
         }
         QJsonObject entry{{u"variable"_s, variable->name}};
         const auto der = authorityCertificate(variable->data);
@@ -127,15 +127,15 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
     }
 
     if (!unknown.isEmpty()) {
-        return {title, CheckStatus::Fail, CheckHelpers::unknownKeys(unknown)};
+        return {title, CheckStatus::Fail, CheckHelpers::unrecognisedKeys(unknown)};
     }
     if (certificates == 0) {
         // Nothing verified the boot chain, e.g. because Secure Boot is off.
-        return {title, CheckStatus::Fail, u"The TPM event log shows no Secure Boot verification"_s};
+        return {title, CheckStatus::Fail, u"TPM event log shows no Secure Boot verification"_s};
     }
     QString detail = vendors.join(u", "_s);
     if (!unknownDrivers.isEmpty()) {
-        detail += u" · driver key not judged: %1"_s.arg(unknownDrivers.join(u", "_s));
+        detail += u" · driver key not counted: %1"_s.arg(unknownDrivers.join(u", "_s));
     }
     return {title, CheckStatus::Pass, detail};
 }

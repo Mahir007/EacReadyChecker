@@ -73,7 +73,7 @@ SubCheckResult logMatchesTpm(const HostSnapshot &snapshot, const EventLogHelpers
 
     const auto replayed = TcgEventLog::replay(*loaded.log, TcgEventLog::Sha256);
     if (!replayed) {
-        return {title, CheckStatus::Unknown, u"The TPM event log has no SHA-256 digests"_s};
+        return {title, CheckStatus::Unknown, u"TPM event log has no SHA-256 digests"_s};
     }
 
     QList<quint32> pcrs;
@@ -83,7 +83,7 @@ SubCheckResult logMatchesTpm(const HostSnapshot &snapshot, const EventLogHelpers
         }
     }
     if (pcrs.isEmpty()) {
-        return {title, CheckStatus::Fail, u"The TPM event log has no boot measurements"_s};
+        return {title, CheckStatus::Fail, u"TPM event log has no boot measurements"_s};
     }
 
     QHash<QString, HostEntry> tpmPcrs;

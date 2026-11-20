@@ -87,9 +87,9 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
     }
     if (modules.ok()) {
         // The flag can't be cleared, so this still fails until a reboot.
-        return {title, CheckStatus::Fail, u"An unsigned module was loaded and later unloaded. The kernel stays tainted until a reboot"_s};
+        return {title, CheckStatus::Fail, u"An unsigned module has been loaded and unloaded since boot"_s};
     }
-    return {title, CheckStatus::Fail, u"An unsigned module has been loaded since boot (taint flags: %1)"_s.arg(taintLetters(taint))};
+    return {title, CheckStatus::Fail, u"An unsigned module has been loaded since boot"_s};
 }
 
 // "MokListRT", "MokListRT1", … from an efivars path.
@@ -146,7 +146,7 @@ SubCheckResult moksWellKnown(const HostSnapshot &snapshot, QJsonArray &rawEntrie
     }
 
     if (!unknown.isEmpty()) {
-        return {title, CheckStatus::Fail, CheckHelpers::unknownKeys(unknown)};
+        return {title, CheckStatus::Fail, CheckHelpers::unrecognisedKeys(unknown)};
     }
     if (vendors.isEmpty()) {
         return {title, CheckStatus::Pass, u"No MOKs enrolled"_s};

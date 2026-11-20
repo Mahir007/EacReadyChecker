@@ -19,18 +19,19 @@ bool bootedWithUefi(const HostSnapshot &snapshot)
 std::optional<SubCheckResult> readFlag(const HostSnapshot &snapshot, const QString &title, const QString &path, std::optional<quint8> &value)
 {
     const HostEntry entry = snapshot.file(path);
+    const QString name = path.section(u'/', -1).section(u'-', 0, 0); // "SecureBoot"
     if (entry.status == HostEntry::Status::Missing) {
         if (!bootedWithUefi(snapshot)) {
             return SubCheckResult{title, CheckStatus::Fail, u"Not booted in UEFI mode"_s};
         }
-        return SubCheckResult{title, CheckStatus::Unknown, u"%1 not found"_s.arg(path.section(u'/', -1).section(u'-', 0, 0))};
+        return SubCheckResult{title, CheckStatus::Unknown, u"%1 variable not found"_s.arg(name)};
     }
     if (!entry.ok()) {
         return SubCheckResult{title, CheckStatus::Unknown, CheckHelpers::unreadable(entry)};
     }
     value = EfiVariable::byteValue(entry.data);
     if (!value || *value > 1) {
-        return SubCheckResult{title, CheckStatus::Unknown, u"Unexpected contents in %1"_s.arg(path)};
+        return SubCheckResult{title, CheckStatus::Unknown, u"Unexpected %1 value"_s.arg(name)};
     }
     return std::nullopt;
 }
