@@ -7,6 +7,7 @@
 #include "app/MessageBar.h"
 #include "app/Motion.h"
 #include "app/Revealer.h"
+#include "app/SummaryBanner.h"
 #include "core/AppInfo.h"
 
 #include <QApplication>
@@ -18,6 +19,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLayout>
 #include <QPalette>
 #include <QStyle>
 #include <QLabel>
@@ -720,6 +722,74 @@ private Q_SLOTS:
         QVERIFY(bar->sizeHint().width() != 12);
 
         QApplication::setStyle(style);
+    }
+
+    void fusionOnPlasmaLooksLikeBreeze()
+    {
+        // The AppImage on Plasma: Fusion, with Breeze's margins, row hover and scroll bar colours.
+        qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        const QString style = QApplication::style()->name();
+        const QPalette platform = QApplication::palette();
+        QApplication::setStyle(u"Fusion"_s);
+        const QColor highlight(61, 174, 233);
+        QPalette kde = platform;
+        kde.setColor(QPalette::Base, Qt::white);
+        kde.setColor(QPalette::Highlight, highlight);
+        QApplication::setPalette(kde);
+
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(finished(window));
+
+        // 10 px around the window's contents and 6 px inside, where Fusion has 9 for both. The
+        // list's 4 px and a row's 6 line the arrows up with the banner's icon. The arrow has 6 px
+        // around its icon, as Breeze's tool buttons do.
+        QCOMPARE(window.findChild<SummaryBanner *>()->layout()->contentsMargins(), QMargins(10, 10, 10, 10));
+        const QList<CheckRow *> rows = window.findChildren<CheckRow *>();
+        QLabel *title = rows[4]->findChildren<QLabel *>().constFirst();
+        QWidget *header = title->parentWidget();
+        QCOMPARE(header->layout()->contentsMargins(), QMargins(6, 6, 6, 6));
+        QCOMPARE(rows[4]->parentWidget()->layout()->contentsMargins(), QMargins(4, 4, 4, 4));
+        const int arrow = window.style()->pixelMetric(QStyle::PM_SmallIconSize) + 12;
+        QCOMPARE(rows[4]->findChild<QToolButton *>()->size(), QSize(arrow, arrow));
+
+        // Breeze's hover: 30% of the highlight over the list, in a line of it at 80%.
+        QTest::mouseMove(title);
+        QTRY_VERIFY(header->underMouse());
+        screenshot(window, u"mainwindow-plasma-hover"_s);
+        const QImage image = window.grab().toImage();
+        const int middle = header->height() / 2;
+        const QColor fill = image.pixelColor(header->mapTo(&window, QPoint(header->width() - 6, middle)));
+        const auto mix = [](int base, int colour) { return base + (colour - base) * 0.3; };
+        QVERIFY(std::abs(fill.red() - mix(255, highlight.red())) <= 1);
+        QVERIFY(std::abs(fill.green() - mix(255, highlight.green())) <= 1);
+        QVERIFY(std::abs(fill.blue() - mix(255, highlight.blue())) <= 1);
+        const QColor line = image.pixelColor(header->mapTo(&window, QPoint(header->width() - 3, middle)));
+        QVERIFY(line.red() < fill.red() - 40);
+
+        // The scroll bar's handle is half the highlight under the pointer, and 35% of it while the
+        // list has focus.
+        window.resize(window.width(), 300);
+        QScrollArea *scroll = window.findChild<QScrollArea *>();
+        QScrollBar *bar = scroll->verticalScrollBar();
+        QTRY_VERIFY(bar->isVisible());
+        QColor hover = highlight;
+        hover.setAlphaF(0.5);
+        QVERIFY(bar->styleSheet().contains(hover.name(QColor::HexArgb)));
+        QColor focused = highlight;
+        focused.setAlphaF(0.35);
+        window.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&window));
+        scroll->setFocus();
+        QTRY_VERIFY(bar->styleSheet().contains(focused.name(QColor::HexArgb)));
+        button(window, u"About"_s)->setFocus();
+        QTRY_VERIFY(!bar->styleSheet().contains(focused.name(QColor::HexArgb)));
+
+        QApplication::setPalette(platform);
+        QApplication::setStyle(style);
+        qunsetenv("XDG_CURRENT_DESKTOP");
     }
 
 private:

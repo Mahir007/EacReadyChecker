@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "CheckRow.h"
 
+#include "Desktop.h"
 #include "IconWidget.h"
 #include "Icons.h"
 #include "Motion.h"
@@ -64,8 +65,22 @@ protected:
         }
         QPainter painter(this);
         painter.setOpacity(m_level);
+        if (isFusionOnPlasma(this)) {
+            // Fusion draws no hover in item views. On Plasma, draw Breeze's: 30% of the highlight
+            // with a 1 px line of it at 80%, inside a margin of 2 px at the sides and 1 px above
+            // and below.
+            QColor fill = palette().color(QPalette::Highlight);
+            QColor line = fill;
+            fill.setAlphaF(0.3);
+            line.setAlphaF(0.8);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(line);
+            painter.setBrush(fill);
+            painter.drawRoundedRect(QRectF(rect()).adjusted(2.5, 1.5, -2.5, -1.5), 4.5, 4.5);
+            return;
+        }
         if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) == 0) {
-            // Fusion draws no hover in item views. Shade the row like GNOME's lists do.
+            // Elsewhere, shade the row like GNOME's lists do.
             QColor colour = palette().color(foregroundRole());
             colour.setAlphaF(0.06);
             painter.setRenderHint(QPainter::Antialiasing);
@@ -288,9 +303,21 @@ void CheckRow::updateIcons(IconChange change)
         subIcon->setIcon(statusIcon(status));
     }
 
+    // Under Fusion on Plasma, Breeze's margin and arrow size, which set a row's height and where
+    // its title starts. Breeze's tool buttons have 6 px around their icon.
+    const int margin = layoutMargin(m_header);
+    m_header->layout()->setContentsMargins(margin, margin, margin, margin);
+    if (isFusionOnPlasma(this)) {
+        const int arrow = style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, this) + 12;
+        m_expander->setFixedSize(arrow, arrow);
+    } else {
+        m_expander->setMinimumSize(0, 0);
+        m_expander->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+    }
     // Sub-checks line up with the row's title. Both sizes depend on the style.
     const QMargins margins = m_header->layout()->contentsMargins();
-    const int indent = margins.left() + m_expander->sizeHint().width() + kSpacing + size + kSpacing;
+    const int expander = m_expander->sizeHint().expandedTo(m_expander->minimumSize()).width();
+    const int indent = margins.left() + expander + kSpacing + size + kSpacing;
     m_subLayout->setContentsMargins(indent, 0, margins.right(), margins.bottom());
 }
 

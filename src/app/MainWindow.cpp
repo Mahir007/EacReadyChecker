@@ -3,6 +3,7 @@
 
 #include "CheckRow.h"
 #include "ColorScheme.h"
+#include "Desktop.h"
 #include "Icons.h"
 #include "MessageBar.h"
 #include "Motion.h"
@@ -145,6 +146,11 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     updateScrollBar();
+    connect(qApp, &QApplication::focusChanged, this, [this](QWidget *old, QWidget *now) {
+        if ((old == m_scroll || now == m_scroll) && isFusionOnPlasma(this)) {
+            updateScrollBar();
+        }
+    });
 
     m_runFull->setToolTip(u"Reads the TPM event log as root. You'll be asked for an admin password once."_s);
     auto *messageLayout = new QVBoxLayout(m_messageBox);
@@ -289,8 +295,8 @@ void MainWindow::updateMargins()
     // The window has no margins of its own, so the list can reach its edges. The banner and the
     // buttons get the window's margins instead. The list's are what's left after its rows' own,
     // so the rows' arrows line up with the banner's icon.
-    const int window = style()->pixelMetric(QStyle::PM_LayoutLeftMargin, nullptr, this);
-    const int row = style()->pixelMetric(QStyle::PM_LayoutLeftMargin, nullptr, m_rows.constFirst());
+    const int window = layoutMargin(this);
+    const int row = layoutMargin(m_rows.constFirst());
     const int inset = std::max(0, window - row);
     m_banner->layout()->setContentsMargins(window, window, window, window);
     m_footer->layout()->setContentsMargins(window, window, window, window);
@@ -312,14 +318,27 @@ void MainWindow::updateScrollBar()
         colour.setAlphaF(opacity);
         return colour.name(QColor::HexArgb);
     };
-    bar->setStyleSheet(uR"(
+    const QString sheet = uR"(
         QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
         QScrollBar::handle:vertical { background: %1; border-radius: 4px; min-height: 32px; margin: 2px; }
         QScrollBar::handle:vertical:hover { background: %2; }
         QScrollBar::handle:vertical:pressed { background: %3; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
-    )"_s.arg(handle(0.2), handle(0.4), handle(0.6)));
+    )"_s;
+    if (isFusionOnPlasma(this)) {
+        // Breeze's colours: 35% of the highlight while the list has focus, otherwise 17.5% of the
+        // text colour, and 50% of the highlight under the pointer.
+        const auto highlight = [this](qreal opacity) {
+            QColor colour = palette().color(QPalette::Active, QPalette::Highlight);
+            colour.setAlphaF(opacity);
+            return colour.name(QColor::HexArgb);
+        };
+        const QString idle = m_scroll->hasFocus() ? highlight(0.35) : handle(0.175);
+        bar->setStyleSheet(sheet.arg(idle, highlight(0.5), highlight(0.5)));
+    } else {
+        bar->setStyleSheet(sheet.arg(handle(0.2), handle(0.4), handle(0.6)));
+    }
 }
 
 void MainWindow::runChecks(bool elevate)
