@@ -23,9 +23,6 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-constexpr auto PortalService = "org.freedesktop.portal.Desktop"_L1;
-constexpr auto PortalPath = "/org/freedesktop/portal/desktop"_L1;
-constexpr auto PortalInterface = "org.freedesktop.portal.Settings"_L1;
 constexpr auto AppearanceNamespace = "org.freedesktop.appearance"_L1;
 constexpr auto ColorSchemeKey = "color-scheme"_L1;
 constexpr auto AccentColorKey = "accent-color"_L1;
@@ -345,12 +342,7 @@ void followDesktopColorScheme()
     }
     if (const auto scheme = readPortalAppearance()) {
         applyColorScheme(*scheme);
-        QDBusConnection::sessionBus().connect(PortalService,
-                                              PortalPath,
-                                              PortalInterface,
-                                              u"SettingChanged"_s,
-                                              new PortalListener(qApp),
-                                              SLOT(settingChanged(QString, QString, QDBusVariant)));
+        connectSettingChanged(new PortalListener(qApp));
         return;
     }
     applyColorScheme(QGuiApplication::styleHints()->colorScheme());
@@ -364,12 +356,7 @@ void followPlasmaFont()
     if (!isKde() || isBreezeStyle()) {
         return;
     }
-    QDBusConnection::sessionBus().connect(PortalService,
-                                          PortalPath,
-                                          PortalInterface,
-                                          u"SettingChanged"_s,
-                                          new PlasmaFontListener(qApp),
-                                          SLOT(settingChanged(QString, QString, QDBusVariant)));
+    connectSettingChanged(new PlasmaFontListener(qApp));
 }
 
 #include "ColorScheme.moc"

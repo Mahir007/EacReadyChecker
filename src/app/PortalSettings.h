@@ -2,10 +2,32 @@
 #pragma once
 
 #include <QDBusArgument>
+#include <QDBusConnection>
 #include <QDBusMessage>
+#include <QDBusVariant>
+#include <QLatin1StringView>
 #include <QMap>
+#include <QObject>
 #include <QString>
 #include <QVariantMap>
+
+inline constexpr auto PortalService = QLatin1StringView("org.freedesktop.portal.Desktop");
+inline constexpr auto PortalPath = QLatin1StringView("/org/freedesktop/portal/desktop");
+inline constexpr auto PortalInterface = QLatin1StringView("org.freedesktop.portal.Settings");
+
+// Calls the receiver's settingChanged(QString, QString, QDBusVariant) slot when a setting changes.
+// Qt 6.5.0 looks the slot's argument types up by name, and finds QDBusVariant only once it's
+// registered, which a reply that holds one also does. Before that, the connection fails.
+inline bool connectSettingChanged(QObject *receiver)
+{
+    qRegisterMetaType<QDBusVariant>();
+    return QDBusConnection::sessionBus().connect(PortalService,
+                                                 PortalPath,
+                                                 PortalInterface,
+                                                 QStringLiteral("SettingChanged"),
+                                                 receiver,
+                                                 SLOT(settingChanged(QString, QString, QDBusVariant)));
+}
 
 // The settings portal's reply to ReadAll, by namespace. xdg-desktop-portal 1.18 asks every backend
 // that has settings and lists each one's namespaces in turn, so a namespace can come twice: on

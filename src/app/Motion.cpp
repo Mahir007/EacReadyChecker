@@ -22,9 +22,6 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-constexpr auto PortalService = "org.freedesktop.portal.Desktop"_L1;
-constexpr auto PortalPath = "/org/freedesktop/portal/desktop"_L1;
-constexpr auto PortalInterface = "org.freedesktop.portal.Settings"_L1;
 constexpr int PortalTimeoutMs = 1000;
 
 // xdg-desktop-portal 1.21 and later: 1 means reduce motion.
@@ -165,12 +162,7 @@ void followDesktop()
             }
         }
     });
-    bus.connect(PortalService,
-                PortalPath,
-                PortalInterface,
-                u"SettingChanged"_s,
-                new PortalListener(qApp),
-                SLOT(settingChanged(QString, QString, QDBusVariant)));
+    connectSettingChanged(new PortalListener(qApp));
 }
 
 void overrideFactor(std::optional<qreal> factor)
