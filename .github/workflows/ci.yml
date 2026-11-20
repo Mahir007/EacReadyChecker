@@ -35,7 +35,7 @@ jobs:
       - name: shellcheck
         run: git ls-files -z '*.sh' | xargs -0 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0
       - name: ruff
-        run: docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/astral-sh/ruff:0.17.5 check --no-cache .
+        run: docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/astral-sh/ruff:0.17.6 check --no-cache .
 
   # The latest Debian release, with the apt packages from CONTRIBUTING.md.
   test-debian:
