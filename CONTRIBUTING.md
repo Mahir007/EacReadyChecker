@@ -215,6 +215,38 @@ it needs no desktop or GPU. The packages it needs are listed at the top of the s
 links to the images at a commit, so after committing new ones, update that commit in its screenshot
 URLs.
 
+## CI and releases
+
+`ci.yml` runs on every push. Compiler warnings are errors in the test jobs, except in the vendored
+title bar plugin.
+
+| Job | What it does |
+| --- | --- |
+| `lint` | actionlint, shellcheck and ruff. |
+| `test (Debian)` | The tests on the latest Debian, with the apt packages above. |
+| `test (Homebrew)` | The tests on Ubuntu with Homebrew's Qt and compiler, installed with the brew command above. |
+| `test (minimum)` | The tests with the oldest versions the build accepts: Qt 6.5.0 from qt.io and CMake 3.22, on AlmaLinux 9 with GCC 11 and glibc 2.34. |
+| `build`, `check` | Builds the Flatpak bundle in Flathub's KDE container, installs it on Ubuntu and checks its version. |
+| `build-appimage`, `check-appimage` | Builds the AppImage on AlmaLinux 9, runs it on Ubuntu and opens its window in Weston with GNOME's settings. |
+
+To release, add the version to `<releases>` in the metainfo and push a tag such as `v1.2.0`.
+`release.yml` builds both packages through `ci.yml` with that version and publishes them with notes
+from `.github/scripts/release-notes.py`. A tag with a hyphen, such as `v1.2.0-rc.1`, makes a
+pre-release, and its AppImage has no update information.
+
+## Upkeep
+
+| What | Where | When |
+| --- | --- | --- |
+| Qt patch releases | `samePrivateApi`, see [Adding a Qt release](#adding-a-qt-release). | When Qt publishes one. aqtinstall can install a release before qt.io's download pages list it. |
+| The KDE runtime | `runtime-version` in the Flatpak manifest, and the `kde-6.x` container image and cache keys of the `build` job. | When Flathub publishes a new branch and Flathub's `flatpak-github-actions` has an image for it. |
+| The AppImage's Qt | `QT_VERSION` in the `build-appimage` job, and the [AppImage](#appimage) commands. | With the KDE runtime. The AppImage bundles the Qt the Flatpak runs. |
+| QAdwaitaDecorations | `third_party/qadwaitadecorations`, at the commit named in `third_party/CMakeLists.txt`. | When upstream changes. Copy it unchanged, since our own changes go in `src/decoration`. Then run `compare-qt-releases.py` again on every release in `samePrivateApi`, since the private API it uses can change. |
+| Pinned tools | actionlint, shellcheck, ruff and aqtinstall in `ci.yml`, the AppImage runtime and appimagetool in `build-appimage.sh`, and the actions' major versions. | Before a release. |
+| Epic's requirements | The checks in `src/checks`, the README's table of checks, and the date in `requirementsAsOf()` (`src/core/Report.cpp`). | When Epic changes the article, or publishes its key list. |
+| Well-known keys | See [Adding a well-known key](#adding-a-well-known-key). | When a vendor adds a certificate, or a report shows an unrecognised key from one of Epic's vendors. |
+| Screenshots | See [Updating the screenshots](#updating-the-screenshots). | After a UI change. |
+
 ## Conventions
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), with the area
