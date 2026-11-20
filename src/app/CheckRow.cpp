@@ -77,6 +77,8 @@ protected:
         QStyleOptionViewItem option;
         option.initFrom(this);
         option.state |= QStyle::State_MouseOver;
+        // An item on its own. Without a position, Breeze draws it square, as for a table cell.
+        option.viewItemPosition = QStyleOptionViewItem::OnlyOne;
         style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &option, &painter, this);
     }
 
