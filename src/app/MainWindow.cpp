@@ -434,7 +434,7 @@ void MainWindow::showAbout()
     box->setTextFormat(Qt::RichText);
     box->setLinkedText(u"<h3>%1 %2</h3>"
                  "<p>%3.</p>"
-                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5. EAC performs its own verification at game launch.</p>"
+                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5.<br>EAC performs its own verification at game launch.</p>"
                  "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"
                  "<p>Qt %9</p>"_s.arg(AppInfo::displayName(),
                                       AppInfo::version(),
