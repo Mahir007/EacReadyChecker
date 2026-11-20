@@ -1,14 +1,4 @@
-<img src="packaging/icons/io.github.Mahir007.EacReadyChecker.svg" width="96" align="right" alt="">
-
-# EACheck
-
-EACheck checks whether a Linux machine meets the
-[Easy Anti-Cheat Linux v2 requirements](https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2).
-It only reads system state, and asks for an admin password only to read the TPM event log.
-
-Status: early development.
-
-![EACheck on a Fedora machine with an unknown module-signing key](docs/screenshots/not-ready.png)
+# Contributing to EACheck
 
 ## Layout
 
@@ -20,15 +10,16 @@ Status: early development.
 | `src/data` | `well-known-keys.json`, compiled in as a Qt resource. |
 | `src/app` | The Qt Widgets window (`eacheck_app`). |
 | `src/cli` | `--json` and `--text` output. |
+| `src/decoration` | The GNOME title bar plugin's entry point. It subclasses QAdwaitaDecorations' decoration to add a shadow to unfocused windows. |
 | `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
 | `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
 | `packaging` | Flatpak manifest, AppImage build scripts, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from, and screenshots. |
-| `third_party` | QAdwaitaDecorations, the title bar plugin used on GNOME. |
+| `third_party` | QAdwaitaDecorations, which draws the window's title bar on GNOME with a border and shadow that Qt's own lacks. |
 
 ## Requirements
 
-- CMake 3.22 or later, Ninja and a C++20 compiler.
+- CMake 3.22 or later, Ninja, and a C++20 compiler such as GCC 11 or later.
 - Qt 6.5 or later with its Wayland and SVG plugins.
 - For the title bar on GNOME: Qt's private headers and Qt SVG's development files. Without them
   the window gets Qt's own title bar, which has no shadow.
@@ -164,31 +155,19 @@ against a fixture. Admin reads skip `pkexec` there, so `--elevate` doesn't ask f
 `--json` shows what a check saw: `raw` under each check has the values it read, and `host` has the
 transport (`direct` or `flatpak-spawn`) and how the admin read went.
 
-To turn a machine's state into a fixture or attach it to a bug report:
+To turn a machine's state into a fixture:
 
 ```sh
 tools/capture-fixture.sh ~/eacheck-capture --with-event-log
 ```
 
-The event log needs `sudo`. `proc/cmdline` in the capture shows your root device, so look it over
+The event log needs `sudo`. `proc/cmdline` in the capture shows the root device, so look it over
 before sharing.
 
 Without a Wayland session, the window aborts with `no Qt platform plugin could be initialized`.
 `QT_QPA_PLATFORM` overrides the platform (`xcb`, or `offscreen` for no display), and
 `QT_DEBUG_PLUGINS=1` shows why a plugin didn't load. On GNOME, `QT_WAYLAND_DECORATION=adwaita`
 gives Qt's own title bar instead of the bundled one.
-
-## CLI
-
-```
-eac-ready-checker                open the window
-eac-ready-checker --json         print the report as JSON
-eac-ready-checker --text         print the report as text
-```
-
-`--elevate` also runs the checks that need admin access. `--sysroot DIR` reads host files below
-`DIR`. `--json` and `--text` exit with 0 for ready, 2 for not ready and 3 for incomplete. 1 is a
-usage error.
 
 ## Adding a check
 
@@ -213,11 +192,13 @@ was built with and on the patch releases in `samePrivateApi` (`src/app/WindowDec
 Qt publishes a patch release, compare it with the others of its minor version:
 
 ```sh
-tools/compare-qt-releases.py ~/qt-compare 6.12.0 6.12.1
+tools/compare-qt-releases.py ~/qt-compare 6.12.1 6.12.2
 ```
 
 It downloads each release from qt.io, builds the plugin against it and compares what the plugin
-uses of the private API. Releases it reports as the same go in one entry. It needs `aqtinstall` and
+uses of the private API. Releases it reports as the same go in one entry, and a release that
+differs starts a new one. The "not checked" rows in `tst_windowdecoration` use the first release
+after an entry, so change them to the release after the new one. The script needs `aqtinstall` and
 `pyelftools` from pip, and the build tools above.
 
 ## Updating the screenshots
@@ -234,7 +215,7 @@ it needs no desktop or GPU. The packages it needs are listed at the top of the s
 links to the images at a commit, so after committing new ones, update that commit in its screenshot
 URLs.
 
-## Contributing
+## Conventions
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), with the area
 as the scope (`app`, `checks`, `parsers`, `keys`, `host`, `report`, `tools` or `packaging`).
@@ -243,8 +224,3 @@ The build turns on Qt's strict string and keyword macros, so use `u"text"_s`, `Q
 `Q_EMIT`.
 
 Changes to the checks are tested on real machines, and the captures become fixtures.
-
-## License
-
-GPL-3.0-or-later. See [LICENSE](LICENSE). QAdwaitaDecorations in `third_party/qadwaitadecorations`
-is LGPL-2.1-or-later, see its [LICENSE](third_party/qadwaitadecorations/LICENSE).
