@@ -5,8 +5,10 @@
 #include "FakePortal.h"
 
 #include <QApplication>
+#include <QFont>
 #include <QStyleHints>
 #include <QTest>
+#include <QWidget>
 
 using namespace Qt::StringLiterals;
 
@@ -193,6 +195,42 @@ private Q_SLOTS:
         QTRY_COMPARE(QApplication::palette().color(QPalette::Link), QColor(0x78, 0xae, 0xed));
         changeScheme(PreferLight);
         QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
+    void followsPlasmaFont()
+    {
+        // Qt's own KDE theme, as in the AppImage, reads Plasma's font only at startup. KDE's portal
+        // sends a change as the text in kdeglobals.
+        const QString general = u"org.kde.kdeglobals.General"_s;
+        const QString serif = u"Noto Serif,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"_s;
+        const QString style = QApplication::style()->name();
+        const QFont font = QApplication::font();
+        QApplication::setStyle(u"Fusion"_s);
+        QWidget widget;
+
+        // Not on other desktops.
+        qputenv("XDG_CURRENT_DESKTOP", "GNOME");
+        followPlasmaFont();
+        QVERIFY(m_portal.emitChanged(general, u"font"_s, serif));
+        QTest::qWait(100);
+        QCOMPARE(QApplication::font(), font);
+
+        qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        followPlasmaFont();
+        QVERIFY(m_portal.emitChanged(general, u"font"_s, serif));
+        QTRY_COMPARE(QApplication::font().family(), u"Noto Serif"_s);
+        QCOMPARE(QApplication::font().pointSize(), 11);
+        // Open widgets get it too.
+        QCOMPARE(widget.font().family(), u"Noto Serif"_s);
+
+        // Back to Plasma's default, which kdeglobals doesn't store: the font stays.
+        QVERIFY(m_portal.emitChanged(general, u"font"_s, QString()));
+        QTest::qWait(100);
+        QCOMPARE(QApplication::font().family(), u"Noto Serif"_s);
+
+        QApplication::setFont(font);
+        QApplication::setStyle(style);
+        qunsetenv("XDG_CURRENT_DESKTOP");
     }
 
 private:

@@ -13,6 +13,11 @@
 // is always light. Call once, after QApplication.
 void followDesktopColorScheme();
 
+// Follows a change to Plasma's font where Qt's own KDE theme is used, as in the AppImage. Qt reads the
+// font when the app starts, but doesn't pass a change on to the open windows.
+// Call once, after QApplication.
+void followPlasmaFont();
+
 // Sets libadwaita's dark palette if the scheme is dark and the current palette isn't, or gives lists
 // the window's colour. Undoes it for other schemes.
 void applyColorScheme(Qt::ColorScheme scheme);

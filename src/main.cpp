@@ -50,6 +50,7 @@ int main(int argc, char **argv)
         // from icons bundled in the app.
         QApplication::setWindowIcon(appIcon());
         followDesktopColorScheme();
+        followPlasmaFont();
         Motion::followDesktop();
         useBundledDecoration(decorationSet);
     }

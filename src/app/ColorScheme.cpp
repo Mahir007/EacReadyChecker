@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ColorScheme.h"
 
+#include "Desktop.h"
 #include "Icons.h"
 #include "PortalSettings.h"
 
@@ -9,6 +10,7 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusVariant>
+#include <QFont>
 #include <QPalette>
 #include <QStyleHints>
 #include <QWidget>
@@ -27,21 +29,13 @@ constexpr auto PortalInterface = "org.freedesktop.portal.Settings"_L1;
 constexpr auto AppearanceNamespace = "org.freedesktop.appearance"_L1;
 constexpr auto ColorSchemeKey = "color-scheme"_L1;
 constexpr auto AccentColorKey = "accent-color"_L1;
+constexpr auto KdeGeneralNamespace = "org.kde.kdeglobals.General"_L1;
+constexpr auto KdeFontKey = "font"_L1;
 constexpr int PortalTimeoutMs = 1000;
 
 bool s_darkPaletteSet = false;
 // The desktop's accent, if the portal reports one (GNOME 47 and later).
 std::optional<QColor> s_accent;
-
-bool isGnome()
-{
-    return qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':').contains(u"GNOME"_s, Qt::CaseInsensitive);
-}
-
-bool isKde()
-{
-    return qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':').contains(u"KDE"_s, Qt::CaseInsensitive);
-}
 
 // Desktops Qt loads a theme for: KDE, and the GTK desktops in Qt 6.11's qgenericunixtheme.cpp. On
 // any other, such as COSMIC, Hyprland or Sway, Qt uses its generic theme, which only has a light
@@ -179,6 +173,30 @@ public Q_SLOTS:
             for (QWidget *window : windows) {
                 QCoreApplication::postEvent(window, new QEvent(QEvent::PaletteChange));
             }
+        }
+    }
+};
+
+// Plasma's font, as KDE's portal sends it: the text in kdeglobals.
+class PlasmaFontListener : public QObject
+{
+    Q_OBJECT
+
+public:
+    using QObject::QObject;
+
+public Q_SLOTS:
+    void settingChanged(const QString &group, const QString &key, const QDBusVariant &value)
+    {
+        if (group != KdeGeneralNamespace || key != KdeFontKey) {
+            return;
+        }
+        // When the font is back to Plasma's default, kdeglobals has none and the portal no value.
+        // The Flatpak keeps its old font then too.
+        const QString text = value.variant().toString();
+        QFont font;
+        if (!text.isEmpty() && font.fromString(text)) {
+            QApplication::setFont(font);
         }
     }
 };
@@ -338,6 +356,20 @@ void followDesktopColorScheme()
     applyColorScheme(QGuiApplication::styleHints()->colorScheme());
     // Queued: the platform theme may update the palette after it reports the new scheme.
     QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, qApp, &applyColorScheme, Qt::QueuedConnection);
+}
+
+void followPlasmaFont()
+{
+    // With Breeze, KDE's platform theme is there and follows the font itself.
+    if (!isKde() || isBreezeStyle()) {
+        return;
+    }
+    QDBusConnection::sessionBus().connect(PortalService,
+                                          PortalPath,
+                                          PortalInterface,
+                                          u"SettingChanged"_s,
+                                          new PlasmaFontListener(qApp),
+                                          SLOT(settingChanged(QString, QString, QDBusVariant)));
 }
 
 #include "ColorScheme.moc"
