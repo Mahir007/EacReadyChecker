@@ -14,10 +14,11 @@ namespace
 {
 // Upstream's ceCornerRadius, the title bar's corners.
 constexpr qreal CornerRadius = 12;
-// GNOME's apps keep a lighter shadow that falls off sooner when unfocused. Upstream blurs its shadow by
-// 12 px; this is tighter and lighter in the same way.
-constexpr qreal BlurRadius = 8;
-constexpr qreal Opacity = 0.5;
+// Upstream's blur. At this opacity the shadow comes closest to upstream's focused one scaled by how much
+// lighter libadwaita's unfocused shadow is at each distance from the window, without being darker than it
+// anywhere.
+constexpr qreal BlurRadius = 12;
+constexpr qreal Opacity = 0.4;
 
 class ShadowedDecoration : public QAdwaitaDecorations
 {
