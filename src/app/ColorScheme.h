@@ -10,7 +10,8 @@
 // arrives. So this asks the settings portal directly, like Qt's title bar plugin does, and only uses
 // what Qt reports if the portal doesn't answer. It also follows the accent the portal reports.
 // It does the same on desktops Qt has no theme for, such as COSMIC, where Qt's palette
-// is always light. Call once, after QApplication.
+// is always light, and on the other GTK desktops, where a dark style can also leave the
+// GTK theme light. Call once, after QApplication.
 void followDesktopColorScheme();
 
 // Follows a change to Plasma's font where Qt's own KDE theme is used, as in the AppImage. Qt reads the
@@ -18,14 +19,16 @@ void followDesktopColorScheme();
 // Call once, after QApplication.
 void followPlasmaFont();
 
-// Sets libadwaita's dark palette if the scheme is dark and the current palette isn't, or gives lists
-// the window's colour. Undoes it for other schemes.
+// Sets libadwaita's dark palette if the scheme is dark and the current palette isn't, or on GNOME
+// gives lists the window's colour. Undoes it for other schemes.
 void applyColorScheme(Qt::ColorScheme scheme);
 
 // The colours to set on a window over the app's palette, for GNOME's light style.
 // There, Qt's GTK plugin gives lists the window's colour and dims some text while the window isn't
 // focused, and GNOME's accent may not be its highlight. On Plasma without KDE's platform theme, as in
-// the AppImage, it's the highlight of an unfocused window. On a desktop Qt has no theme
-// for, it's the accent. Otherwise it's an empty palette, which changes nothing. Set it on
-// the window, not the app: an app palette replaces the plugin's palettes for labels and buttons.
+// the AppImage, it's the highlight of an unfocused window. On the other desktops that
+// follow the portal, it's the accent. Anywhere, it's a dimmed text colour where
+// Qt's GTK plugin gives an invalid one. Otherwise it's an empty palette, which changes
+// nothing. Set it on the window, not the app: an app palette replaces the plugin's palettes for labels
+// and buttons.
 QPalette windowColours(const QPalette &appPalette);

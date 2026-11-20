@@ -45,11 +45,8 @@ private Q_SLOTS:
     {
         QTest::addColumn<QByteArray>("desktop");
         QTest::addColumn<QByteArray>("platformTheme");
-        // Qt's KDE theme or Plasma's follows the colour scheme, and Qt's GTK plugin gives the GTK
-        // theme's own dark palette.
+        // Qt's KDE theme or Plasma's follows the colour scheme.
         QTest::newRow("KDE") << QByteArray("KDE") << QByteArray();
-        QTest::newRow("Cinnamon") << QByteArray("X-Cinnamon") << QByteArray();
-        QTest::newRow("XFCE") << QByteArray("XFCE") << QByteArray();
         // The user picked their colours.
         QTest::newRow("qt6ct") << QByteArray("COSMIC") << QByteArray("qt6ct");
     }
@@ -197,6 +194,102 @@ private Q_SLOTS:
         QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
     }
 
+    void followsThePortalOnGtkDesktops_data()
+    {
+        QTest::addColumn<QByteArray>("desktop");
+        QTest::addColumn<bool>("listed");
+        QTest::addColumn<bool>("hasReadOne");
+        QTest::newRow("Cinnamon") << QByteArray("X-Cinnamon") << true << true;
+        QTest::newRow("XFCE") << QByteArray("XFCE") << true << true;
+        // A backend that lists nothing in ReadAll, as elementary OS 8's does, before GTK's, which has
+        // the colour scheme but no accent.
+        QTest::newRow("unlisted") << QByteArray("Pantheon") << false << true;
+        // The same with xdg-desktop-portal before 1.15.
+        QTest::newRow("unlisted, no ReadOne") << QByteArray("Pantheon") << false << false;
+    }
+
+    void followsThePortalOnGtkDesktops()
+    {
+        // A dark style that leaves the GTK theme light, so Qt's GTK plugin keeps a light palette.
+        QFETCH(QByteArray, desktop);
+        QFETCH(bool, listed);
+        QFETCH(bool, hasReadOne);
+        qputenv("XDG_CURRENT_DESKTOP", desktop);
+        const QColor grape(0xa5, 0x6d, 0xe2);
+        const QColor mint(0x28, 0xbc, 0xa3);
+        const PortalSettings appearance{{Appearance, {{SchemeKey, QVariant::fromValue(PreferDark)}, {AccentKey, portalColour(grape)}}}};
+        m_portal.setSettings(listed ? appearance : PortalSettings{});
+        m_portal.setUnlisted(listed ? PortalSettings{} : appearance);
+        m_portal.setOtherBackend(listed ? PortalSettings{} : PortalSettings{{Appearance, {{SchemeKey, QVariant::fromValue(PreferDark)}}}});
+        m_portal.setHasReadOne(hasReadOne);
+        followDesktopColorScheme();
+        QVERIFY(isDarkPalette(QApplication::palette()));
+        QVERIFY(near(QApplication::palette().color(QPalette::Highlight), grape));
+
+        // In light, the accent is in the windows' own colours, over GTK's palette.
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+        QVERIFY(near(windowColours(QApplication::palette()).color(QPalette::Highlight), grape));
+
+        // Picked while the app runs.
+        QVERIFY(m_portal.emitChanged(Appearance, AccentKey, portalColour(mint)));
+        QTRY_VERIFY(near(windowColours(QApplication::palette()).color(QPalette::Highlight), mint));
+        changeScheme(PreferDark);
+        QTRY_VERIFY(isDarkPalette(QApplication::palette()));
+        QVERIFY(near(QApplication::palette().color(QPalette::Highlight), mint));
+
+        m_portal.setUnlisted({});
+        m_portal.setOtherBackend({});
+        m_portal.setHasReadOne(true);
+        changeScheme(PreferLight);
+        QTRY_VERIFY(!isDarkPalette(QApplication::palette()));
+    }
+
+    void keepsADarkGtkTheme()
+    {
+        // A GTK desktop whose dark style is a dark GTK theme: Qt's GTK plugin gives its colours, with
+        // the list in the window's colour, and they stay.
+        const QColor window(0x2f, 0x2f, 0x2f);
+        QPalette gtkDark = QApplication::palette();
+        for (const QPalette::ColorRole role : {QPalette::Window, QPalette::Base, QPalette::Button}) {
+            gtkDark.setColor(role, window);
+        }
+        for (const QPalette::ColorRole role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText}) {
+            gtkDark.setColor(role, QColor(0xda, 0xda, 0xda));
+        }
+        QApplication::setPalette(gtkDark);
+        qputenv("XDG_CURRENT_DESKTOP", "X-Cinnamon");
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QCOMPARE(QApplication::palette().color(QPalette::Window), window);
+
+        // On GNOME, libadwaita's colours replace them.
+        qputenv("XDG_CURRENT_DESKTOP", "GNOME");
+        applyColorScheme(Qt::ColorScheme::Dark);
+        QCOMPARE(QApplication::palette().color(QPalette::Window), QColor(0x24, 0x24, 0x24));
+        applyColorScheme(Qt::ColorScheme::Light);
+        QVERIFY(!isDarkPalette(QApplication::palette()));
+        qunsetenv("XDG_CURRENT_DESKTOP");
+    }
+
+    void replacesAnInvalidDimmedColour()
+    {
+        // Qt's GTK plugin on a desktop set to dark with a light GTK theme: dark grey text less 100
+        // shades is out of range. Also where the app leaves the colours to Qt.
+        qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        QPalette palette = QApplication::palette();
+        palette.setColor(QPalette::PlaceholderText, QColor(0x33 - 100, 0x33 - 100, 0x33 - 100));
+        QVERIFY(!palette.color(QPalette::PlaceholderText).isValid());
+        const QPalette colours = windowColours(palette);
+        QVERIFY(colours.isBrushSet(QPalette::Active, QPalette::PlaceholderText));
+        const QColor dimmed = colours.color(QPalette::PlaceholderText);
+        QCOMPARE(dimmed.rgb(), palette.color(QPalette::WindowText).rgb());
+        QVERIFY(dimmed.alpha() < 255);
+
+        // A valid one is left alone.
+        QVERIFY(!windowColours(QApplication::palette()).isBrushSet(QPalette::Active, QPalette::PlaceholderText));
+        qunsetenv("XDG_CURRENT_DESKTOP");
+    }
+
     void followsPlasmaFont()
     {
         // Qt's own KDE theme, as in the AppImage, reads Plasma's font only at startup. KDE's portal
@@ -239,6 +332,8 @@ private:
     {
         return std::abs(a.red() - b.red()) <= 1 && std::abs(a.green() - b.green()) <= 1 && std::abs(a.blue() - b.blue()) <= 1;
     }
+
+    static QVariant portalColour(const QColor &colour) { return QVariant::fromValue(PortalColour{colour.redF(), colour.greenF(), colour.blueF()}); }
 
     void setScheme(uint scheme) { m_portal.set(Appearance, SchemeKey, QVariant::fromValue(scheme)); }
 

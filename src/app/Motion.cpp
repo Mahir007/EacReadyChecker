@@ -49,18 +49,9 @@ struct DesktopSetting
 DesktopSetting s_desktop;
 std::optional<qreal> s_override;
 
-// A value inside a variant arrives wrapped once more.
-QVariant unwrap(QVariant value)
-{
-    while (value.metaType() == QMetaType::fromType<QDBusVariant>()) {
-        value = qvariant_cast<QDBusVariant>(value).variant();
-    }
-    return value;
-}
-
 void applySetting(const QString &group, const QString &key, const QVariant &wrapped)
 {
-    const QVariant value = unwrap(wrapped);
+    const QVariant value = unwrapVariant(wrapped);
     if (group == Appearance && key == ReducedMotion) {
         s_desktop.reducedMotion = value.toUInt() == 1;
     } else if (group == GnomeInterface && key == EnableAnimations) {

@@ -3,6 +3,8 @@
 
 #include <QDBusArgument>
 #include <QDBusConnection>
+#include <QDBusContext>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusMetaType>
 #include <QDBusVariant>
@@ -76,7 +78,7 @@ inline const QDBusArgument &operator>>(const QDBusArgument &argument, PortalRepl
 }
 
 // Stand-in for the settings portal.
-class FakePortal : public QObject
+class FakePortal : public QObject, protected QDBusContext
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.freedesktop.portal.Settings")
@@ -84,8 +86,13 @@ class FakePortal : public QObject
 public:
     using QObject::QObject;
     PortalSettings settings;
+    // The first backend's settings that its ReadAll leaves out, as elementary OS 8's does with all
+    // of them. ReadOne and Read still find them.
+    PortalSettings unlisted;
     // A second backend's settings, listed after the first's, as GTK's after COSMIC's on Pop!_OS.
     PortalSettings otherBackend;
+    // xdg-desktop-portal before 1.15 has only Read.
+    bool hasReadOne = true;
 
 public Q_SLOTS:
     PortalReply ReadAll(const QStringList &namespaces)
@@ -99,6 +106,30 @@ public Q_SLOTS:
             }
         }
         return result;
+    }
+
+    QDBusVariant ReadOne(const QString &group, const QString &key)
+    {
+        if (!hasReadOne) {
+            sendErrorReply(QDBusError::UnknownMethod, QStringLiteral("No such method"));
+            return {};
+        }
+        return find(group, key);
+    }
+
+    // The value in one more variant.
+    QDBusVariant Read(const QString &group, const QString &key) { return QDBusVariant(QVariant::fromValue(find(group, key))); }
+
+private:
+    QDBusVariant find(const QString &group, const QString &key)
+    {
+        for (const PortalSettings *backend : {&settings, &unlisted, &otherBackend}) {
+            if (backend->value(group).contains(key)) {
+                return QDBusVariant(backend->value(group).value(key));
+            }
+        }
+        sendErrorReply(QStringLiteral("org.freedesktop.portal.Error.NotFound"), QStringLiteral("Requested setting not found"));
+        return {};
     }
 };
 
@@ -156,6 +187,17 @@ public:
             Qt::BlockingQueuedConnection);
     }
 
+    // Replaces everything the first backend's ReadAll returns.
+    void setSettings(const PortalSettings &settings)
+    {
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this, settings] {
+                m_portal->settings = settings;
+            },
+            Qt::BlockingQueuedConnection);
+    }
+
     // What the second backend's ReadAll returns from now on.
     void setOtherBackend(const PortalSettings &settings)
     {
@@ -163,6 +205,27 @@ public:
             m_portal,
             [this, settings] {
                 m_portal->otherBackend = settings;
+            },
+            Qt::BlockingQueuedConnection);
+    }
+
+    // The first backend's settings that its ReadAll leaves out, from now on.
+    void setUnlisted(const PortalSettings &settings)
+    {
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this, settings] {
+                m_portal->unlisted = settings;
+            },
+            Qt::BlockingQueuedConnection);
+    }
+
+    void setHasReadOne(bool has)
+    {
+        QMetaObject::invokeMethod(
+            m_portal,
+            [this, has] {
+                m_portal->hasReadOne = has;
             },
             Qt::BlockingQueuedConnection);
     }

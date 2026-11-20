@@ -47,10 +47,12 @@ bool hasQtTheme()
     return std::ranges::any_of(names, [](const QString &name) { return qtDesktops.contains(name, Qt::CaseInsensitive); });
 }
 
-// GNOME, and desktops Qt has no theme for. Elsewhere Qt's theme follows the desktop's colours.
+// Everywhere but KDE, where Qt's KDE theme or Plasma's follows the colour scheme, and where the user
+// picked a theme, such as qt6ct. On GTK desktops a dark style can leave the GTK theme light, as GNOME's
+// does. GNOME is followed whatever the theme, as Qt's GTK plugin gets it wrong.
 bool followsPortal()
 {
-    return isGnome() || !hasQtTheme();
+    return isGnome() || (!isKde() && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME"));
 }
 
 // Qt's GTK plugin takes Window and Base from the same GTK colour, so a list has the window's colour.
@@ -92,7 +94,19 @@ std::optional<Qt::ColorScheme> readPortalAppearance()
 {
     QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, u"ReadAll"_s);
     message << QStringList{AppearanceNamespace};
-    const QVariantMap appearance = portalSettings(QDBusConnection::sessionBus().call(message, QDBus::Block, PortalTimeoutMs)).value(AppearanceNamespace);
+    const QDBusMessage reply = QDBusConnection::sessionBus().call(message, QDBus::Block, PortalTimeoutMs);
+    QVariantMap appearance = portalSettings(reply).value(AppearanceNamespace);
+    // A backend can leave its settings out of ReadAll, as elementary OS 8's does. Not when the
+    // portal didn't answer: asking again would only wait longer.
+    if (reply.type() == QDBusMessage::ReplyMessage) {
+        for (const QString &key : {QString(ColorSchemeKey), QString(AccentColorKey)}) {
+            if (!appearance.contains(key)) {
+                if (const QVariant value = readPortalSetting(AppearanceNamespace, key, PortalTimeoutMs); value.isValid()) {
+                    appearance.insert(key, value);
+                }
+            }
+        }
+    }
     s_accent = accentFromPortal(appearance.value(AccentColorKey));
     const QVariant value = appearance.value(ColorSchemeKey);
     if (!value.isValid()) {
@@ -273,9 +287,10 @@ void applyColorScheme(Qt::ColorScheme scheme)
     // Without a Qt theme, both palettes are set here. In the Flatpak, Qt's portal theme reports the
     // scheme, but its palette is Fusion's in the scheme the app started in, and stays so.
     if (scheme == Qt::ColorScheme::Dark) {
-        // A dark GTK theme still gives lists the window's colour.
+        // On GNOME, a dark GTK theme still gives lists the window's colour. On other
+        // GTK desktops a dark GTK theme keeps its colours.
         const QPalette palette = QGuiApplication::palette();
-        if (!hasQtTheme() || !isDarkPalette(palette) || hasOneColour(palette)) {
+        if (!hasQtTheme() || !isDarkPalette(palette) || (isGnome() && hasOneColour(palette))) {
             QApplication::setPalette(darkPalette());
             s_darkPaletteSet = true;
         }
@@ -291,6 +306,15 @@ void applyColorScheme(Qt::ColorScheme scheme)
 QPalette windowColours(const QPalette &appPalette)
 {
     QPalette p;
+    // Qt's GTK plugin makes the dimmed text colour 100 shades lighter than the text for the light
+    // scheme the portal reports, and 100 darker for dark. When the GTK theme has the other scheme,
+    // as on a desktop set to dark with a light GTK theme, that's out of range and the colour is
+    // invalid. Qt draws it black or not at all. Use the text colour at libadwaita's 55% instead.
+    if (!appPalette.color(QPalette::PlaceholderText).isValid()) {
+        QColor dimmed = appPalette.color(QPalette::WindowText);
+        dimmed.setAlphaF(0.55F);
+        p.setColor(QPalette::PlaceholderText, dimmed);
+    }
     if (isKde() && !isBreezeStyle()) {
         // Qt's own KDE theme, as in the AppImage, gives an unfocused window the focused window's
         // highlight. Plasma tints the window colour with it, in its own colour space, and 29% of

@@ -29,6 +29,34 @@ inline bool connectSettingChanged(QObject *receiver)
                                                  SLOT(settingChanged(QString, QString, QDBusVariant)));
 }
 
+// A value inside a variant arrives wrapped once more.
+inline QVariant unwrapVariant(QVariant value)
+{
+    while (value.metaType() == QMetaType::fromType<QDBusVariant>()) {
+        value = qvariant_cast<QDBusVariant>(value).variant();
+    }
+    return value;
+}
+
+// One setting, from the first backend that has it, or nothing if none has it. For a backend that
+// leaves settings out of ReadAll: elementary OS 8's answers ReadAll with nothing, but ReadOne with
+// its accent. ReadOne is new in xdg-desktop-portal 1.15. Before that, Read gives the same.
+inline QVariant readPortalSetting(const QString &group, const QString &key, int timeoutMs)
+{
+    for (const QString &method : {QStringLiteral("ReadOne"), QStringLiteral("Read")}) {
+        QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, method);
+        message << group << key;
+        const QDBusMessage reply = QDBusConnection::sessionBus().call(message, QDBus::Block, timeoutMs);
+        if (reply.type() == QDBusMessage::ReplyMessage && !reply.arguments().isEmpty()) {
+            return unwrapVariant(reply.arguments().constFirst());
+        }
+        if (reply.errorName() != QLatin1StringView("org.freedesktop.DBus.Error.UnknownMethod")) {
+            break;
+        }
+    }
+    return {};
+}
+
 // The settings portal's reply to ReadAll, by namespace. xdg-desktop-portal 1.18 asks every backend
 // that has settings and lists each one's namespaces in turn, so a namespace can come twice: on
 // Pop!_OS, from COSMIC's backend and then GTK's, which has no accent. Qt's own conversion keeps the
