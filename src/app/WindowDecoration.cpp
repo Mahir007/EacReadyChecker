@@ -31,6 +31,7 @@ constexpr PatchReleases samePrivateApi[] = {
     {9, 2, 3}, // 6.9.2 moved a field the plugin reads
     {10, 0, 3},
     {11, 0, 3},
+    {12, 0, 1},
 };
 
 bool sharesPrivateApi(const QString &built, const QString &running)

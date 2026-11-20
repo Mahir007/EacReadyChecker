@@ -84,8 +84,8 @@ private Q_SLOTS:
         QTest::newRow("patch release not checked") << in << Decoration::QtVersionDiffers;
 
         in = gnome();
-        in.builtQtVersion = u"6.12.0"_s;
-        in.runningQtVersion = u"6.12.1"_s;
+        in.builtQtVersion = u"6.12.1"_s;
+        in.runningQtVersion = u"6.12.2"_s;
         QTest::newRow("built for a release not checked") << in << Decoration::QtVersionDiffers;
 
         in = gnome();
