@@ -73,11 +73,5 @@
     <control>keyboard</control>
   </supports>
 
-  <releases>
-    <release version="0.1.0" date="2026-10-24">
-      <description>
-        <p>Development snapshot: app skeleton, no checks implemented yet.</p>
-      </description>
-    </release>
-  </releases>
+@EACHECK_RELEASES@
 </component>

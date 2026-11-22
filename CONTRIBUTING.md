@@ -229,7 +229,11 @@ title bar plugin.
 | `build`, `check` | Builds the Flatpak bundle in Flathub's KDE container, installs it on Ubuntu and checks its version. |
 | `build-appimage`, `check-appimage` | Builds the AppImage on AlmaLinux 9, runs it on Ubuntu and opens its window in Weston with GNOME's settings. |
 
-To release, add the version to `<releases>` in the metainfo and push a tag such as `v1.2.0`.
+To release, push an annotated tag such as `v1.2.0`. Its message becomes the release's description
+in the metainfo, so write it as paragraphs and `- ` lists, with `` `code` `` for commands.
+`packaging/metainfo-releases.py` builds the metainfo's `<releases>` from the tags reachable from the
+commit, and a build without tags, such as a shallow clone, lists only its own version. A
+pre-release is listed as `1.2.0~rc.1`, because AppStream sorts `1.2.0-rc.1` after `1.2.0`.
 `release.yml` builds both packages through `ci.yml` with that version and publishes them with notes
 from `.github/scripts/release-notes.py`. A tag with a hyphen, such as `v1.2.0-rc.1`, makes a
 pre-release, and its AppImage has no update information.

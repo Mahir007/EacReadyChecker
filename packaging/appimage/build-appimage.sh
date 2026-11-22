@@ -11,6 +11,7 @@
 # VERSION is the version to stamp (default 0.0.0-dev). SOURCE_DATE_EPOCH defaults to the commit's
 # time, so the same commit and Qt give the same file. BUILD_DIR defaults to build-appimage in the
 # checkout, and CACHE_DIR, where the AppImage tools are downloaded, to ~/.cache/eacheck-appimage.
+# METAINFO_RELEASES is a file from packaging/metainfo-releases.py, for a build without git.
 # Needs cmake, ninja, a C++20 compiler, curl, objdump, patchelf and file.
 
 set -euo pipefail
@@ -91,7 +92,8 @@ cmake -S "$src" -B "$build/cmake" -G Ninja \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DBUILD_TESTING=OFF \
     -DEACHECK_DECORATIONS=ON \
-    -DEACHECK_VERSION="$version"
+    -DEACHECK_VERSION="$version" \
+    -DEACHECK_METAINFO_RELEASES="${METAINFO_RELEASES:-}"
 cmake --build "$build/cmake"
 rm -rf "$appdir"
 DESTDIR=$appdir cmake --install "$build/cmake"

@@ -319,7 +319,10 @@ jobs:
       # bubblewrap, which flatpak-builder runs the build in, needs it.
       options: --privileged
     steps:
+      # The metainfo's releases come from the tags.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Version
         env:
           VERSION: ${{ inputs.version }}
@@ -337,8 +340,12 @@ jobs:
         run: |
           manifest=packaging/flatpak/$APP_ID.yml
           stamped=packaging/flatpak/stamped.yml
-          sed "s/^\(      - -DBUILD_TESTING=OFF\)$/\1\n      - -DEACHECK_VERSION=$VERSION/" "$manifest" > "$stamped"
+          # flatpak-builder leaves out .git, so the metainfo's releases are made here.
+          python3 packaging/metainfo-releases.py "$VERSION" > packaging/flatpak/releases.xml
+          sed "s/^\(      - -DBUILD_TESTING=OFF\)$/\1\n      - -DEACHECK_VERSION=$VERSION\n      - -DEACHECK_METAINFO_RELEASES=packaging\/flatpak\/releases.xml/" \
+            "$manifest" > "$stamped"
           grep -q -- "-DEACHECK_VERSION=$VERSION$" "$stamped"
+          grep -q -- "-DEACHECK_METAINFO_RELEASES=packaging/flatpak/releases.xml$" "$stamped"
           flatpak-builder --disable-rofiles-fuse --ccache --force-clean --default-branch=stable \
             --override-source-date-epoch="$SOURCE_DATE_EPOCH" "$RUNNER_TEMP/build" "$stamped"
       - name: Save the build cache
@@ -408,7 +415,10 @@ jobs:
       AQT_VERSION: 3.3.0
       QT_ARCHIVES: qtbase qtwayland qtsvg icu
     steps:
+      # The metainfo's releases come from the tags.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Version
         env:
           VERSION: ${{ inputs.version }}
