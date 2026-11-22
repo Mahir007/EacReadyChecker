@@ -1,5 +1,6 @@
 # Core logic: host access, checks, reports. No widgets, so the CLI and tests can use it headless.
 add_library(eacheck_core STATIC
+    core/AppInfo.cpp
     core/Certificate.cpp
     core/CheckResult.cpp
     core/CheckRunner.cpp

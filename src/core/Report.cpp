@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "Report.h"
 
-#include "eacheck_version.h"
+#include "AppInfo.h"
 
 #include <QCryptographicHash>
 #include <QJsonArray>
@@ -126,7 +126,7 @@ QJsonObject Report::toJson() const
     }
 
     return QJsonObject{
-        {u"app"_s, QJsonObject{{u"id"_s, QStringLiteral(EACHECK_APP_ID)}, {u"version"_s, QStringLiteral(EACHECK_VERSION_STRING)}}},
+        {u"app"_s, QJsonObject{{u"id"_s, QStringLiteral(EACHECK_APP_ID)}, {u"version"_s, AppInfo::version()}}},
         {u"requirementsAsOf"_s, requirementsAsOf()},
         {u"generated"_s, generated.toUTC().toString(Qt::ISODate)},
         {u"host"_s, host},
@@ -161,7 +161,7 @@ QStringList Report::accessProblems() const
 QString Report::toText() const
 {
     QString text;
-    text += u"EACheck %1: %2\n"_s.arg(QStringLiteral(EACHECK_VERSION_STRING), verdictLabel(verdict()));
+    text += u"EACheck %1: %2\n"_s.arg(AppInfo::version(), verdictLabel(verdict()));
     text += u"Generated %1 · requirements as of %2\n"_s.arg(generated.toUTC().toString(Qt::ISODate), requirementsAsOf());
     for (QString problem : accessProblems()) {
         problem[0] = problem[0].toUpper();
