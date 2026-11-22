@@ -121,23 +121,31 @@ jobs:
       BREW_PACKAGES: glibc gcc cmake ninja qtbase qtsvg
       PACKAGES: breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache
       CCACHE_MAXSIZE: 500M
+      # Homebrew rewrites the compiler when it installs it, so the mtime ccache checks by default is
+      # new on every run.
+      CCACHE_COMPILERCHECK: content
+      # The prefix without Homebrew itself, which the runner image brings.
+      BREW_PREFIX_PATHS: |-
+        /home/linuxbrew/.linuxbrew/*
+        !/home/linuxbrew/.linuxbrew/Homebrew
     steps:
       - uses: actions/checkout@v7
       # The runner has Homebrew, but not on the PATH. As in the Debian job, the caches start again
-      # each week and when the package lists change. apt and brew download into the home folder,
-      # where the cache action can read them.
+      # each week and when the package lists change. apt downloads into the home folder, where the
+      # cache action can read it.
       - name: Cache keys
         id: packages
         run: |
           echo /home/linuxbrew/.linuxbrew/bin >> "$GITHUB_PATH"
           week=$(date -u +%G-W%V)
+          brew=brew-prefix-$(echo "$BREW_PACKAGES" | sha256sum | cut -c1-8)-
           {
             echo "apt=packages-homebrew-apt-$(echo "$PACKAGES" | sha256sum | cut -c1-8)-$week"
-            echo "brew=packages-homebrew-$(echo "$BREW_PACKAGES" | sha256sum | cut -c1-8)-$week"
+            echo "brew-prefix=$brew"
+            echo "brew=$brew$week"
           } >> "$GITHUB_OUTPUT"
           {
             echo "APT_ARCHIVES=$HOME/apt-archives"
-            echo "HOMEBREW_CACHE=$HOME/brew-cache"
             echo "CCACHE_DIR=$HOME/.ccache"
           } >> "$GITHUB_ENV"
       - name: Restore the apt package cache
@@ -147,14 +155,18 @@ jobs:
           path: ~/apt-archives/*.deb
           key: ${{ steps.packages.outputs.apt }}
           restore-keys: packages-homebrew-apt-
-      - name: Restore the Homebrew package cache
+      # The installed formulae, not their bottles: pouring 100 bottles takes longer than downloading
+      # them.
+      - name: Restore the Homebrew prefix
         id: restore-brew
         uses: actions/cache/restore@v6
         with:
-          path: ~/brew-cache
+          path: ${{ env.BREW_PREFIX_PATHS }}
           key: ${{ steps.packages.outputs.brew }}
-          restore-keys: packages-homebrew-
+          restore-keys: ${{ steps.packages.outputs.brew-prefix }}
       - name: Install packages
+        env:
+          RESTORED: ${{ steps.restore-brew.outputs.cache-matched-key != '' }}
         run: |
           mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
@@ -162,6 +174,11 @@ jobs:
           # shellcheck disable=SC2086
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             -o Dir::Cache::Archives="$APT_ARCHIVES" -o APT::Keep-Downloaded-Packages=true $PACKAGES
+          # A restored prefix can be up to a week old. This brings it up to date, so the job still
+          # tests the newest Qt and GCC, and pours only the bottles that changed.
+          if [ "$RESTORED" = true ]; then
+            brew upgrade
+          fi
           # shellcheck disable=SC2086
           brew install $BREW_PACKAGES
           gcc=$(brew list --versions gcc | cut -d' ' -f2 | cut -d. -f1)
@@ -171,18 +188,19 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           sudo apt-get autoclean -o Dir::Cache::Archives="$APT_ARCHIVES"
-          brew cleanup
+          brew autoremove
+          brew cleanup --prune=all
       - name: Save the apt package cache
         if: github.ref == 'refs/heads/main' && steps.restore-apt.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: ~/apt-archives/*.deb
           key: ${{ steps.packages.outputs.apt }}
-      - name: Save the Homebrew package cache
+      - name: Save the Homebrew prefix
         if: github.ref == 'refs/heads/main' && steps.restore-brew.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
-          path: ~/brew-cache
+          path: ${{ env.BREW_PREFIX_PATHS }}
           key: ${{ steps.packages.outputs.brew }}
       - name: Restore the compiler cache
         uses: actions/cache/restore@v6
