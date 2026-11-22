@@ -91,3 +91,4 @@ shot not-ready.png - 1 fedora44-vmware-akmods --elevate
 shot ready.png - 0 fedora-ready --elevate
 shot needs-admin.png - 0 fedora-ready
 shot not-ready-dark.png "$dark" 1 fedora44-vmware-akmods --elevate
+shot ready-dark.png "$dark" 0 fedora-ready --elevate
