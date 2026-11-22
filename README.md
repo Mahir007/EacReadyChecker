@@ -1,19 +1,49 @@
-<img src="packaging/icons/io.github.Mahir007.EacReadyChecker.svg" width="96" align="right" alt="">
+<div align="center">
+
+<img src="packaging/icons/io.github.Mahir007.EacReadyChecker.svg" width="112" alt="">
 
 # EACheck
 
-EACheck checks whether a Linux machine meets the
-[Easy Anti-Cheat Linux v2 requirements](https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2)
-and shows which ones pass. It only reads system state, and asks for an admin password only to read
-the TPM event log.
+Checks whether a Linux machine meets the
+[Easy Anti-Cheat Linux v2 requirements](https://onlineservices.epicgames.com/news/introducing-easy-anti-cheat-linux-v2).
 
-![EACheck on a Fedora machine with an unrecognised module-signing key](docs/screenshots/not-ready.png)
+[![CI](https://github.com/Mahir007/EacReadyChecker/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahir007/EacReadyChecker/actions/workflows/ci.yml)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+![Platform: Linux x86_64](https://img.shields.io/badge/platform-Linux%20x86__64-informational)
+
+[![Download the AppImage](docs/assets/download-appimage.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
+&nbsp;
+[![Download the Flatpak](docs/assets/download-flatpak.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
+
+<img src="docs/screenshots/needs-admin.png" width="390" alt="EACheck in light mode on Plasma: Incomplete, with three checks that need admin access">
+<img src="docs/screenshots/ready-dark.png" width="390" alt="EACheck in dark mode on Plasma: Ready for EAC Linux v2">
+
+</div>
+
+EACheck only reads system state. It asks for an admin password once, to read the TPM event log.
+
+## Requirements
+
+- Linux on x86_64.
+- A Wayland session for the window. The command-line reports work without one.
+- For the AppImage, glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 or newer).
+  libfuse2 isn't needed.
+- For the Flatpak, the Flathub remote.
+- For the full check, a polkit authentication agent. See
+  [Troubleshooting](#no-polkit-authentication-agent-is-running).
 
 ## Install
 
-Download the Flatpak bundle or the AppImage from the
-[latest release](https://github.com/Mahir007/EacReadyChecker/releases/latest). The window needs a
-Wayland session. The command-line reports work without one.
+Get either file from the [latest release](https://github.com/Mahir007/EacReadyChecker/releases/latest).
+
+AppImage:
+
+```sh
+chmod +x eac-ready-checker-*-x86_64.AppImage
+./eac-ready-checker-*-x86_64.AppImage
+```
+
+AppImageUpdate, Gear Lever and AppImageLauncher can update it.
 
 Flatpak:
 
@@ -22,28 +52,13 @@ flatpak install --user eac-ready-checker-*-x86_64.flatpak
 flatpak run io.github.Mahir007.EacReadyChecker
 ```
 
-The bundle needs the KDE runtime from Flathub, and flatpak offers to add Flathub if it isn't set
-up. The sandbox hides most of what the checks read, such as `/sys/firmware`, so the Flatpak has
-permission to run commands on the host. The app uses it only to read files, and to run `pkexec` for
-the event log.
-
-AppImage, on distributions with glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 and
-later). It doesn't need libfuse2.
-
-```sh
-chmod +x eac-ready-checker-*-x86_64.AppImage
-./eac-ready-checker-*-x86_64.AppImage
-```
-
-AppImageUpdate, Gear Lever and AppImageLauncher can update it from the latest release.
-
-To build it from source, see [CONTRIBUTING.md](CONTRIBUTING.md).
+To build from source, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Usage
 
-The window runs the checks when it opens. Parts of three of them need the TPM event log, which only
-root can read: Signed kernel & kernel modules, Secure Boot and Measured boot. "Run Full Check" asks
-for an admin password once and reads the log. Until then, those parts show "Needs admin".
+The checks run when the window opens. Parts of Signed kernel & kernel modules, Secure Boot and
+Measured boot need the TPM event log, which only root can read. Until you click "Run Full Check"
+and enter the admin password, those parts show "Needs admin".
 
 | Verdict | Meaning |
 | --- | --- |
@@ -51,12 +66,9 @@ for an admin password once and reads the log. Until then, those parts show "Need
 | Not ready | At least one requirement fails. |
 | Incomplete | Nothing fails, but at least one requirement needs admin access or couldn't be checked. |
 
-"Copy Report" copies the results as text or as JSON. F5 runs the checks again.
+"Copy Report" copies the results as text or JSON. F5 runs the checks again.
 
-Several checks look for well-known keys. Epic names the vendors whose keys are well-known, but
-hasn't published the certificates. EACheck matches certificates by fingerprint against its own
-list, collected from the vendors' signed shims and repositories.
-[docs/well-known-keys.md](docs/well-known-keys.md) lists each certificate and where it came from.
+### What it checks
 
 | Requirement | Passes when |
 | --- | --- |
@@ -69,30 +81,34 @@ list, collected from the vendors' signed shims and repositories.
 | Kexec disabled | `kexec_load_disabled` is 1, or the kernel is built without kexec. |
 | BPF LSM | BPF is one of the active LSMs. |
 
-The results are what
-EACheck can see on the machine. EAC does its own verification when a game starts.
+Epic names the vendors whose keys count as well-known but hasn't published the certificates.
+EACheck matches them by fingerprint against its own list, taken from the vendors' signed shims and
+repositories. [docs/well-known-keys.md](docs/well-known-keys.md) lists each certificate and its
+source.
+
+The results are what EACheck can see on the machine. EAC does its own verification when a game
+starts.
 
 ## Command line
 
-The Flatpak runs as `flatpak run io.github.Mahir007.EacReadyChecker`, the AppImage as the file
-itself, and a build from source as `eac-ready-checker`. Each takes these options:
+Run the AppImage file, `flatpak run io.github.Mahir007.EacReadyChecker`, or `eac-ready-checker` from
+a source build, with these options:
 
 ```
 --text      print the report
 --json      print the report as JSON, with the values each check read
---elevate   also run the checks that need admin access
+--elevate   also run the checks that need admin access; on its own, open the window and run them
 ```
 
-The reports don't need a display. They exit with 0 for ready, 2 for not ready and 3 for
-incomplete, and 1 is a usage error.
+The reports don't need a display. The exit status is 0 for ready, 2 for not ready, 3 for incomplete and 1 for a usage error.
 
 ## Troubleshooting
 
 ### "No polkit authentication agent is running"
 
-"Run Full Check" asks for the password through a polkit authentication agent. Plasma, GNOME and
-most other desktops start one. Standalone compositors such as Sway and Hyprland don't, so start one
-yourself, for example `hyprpolkitagent`, `lxqt-policykit` or `polkit-gnome`.
+Plasma, GNOME and most other desktops start a polkit agent. Standalone compositors such as Sway and
+Hyprland don't, so start one yourself, for example `hyprpolkitagent`, `lxqt-policykit` or
+`polkit-gnome`.
 
 ### A result looks wrong
 
@@ -102,6 +118,6 @@ key from one of Epic's vendors usually means EACheck's list is missing that cert
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE). The title bar used on GNOME is built from
-QAdwaitaDecorations in `third_party/qadwaitadecorations`, which is LGPL-2.1-or-later, see its
+GPL-3.0-or-later, see [LICENSE](LICENSE). The GNOME title bar is built from QAdwaitaDecorations in
+`third_party/qadwaitadecorations`, which is LGPL-2.1-or-later, see its
 [LICENSE](third_party/qadwaitadecorations/LICENSE).

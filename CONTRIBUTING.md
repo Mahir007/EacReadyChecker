@@ -14,7 +14,7 @@
 | `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
 | `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
 | `packaging` | Flatpak manifest, AppImage build scripts, desktop file, metainfo and icon. |
-| `docs` | Where each well-known key came from, and screenshots. |
+| `docs` | Where each well-known key came from, screenshots, and the README's download buttons. |
 | `third_party` | QAdwaitaDecorations, which draws the window's title bar on GNOME with a border and shadow that Qt's own lacks. |
 
 ## Requirements
