@@ -280,15 +280,22 @@ jobs:
           path: /var/cache/dnf/*/packages/*.rpm
           key: ${{ steps.packages.outputs.key }}
       - uses: actions/checkout@v7
-      - name: Cache pip
+      # The venv, not pip's cache: pip turns that off here, as the container runs as root and the
+      # home folder isn't root's.
+      - name: Cache CMake and aqtinstall
+        id: cache-tools
         uses: actions/cache@v6
         with:
-          path: ~/.cache/pip
-          key: pip-almalinux9-aqt-${{ env.AQT_VERSION }}-cmake-${{ env.CMAKE_VERSION }}
+          path: ~/tools
+          key: tools-almalinux9-aqt-${{ env.AQT_VERSION }}-cmake-${{ env.CMAKE_VERSION }}
       - name: Install CMake and aqtinstall
+        env:
+          CACHED: ${{ steps.cache-tools.outputs.cache-hit }}
         run: |
-          python3 -m venv ~/tools
-          ~/tools/bin/pip install "aqtinstall==$AQT_VERSION" "cmake==$CMAKE_VERSION"
+          if [ "$CACHED" != true ]; then
+            python3 -m venv ~/tools
+            ~/tools/bin/pip install "aqtinstall==$AQT_VERSION" "cmake==$CMAKE_VERSION"
+          fi
           cmake --version
       - name: Cache Qt
         id: cache-qt
