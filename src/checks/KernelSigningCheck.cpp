@@ -14,7 +14,7 @@ using namespace Qt::StringLiterals;
 namespace
 {
 // Documentation/admin-guide/tainted-kernels.rst
-constexpr int kTaintUnsignedModule = 13; // 'E'
+constexpr int TaintUnsignedModule = 13; // 'E'
 
 // "name (flags)" for each loaded module that tainted the kernel. /proc/modules ends such a line
 // with its taint letters in parentheses, plus '+' or '-' while it loads or unloads.
@@ -69,7 +69,7 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
     if (!ok) {
         return {title, CheckStatus::Unknown, u"Unexpected taint value “%1”"_s.arg(QString::fromUtf8(tainted.trimmed()))};
     }
-    if (!(taint & (quint64(1) << kTaintUnsignedModule))) {
+    if (!(taint & (quint64(1) << TaintUnsignedModule))) {
         // Out-of-tree modules (O) are fine as long as they're signed. Name them, since they're the
         // ones whose keys the MOK sub-check is about. Other taint flags don't concern signing.
         return {title, CheckStatus::Pass, outOfTree.isEmpty() ? QString() : u"Out-of-tree: %1"_s.arg(outOfTree.join(u", "_s))};

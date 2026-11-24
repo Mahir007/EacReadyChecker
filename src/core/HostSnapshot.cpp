@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+using namespace Qt::StringLiterals;
+
 bool hasWildcard(QStringView path)
 {
     return path.contains(u'*') || path.contains(u'?') || path.contains(u'[');
@@ -15,24 +17,24 @@ bool HostRequest::isGlob() const
 
 QString HostRequest::key() const
 {
-    return (kind == Kind::Read ? QStringLiteral("r:") : QStringLiteral("l:")) + pattern;
+    return (kind == Kind::Read ? u"r:"_s : u"l:"_s) + pattern;
 }
 
 QString privilegedStateKey(PrivilegedState state)
 {
     switch (state) {
     case PrivilegedState::NotRequested:
-        return QStringLiteral("not-requested");
+        return u"not-requested"_s;
     case PrivilegedState::Granted:
-        return QStringLiteral("granted");
+        return u"granted"_s;
     case PrivilegedState::Cancelled:
-        return QStringLiteral("cancelled");
+        return u"cancelled"_s;
     case PrivilegedState::NoAgent:
-        return QStringLiteral("no-agent");
+        return u"no-agent"_s;
     case PrivilegedState::Failed:
         break;
     }
-    return QStringLiteral("failed");
+    return u"failed"_s;
 }
 
 void HostSnapshot::insert(const HostRequest &request, QList<HostEntry> entries)

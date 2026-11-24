@@ -9,12 +9,10 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-// TCG_PCClientPCREvent: PCRIndex, EventType, SHA-1 digest, EventSize.
-constexpr qsizetype kSha1EventHeaderSize = 4 + 4 + 20 + 4;
-const QByteArray kSpecIdSignature("Spec ID Event03\0", 16);
-const QByteArray kStartupLocalitySignature("StartupLocality\0", 16);
+const QByteArray SpecIdSignature("Spec ID Event03\0", 16);
+const QByteArray StartupLocalitySignature("StartupLocality\0", 16);
 // Far more than any TPM has. Keeps a corrupt count from walking off with the parser.
-constexpr quint32 kMaxAlgorithms = 16;
+constexpr quint32 MaxAlgorithms = 16;
 
 // Bounds-checked little-endian reader.
 class Reader
@@ -78,8 +76,8 @@ quint8 startupLocality(const TcgEventLog::Log &log)
         if (event.pcr != 0) {
             continue;
         }
-        if (event.type == TcgEventLog::NoAction && event.data.size() > kStartupLocalitySignature.size() && event.data.startsWith(kStartupLocalitySignature)) {
-            return quint8(event.data.at(kStartupLocalitySignature.size()));
+        if (event.type == TcgEventLog::NoAction && event.data.size() > StartupLocalitySignature.size() && event.data.startsWith(StartupLocalitySignature)) {
+            return quint8(event.data.at(StartupLocalitySignature.size()));
         }
         hcrtm = hcrtm || event.type == TcgEventLog::EfiHcrtmEvent;
     }
@@ -104,7 +102,7 @@ ParseResult parse(const QByteArray &data)
         // Too short for even one SHA-1 event. A legacy log would have parsed this far.
         return result;
     }
-    if (type != NoAction || !specId.startsWith(kSpecIdSignature)) {
+    if (type != NoAction || !specId.startsWith(SpecIdSignature)) {
         result.error = ParseResult::Error::NotCryptoAgile;
         return result;
     }
@@ -114,7 +112,7 @@ ParseResult parse(const QByteArray &data)
     Reader spec(specId);
     QByteArray skipped;
     quint32 algorithmCount = 0;
-    if (!spec.bytes(kSpecIdSignature.size() + 4 + 4, skipped) || !spec.read(algorithmCount) || algorithmCount == 0 || algorithmCount > kMaxAlgorithms) {
+    if (!spec.bytes(SpecIdSignature.size() + 4 + 4, skipped) || !spec.read(algorithmCount) || algorithmCount == 0 || algorithmCount > MaxAlgorithms) {
         return result;
     }
     QHash<quint16, quint16> digestSizes;
@@ -132,7 +130,7 @@ ParseResult parse(const QByteArray &data)
     while (!reader.atEnd()) {
         Event event;
         quint32 digestCount = 0;
-        if (!reader.read(event.pcr) || !reader.read(event.type) || !reader.read(digestCount) || digestCount > kMaxAlgorithms) {
+        if (!reader.read(event.pcr) || !reader.read(event.type) || !reader.read(digestCount) || digestCount > MaxAlgorithms) {
             return result;
         }
         for (quint32 i = 0; i < digestCount; ++i) {

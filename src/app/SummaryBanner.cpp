@@ -15,7 +15,7 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-constexpr int kIconSize = 48;
+constexpr int IconSize = 48;
 }
 
 SummaryBanner::SummaryBanner(QWidget *parent)
@@ -24,7 +24,7 @@ SummaryBanner::SummaryBanner(QWidget *parent)
     , m_title(new QLabel(this))
     , m_subtitle(new QLabel(this))
 {
-    m_icon->setFixedSize(kIconSize, kIconSize);
+    m_icon->setFixedSize(IconSize, IconSize);
 
     QFont titleFont = m_title->font();
     titleFont.setPointSizeF(titleFont.pointSizeF() * 1.5);

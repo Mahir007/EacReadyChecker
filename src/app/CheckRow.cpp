@@ -140,7 +140,7 @@ private:
 
 namespace
 {
-constexpr int kSpacing = 8;
+constexpr int Spacing = 8;
 
 int iconSize(const QWidget *w)
 {
@@ -206,7 +206,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     m_title->setFont(titleFont);
     m_title->setWordWrap(true);
 
-    m_subLayout->setSpacing(kSpacing);
+    m_subLayout->setSpacing(Spacing);
     // Qt would lay out the row, then the list, painting in between: for a frame, a collapsed row
     // keeps its height with the title and detail stretched into it. So lay out both at once, on
     // each step while the sub-checks slide.
@@ -224,7 +224,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     }
 
     auto *header = new QGridLayout(m_header);
-    header->setHorizontalSpacing(kSpacing);
+    header->setHorizontalSpacing(Spacing);
     header->setVerticalSpacing(0);
     header->setColumnStretch(2, 1);
     header->addWidget(m_expander, 0, 0, Qt::AlignTop);
@@ -296,7 +296,7 @@ void CheckRow::setResult(const CheckResult &result)
         }
         auto *itemLayout = new QHBoxLayout(item);
         itemLayout->setContentsMargins({});
-        itemLayout->setSpacing(kSpacing);
+        itemLayout->setSpacing(Spacing);
         itemLayout->addWidget(icon, 0, Qt::AlignTop);
         itemLayout->addLayout(text, 1);
         m_subLayout->addWidget(item);
@@ -347,7 +347,7 @@ void CheckRow::updateIcons(IconChange change)
     // Sub-checks line up with the row's title. Both sizes depend on the style.
     const QMargins margins = m_header->layout()->contentsMargins();
     const int expander = m_expander->sizeHint().expandedTo(m_expander->minimumSize()).width();
-    const int indent = margins.left() + expander + kSpacing + size + kSpacing;
+    const int indent = margins.left() + expander + Spacing + size + Spacing;
     m_subLayout->setContentsMargins(indent, 0, margins.right(), margins.bottom());
 }
 

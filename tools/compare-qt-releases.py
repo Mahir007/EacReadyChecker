@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-#
-# Finds the Qt patch releases that can share a build of the GNOME title bar plugin
-# (third_party/qadwaitadecorations and src/decoration), for samePrivateApi in src/app/WindowDecoration.cpp.
-#
-#   tools/compare-qt-releases.py <work-dir> <release>... [--objects <label>=<dir>]...
-#
-# Each release is downloaded from qt.io into <work-dir> and the plugin is built against it at -O0
-# with full debug info. From that the script reads what the plugin uses of Qt's private API: the
-# private functions it calls, the code of private inline functions compiled into it, the layout of
-# its classes and the private classes they derive from, and the vtable slots and enum values of
-# private classes. It then compares consecutive releases of the same minor version. Releases that
-# agree on all of it run each other's build. New enum values count as the same if the existing ones
-# keep theirs.
-#
-# --objects adds plugin objects built elsewhere, such as against a distribution's Qt in a
-# container. Build them with the CMake options printed by --cmake-args, pass the folder holding the
-# three .o files from build/third_party, and start the label with the release (6.11.2-fedora).
-#
-# Needs aqtinstall and pyelftools (pip install aqtinstall pyelftools), CMake, Ninja, g++ and
-# binutils.
+"""Finds the Qt patch releases that can share a build of the GNOME title bar plugin
+(third_party/qadwaitadecorations and src/decoration), for samePrivateApi in src/app/WindowDecoration.cpp.
+
+  tools/compare-qt-releases.py <work-dir> <release>... [--objects <label>=<dir>]...
+
+Each release is downloaded from qt.io into <work-dir> and the plugin is built against it at -O0
+with full debug info. From that the script reads what the plugin uses of Qt's private API: the
+private functions it calls, the code of private inline functions compiled into it, the layout of
+its classes and the private classes they derive from, and the vtable slots and enum values of
+private classes. It then compares consecutive releases of the same minor version. Releases that
+agree on all of it run each other's build. New enum values count as the same if the existing ones
+keep theirs.
+
+--objects adds plugin objects built elsewhere, such as against a distribution's Qt in a
+container. Build them with the CMake options printed by --cmake-args, pass the folder holding the
+three .o files from build/third_party, and start the label with the release (6.11.2-fedora).
+
+Needs aqtinstall and pyelftools (pip install aqtinstall pyelftools), CMake, Ninja, g++ and
+binutils.
+"""
 
 import hashlib
 import re

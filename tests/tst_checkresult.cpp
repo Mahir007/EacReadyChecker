@@ -4,6 +4,8 @@
 
 #include <QTest>
 
+using namespace Qt::StringLiterals;
+
 class TestCheckResult : public QObject
 {
     Q_OBJECT
@@ -40,9 +42,9 @@ private Q_SLOTS:
 
     void keys()
     {
-        QCOMPARE(statusKey(CheckStatus::NeedsAdmin), QStringLiteral("needs-admin"));
-        QCOMPARE(statusKey(CheckStatus::NotRequired), QStringLiteral("not-required"));
-        QCOMPARE(verdictKey(Verdict::NotReady), QStringLiteral("not-ready"));
+        QCOMPARE(statusKey(CheckStatus::NeedsAdmin), u"needs-admin"_s);
+        QCOMPARE(statusKey(CheckStatus::NotRequired), u"not-required"_s);
+        QCOMPARE(verdictKey(Verdict::NotReady), u"not-ready"_s);
     }
 
     void textReportNamesAccessProblems()
@@ -50,21 +52,20 @@ private Q_SLOTS:
         // A copied report says why rows still need admin, as the window's header does.
         Report report;
         CheckResult result;
-        result.title = QStringLiteral("Measured boot");
+        result.title = u"Measured boot"_s;
         result.status = CheckStatus::NeedsAdmin;
         report.results.append(result);
         QVERIFY(report.accessProblems().isEmpty());
-        QVERIFY(!report.toText().contains(QStringLiteral("admin access")));
+        QVERIFY(!report.toText().contains(u"admin access"_s));
 
         report.privilegedState = PrivilegedState::Cancelled;
-        QCOMPARE(report.accessProblems(), QStringList{QStringLiteral("admin access wasn't granted")});
-        QVERIFY(report.toText().contains(QStringLiteral("\nAdmin access wasn't granted\n")));
+        QCOMPARE(report.accessProblems(), QStringList{u"admin access wasn't granted"_s});
+        QVERIFY(report.toText().contains(u"\nAdmin access wasn't granted\n"_s));
 
         report.privilegedState = PrivilegedState::Failed;
-        report.privilegedError = QStringLiteral("pkexec exited with 1");
-        report.hostReadError = QStringLiteral("sh not found");
-        QCOMPARE(report.accessProblems(),
-                 (QStringList{QStringLiteral("couldn't read system state: sh not found"), QStringLiteral("admin read failed: pkexec exited with 1")}));
+        report.privilegedError = u"pkexec exited with 1"_s;
+        report.hostReadError = u"sh not found"_s;
+        QCOMPARE(report.accessProblems(), (QStringList{u"couldn't read system state: sh not found"_s, u"admin read failed: pkexec exited with 1"_s}));
     }
 };
 

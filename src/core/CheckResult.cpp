@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+using namespace Qt::StringLiterals;
+
 namespace
 {
 template<typename Results>
@@ -39,58 +41,58 @@ QString statusKey(CheckStatus status)
 {
     switch (status) {
     case CheckStatus::Pass:
-        return QStringLiteral("pass");
+        return u"pass"_s;
     case CheckStatus::Fail:
-        return QStringLiteral("fail");
+        return u"fail"_s;
     case CheckStatus::NotRequired:
-        return QStringLiteral("not-required");
+        return u"not-required"_s;
     case CheckStatus::NeedsAdmin:
-        return QStringLiteral("needs-admin");
+        return u"needs-admin"_s;
     case CheckStatus::Unknown:
         break;
     }
-    return QStringLiteral("unknown");
+    return u"unknown"_s;
 }
 
 QString statusLabel(CheckStatus status)
 {
     switch (status) {
     case CheckStatus::Pass:
-        return QStringLiteral("Pass");
+        return u"Pass"_s;
     case CheckStatus::Fail:
-        return QStringLiteral("Fail");
+        return u"Fail"_s;
     case CheckStatus::NotRequired:
-        return QStringLiteral("Not required");
+        return u"Not required"_s;
     case CheckStatus::NeedsAdmin:
-        return QStringLiteral("Needs admin");
+        return u"Needs admin"_s;
     case CheckStatus::Unknown:
         break;
     }
-    return QStringLiteral("Couldn't check");
+    return u"Couldn't check"_s;
 }
 
 QString verdictKey(Verdict verdict)
 {
     switch (verdict) {
     case Verdict::Ready:
-        return QStringLiteral("ready");
+        return u"ready"_s;
     case Verdict::NotReady:
-        return QStringLiteral("not-ready");
+        return u"not-ready"_s;
     case Verdict::Incomplete:
         break;
     }
-    return QStringLiteral("incomplete");
+    return u"incomplete"_s;
 }
 
 QString verdictLabel(Verdict verdict)
 {
     switch (verdict) {
     case Verdict::Ready:
-        return QStringLiteral("Ready for EAC Linux v2");
+        return u"Ready for EAC Linux v2"_s;
     case Verdict::NotReady:
-        return QStringLiteral("Not ready");
+        return u"Not ready"_s;
     case Verdict::Incomplete:
         break;
     }
-    return QStringLiteral("Incomplete");
+    return u"Incomplete"_s;
 }

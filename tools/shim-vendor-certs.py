@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-#
-# Prints the SHA-256 fingerprint and subject of every certificate a shim binary trusts (the
-# vendor_authorized part of its .vendor_cert section: one DER certificate, or an EFI signature list
-# when built with VENDOR_DB_FILE). Used to collect and re-check src/data/well-known-keys.json.
-#
-#   tools/shim-vendor-certs.py <shimx64.efi>...
-#
-# Needs objcopy (binutils) and openssl.
+"""Prints the SHA-256 fingerprint and subject of every certificate a shim binary trusts (the
+vendor_authorized part of its .vendor_cert section: one DER certificate, or an EFI signature list
+when built with VENDOR_DB_FILE). Used to collect and re-check src/data/well-known-keys.json.
+
+  tools/shim-vendor-certs.py <shimx64.efi>...
+
+Needs objcopy (binutils) and openssl.
+"""
 
 import hashlib
 import struct

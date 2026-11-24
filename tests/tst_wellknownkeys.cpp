@@ -13,7 +13,7 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-const QString kCanonical = u"ED:1F:E7:2C:B9:CA:31:C9:AF:5B:75:7A:FC:D7:33:32:3D:67:58:25:03:2E:6C:ED:7F:E1:AE:9E:B7:67:99:8C"_s;
+const QString Canonical = u"ED:1F:E7:2C:B9:CA:31:C9:AF:5B:75:7A:FC:D7:33:32:3D:67:58:25:03:2E:6C:ED:7F:E1:AE:9E:B7:67:99:8C"_s;
 
 QJsonObject key(const QString &vendor, const QString &subject, const QString &sha256)
 {
@@ -74,7 +74,7 @@ private Q_SLOTS:
     void certificateHelpers()
     {
         const QByteArray der = EfiTestData::canonicalCertificate();
-        QCOMPARE(Certificate::fingerprint(Certificate::sha256(der)), kCanonical);
+        QCOMPARE(Certificate::fingerprint(Certificate::sha256(der)), Canonical);
         QCOMPARE(Certificate::subject(der), u"CN=Canonical Ltd. Master Certificate Authority, O=Canonical Ltd."_s);
         QCOMPARE(Certificate::subject("not a certificate"), QString());
 
@@ -89,7 +89,7 @@ private Q_SLOTS:
 
     void fromJson()
     {
-        const auto keys = WellKnownKeys::fromJson(keysJson({key(u"V"_s, u"CN=a"_s, kCanonical)}));
+        const auto keys = WellKnownKeys::fromJson(keysJson({key(u"V"_s, u"CN=a"_s, Canonical)}));
         QVERIFY(keys);
         QCOMPARE(keys->keys().size(), 1);
         QVERIFY(keys->findCertificate(EfiTestData::canonicalCertificate()));
@@ -100,11 +100,11 @@ private Q_SLOTS:
         QTest::addColumn<QByteArray>("json");
         QTest::newRow("not json") << QByteArray("{");
         QTest::newRow("no keys") << QJsonDocument(QJsonObject{{u"list"_s, QJsonArray()}}).toJson();
-        QTest::newRow("no vendor") << keysJson({key(QString(), u"CN=a"_s, kCanonical)});
-        QTest::newRow("no subject") << keysJson({key(u"V"_s, QString(), kCanonical)});
+        QTest::newRow("no vendor") << keysJson({key(QString(), u"CN=a"_s, Canonical)});
+        QTest::newRow("no subject") << keysJson({key(u"V"_s, QString(), Canonical)});
         QTest::newRow("short fingerprint") << keysJson({key(u"V"_s, u"CN=a"_s, u"ED:1F"_s)});
-        QTest::newRow("not hex") << keysJson({key(u"V"_s, u"CN=a"_s, kCanonical.chopped(2) + u"ZZ"_s)});
-        QTest::newRow("duplicate") << keysJson({key(u"V"_s, u"CN=a"_s, kCanonical), key(u"W"_s, u"CN=b"_s, kCanonical)});
+        QTest::newRow("not hex") << keysJson({key(u"V"_s, u"CN=a"_s, Canonical.chopped(2) + u"ZZ"_s)});
+        QTest::newRow("duplicate") << keysJson({key(u"V"_s, u"CN=a"_s, Canonical), key(u"W"_s, u"CN=b"_s, Canonical)});
     }
     void fromJsonRejects()
     {

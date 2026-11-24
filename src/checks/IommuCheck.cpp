@@ -8,8 +8,8 @@ using namespace Qt::StringLiterals;
 namespace
 {
 // SMBIOS chassis types exempt from the IOMMU requirement.
-constexpr int kChassisHandHeld = 11;
-constexpr int kChassisTablet = 30;
+constexpr int ChassisHandHeld = 11;
+constexpr int ChassisTablet = 30;
 
 QStringList names(const QList<HostEntry> &entries)
 {
@@ -143,9 +143,9 @@ CheckResult IommuCheck::evaluate(const HostSnapshot &snapshot) const
     const HostEntry chassis = snapshot.file(HostPaths::ChassisType);
     bool isNumber = false;
     const int chassisType = chassis.ok() ? chassis.trimmed().toInt(&isNumber) : 0;
-    if (isNumber && (chassisType == kChassisHandHeld || chassisType == kChassisTablet)) {
+    if (isNumber && (chassisType == ChassisHandHeld || chassisType == ChassisTablet)) {
         result.status = CheckStatus::NotRequired;
-        result.detail = chassisType == kChassisHandHeld ? u"Not required on handhelds"_s : u"Not required on tablets"_s;
+        result.detail = chassisType == ChassisHandHeld ? u"Not required on handhelds"_s : u"Not required on tablets"_s;
         return result;
     }
 

@@ -17,7 +17,7 @@ namespace
 // Output, one line per entry: <request index> TAB <status> TAB <path> TAB <base64 data>
 // Paths in /sys and /proc never contain tabs or newlines, and base64 has neither.
 // Needs only POSIX sh and base64 (coreutils, uutils or busybox).
-constexpr auto kHostScript = R"sh(export LC_ALL=C
+constexpr auto HostScript = R"sh(export LC_ALL=C
 IFS='
 '
 root=$1
@@ -46,8 +46,8 @@ done
 exit 0
 )sh";
 
-constexpr int kUserReadTimeoutMs = 30'000;
-constexpr int kPollIntervalMs = 100;
+constexpr int UserReadTimeoutMs = 30'000;
+constexpr int PollIntervalMs = 100;
 
 // Expands `pattern` (absolute host path) below `root` the way sh would: wildcard components don't
 // match dotfiles, and a pattern without wildcards is returned as-is even if it doesn't exist.
@@ -228,15 +228,15 @@ HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Pri
     bool finished = false;
     if (process.waitForStarted()) {
         if (!useCat) {
-            process.write(kHostScript);
+            process.write(HostScript);
         }
         process.closeWriteChannel();
 
         // pkexec waits for the user to answer the password dialog, so only user reads time out.
         QElapsedTimer timer;
         timer.start();
-        while (!(finished = process.waitForFinished(kPollIntervalMs))) {
-            const bool timedOut = !usePkexec && timer.hasExpired(kUserReadTimeoutMs);
+        while (!(finished = process.waitForFinished(PollIntervalMs))) {
+            const bool timedOut = !usePkexec && timer.hasExpired(UserReadTimeoutMs);
             if (timedOut || (cancelled && cancelled->load()) || process.state() == QProcess::NotRunning) {
                 break;
             }

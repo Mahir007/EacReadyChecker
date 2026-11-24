@@ -18,11 +18,11 @@ using Files = QMap<QString, QByteArray>;
 
 namespace
 {
-const QByteArray kEfiAttr("\x06\x00\x00\x00", 4);
+const QByteArray EfiAttr("\x06\x00\x00\x00", 4);
 
 QByteArray efiByte(char value)
 {
-    return kEfiAttr + QByteArray(1, value);
+    return EfiAttr + QByteArray(1, value);
 }
 
 Files withSecureBoot(Files files, char secureBoot = 1, char setupMode = 0)
@@ -145,7 +145,7 @@ private Q_SLOTS:
         QTest::newRow("sb: legacy boot") << sb << Files{} << QString() << u"fail"_s << u"Not booted in UEFI mode"_s;
         QTest::newRow("sb: no variable") << sb << Files{{u"/sys/firmware/efi/efivars/"_s, {}}} << u"Enabled"_s << u"unknown"_s
                                          << u"SecureBoot variable not found"_s;
-        QTest::newRow("sb: truncated") << sb << Files{{HostPaths::SecureBoot, kEfiAttr}} << u"Enabled"_s << u"unknown"_s << u"Unexpected SecureBoot value"_s;
+        QTest::newRow("sb: truncated") << sb << Files{{HostPaths::SecureBoot, EfiAttr}} << u"Enabled"_s << u"unknown"_s << u"Unexpected SecureBoot value"_s;
         QTest::newRow("sb: value 2") << sb << Files{{HostPaths::SecureBoot, efiByte(2)}} << u"Enabled"_s << u"unknown"_s << u"Unexpected SecureBoot value"_s;
 
         QTest::newRow("measured: event log pending") << u"measured-boot"_s << withEventLog(grubBoot({}, {})) << QString() << u"needs-admin"_s

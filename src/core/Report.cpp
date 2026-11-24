@@ -14,8 +14,8 @@ using namespace Qt::StringLiterals;
 
 namespace
 {
-constexpr qsizetype kMaxInlineText = 4096;
-constexpr qsizetype kMaxInlineHex = 256;
+constexpr qsizetype MaxInlineText = 4096;
+constexpr qsizetype MaxInlineHex = 256;
 
 bool isPrintableText(const QByteArray &data)
 {
@@ -40,10 +40,10 @@ QJsonValue rawValue(const HostEntry &entry)
 {
     switch (entry.status) {
     case HostEntry::Status::Ok:
-        if (entry.data.size() <= kMaxInlineText && isPrintableText(entry.data)) {
+        if (entry.data.size() <= MaxInlineText && isPrintableText(entry.data)) {
             return QString::fromUtf8(entry.data.trimmed());
         }
-        if (entry.data.size() <= kMaxInlineHex) {
+        if (entry.data.size() <= MaxInlineHex) {
             return QJsonObject{{u"hex"_s, QString::fromLatin1(entry.data.toHex())}};
         }
         return QJsonObject{
