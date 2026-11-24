@@ -179,6 +179,7 @@ gives Qt's own title bar instead of the bundled one.
 2. Add its paths to `tools/capture-fixture.sh`.
 3. Add its status to `checks` and `checksElevated` in every `tests/fixtures/*/expected.json`.
 4. Update the check counts in `tst_checkrunner`, `tst_cli` and `tst_mainwindow`.
+5. Add a row for it to the table under "What it checks" in the README.
 
 ## Adding a well-known key
 
