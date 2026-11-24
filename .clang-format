@@ -1,0 +1,41 @@
+# The style the code was already written in: close to KDE's, with 160 columns.
+BasedOnStyle: WebKit
+Standard: Latest
+ColumnLimit: 160
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+# Short member functions written in the class may stay on one line. Lambdas only when empty.
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortLambdasOnASingleLine: Empty
+
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: true
+BinPackArguments: false
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+BreakTemplateDeclarations: Yes
+SpaceAfterTemplateKeyword: false
+Cpp11BracedListStyle: true
+SpaceBeforeCpp11BracedList: false
+PointerAlignment: Right
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive

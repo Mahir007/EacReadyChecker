@@ -39,8 +39,7 @@ constexpr int BreezeDurationMs = 100;
 
 constexpr auto CrossFadeName = "eacheck-cross-fade"_L1;
 
-struct DesktopSetting
-{
+struct DesktopSetting {
     bool reducedMotion = false;
     bool gnomeAnimations = true;
     std::optional<qreal> kdeFactor;
@@ -71,10 +70,7 @@ public:
     using QObject::QObject;
 
 public Q_SLOTS:
-    void settingChanged(const QString &group, const QString &key, const QDBusVariant &value)
-    {
-        applySetting(group, key, value.variant());
-    }
+    void settingChanged(const QString &group, const QString &key, const QDBusVariant &value) { applySetting(group, key, value.variant()); }
 };
 
 // The widget as it was, drawn over it as it is now and fading out.

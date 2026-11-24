@@ -41,10 +41,7 @@ private Q_SLOTS:
         QVERIFY(cmdline.contains(u"module-blacklist"));
     }
 
-    void repeatedValuesInOrder()
-    {
-        QCOMPARE(KernelCmdline::parse("iommu=pt iommu=nopt").values(u"iommu"), (QStringList{u"pt"_s, u"nopt"_s}));
-    }
+    void repeatedValuesInOrder() { QCOMPARE(KernelCmdline::parse("iommu=pt iommu=nopt").values(u"iommu"), (QStringList{u"pt"_s, u"nopt"_s})); }
 
     void parseBool_data()
     {

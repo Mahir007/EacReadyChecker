@@ -49,7 +49,8 @@ private Q_SLOTS:
         QCOMPARE(parsed.error, Error::None);
         QByteArray start(32, '\0');
         start[31] = 3;
-        const QByteArray expected = QCryptographicHash::hash(QByteArray(start + QCryptographicHash::hash("crtm", QCryptographicHash::Sha256)), QCryptographicHash::Sha256);
+        const QByteArray expected
+            = QCryptographicHash::hash(QByteArray(start + QCryptographicHash::hash("crtm", QCryptographicHash::Sha256)), QCryptographicHash::Sha256);
         QCOMPARE(TcgEventLog::replay(parsed.log, TcgEventLog::Sha256)->value(0), expected);
     }
 
@@ -81,8 +82,8 @@ private Q_SLOTS:
         QTest::newRow("spec id only partly") << specIdEvent({TcgEventLog::Sha256}).chopped(3);
         {
             // A digest of an algorithm the Spec ID event didn't list.
-            QByteArray bad = specIdEvent({TcgEventLog::Sha256}) + EfiTestData::le32(4) + EfiTestData::le32(4) + EfiTestData::le32(1)
-                + le16(TcgEventLog::Sha1) + QByteArray(20, '\0') + EfiTestData::le32(0);
+            QByteArray bad = specIdEvent({TcgEventLog::Sha256}) + EfiTestData::le32(4) + EfiTestData::le32(4) + EfiTestData::le32(1) + le16(TcgEventLog::Sha1)
+                             + QByteArray(20, '\0') + EfiTestData::le32(0);
             QTest::newRow("unlisted algorithm") << bad;
         }
         QTest::newRow("no algorithms") << specIdEvent({});

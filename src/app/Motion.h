@@ -14,7 +14,7 @@ namespace Motion
 {
 // Durations at normal speed, in ms.
 constexpr int Short = 100; // hover
-constexpr int Long = 200; // fades, and rows opening and closing
+constexpr int Long = 200;  // fades, and rows opening and closing
 
 // How long animations take, as a multiple of their normal duration. 0 when they're off.
 qreal factor();

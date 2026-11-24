@@ -14,8 +14,8 @@ enum class Decoration {
 };
 
 struct DecorationInputs {
-    QString platformName; // QGuiApplication::platformName()
-    QString currentDesktop; // XDG_CURRENT_DESKTOP
+    QString platformName;       // QGuiApplication::platformName()
+    QString currentDesktop;     // XDG_CURRENT_DESKTOP
     bool decorationSet = false; // the user set QT_WAYLAND_DECORATION
     bool pluginInstalled = false;
     QString builtQtVersion;

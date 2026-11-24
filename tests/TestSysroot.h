@@ -31,10 +31,7 @@ public:
         QFile::link(target, full);
     }
 
-    void setPermissions(const QString &hostPath, QFileDevice::Permissions permissions) const
-    {
-        QFile::setPermissions(m_dir.path() + hostPath, permissions);
-    }
+    void setPermissions(const QString &hostPath, QFileDevice::Permissions permissions) const { QFile::setPermissions(m_dir.path() + hostPath, permissions); }
 
 private:
     QTemporaryDir m_dir;

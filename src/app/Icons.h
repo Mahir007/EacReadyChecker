@@ -21,9 +21,8 @@ inline bool isDarkPalette(const QPalette &palette)
 // Both have old full-colour icons for the buttons, which look out of place.
 inline bool isGnomeIconTheme(const QString &theme)
 {
-    return theme.compare(QStringLiteral("Adwaita"), Qt::CaseInsensitive) == 0
-        || theme.compare(QStringLiteral("Yaru"), Qt::CaseInsensitive) == 0
-        || theme.startsWith(QStringLiteral("Yaru-"), Qt::CaseInsensitive);
+    return theme.compare(QStringLiteral("Adwaita"), Qt::CaseInsensitive) == 0 || theme.compare(QStringLiteral("Yaru"), Qt::CaseInsensitive) == 0
+           || theme.startsWith(QStringLiteral("Yaru-"), Qt::CaseInsensitive);
 }
 
 inline bool isBreezeInstalled()

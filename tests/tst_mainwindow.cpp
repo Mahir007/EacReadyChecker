@@ -19,21 +19,21 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QLayout>
-#include <QPalette>
-#include <QStyle>
 #include <QLabel>
+#include <QLayout>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPalette>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QScroller>
 #include <QSet>
 #include <QStandardPaths>
-#include <QToolButton>
+#include <QStyle>
 #include <QTest>
+#include <QToolButton>
 #include <QVariantAnimation>
 
 #include <algorithm>
@@ -69,16 +69,10 @@ private:
         });
     }
 
-    static QString message(const QWidget &window)
-    {
-        return window.findChild<MessageBar *>()->findChild<QLabel *>()->text();
-    }
+    static QString message(const QWidget &window) { return window.findChild<MessageBar *>()->findChild<QLabel *>()->text(); }
 
     // The message bar's Revealer.
-    static Revealer *messageReveal(const QWidget &window)
-    {
-        return qobject_cast<Revealer *>(window.findChild<MessageBar *>()->parentWidget()->parentWidget());
-    }
+    static Revealer *messageReveal(const QWidget &window) { return qobject_cast<Revealer *>(window.findChild<MessageBar *>()->parentWidget()->parentWidget()); }
 
     static void screenshot(QWidget &window, const QString &name)
     {
@@ -561,7 +555,9 @@ private Q_SLOTS:
         auto *icon = window.findChild<MessageBar *>()->findChild<IconWidget *>();
         // Inside the square, beside the "i".
         const QPoint inside(icon->width() / 4, icon->height() / 2);
-        const auto drawn = [&] { return icon->grab().toImage().pixelColor(inside); };
+        const auto drawn = [&] {
+            return icon->grab().toImage().pixelColor(inside);
+        };
 
         // An accent picked while the app runs.
         const QColor green(49, 156, 35);
@@ -863,7 +859,9 @@ private Q_SLOTS:
         const QImage image = window.grab().toImage();
         const int middle = header->height() / 2;
         const QColor fill = image.pixelColor(header->mapTo(&window, QPoint(header->width() - 6, middle)));
-        const auto mix = [](int base, int colour) { return base + (colour - base) * 0.3; };
+        const auto mix = [](int base, int colour) {
+            return base + (colour - base) * 0.3;
+        };
         QVERIFY(std::abs(fill.red() - mix(255, highlight.red())) <= 1);
         QVERIFY(std::abs(fill.green() - mix(255, highlight.green())) <= 1);
         QVERIFY(std::abs(fill.blue() - mix(255, highlight.blue())) <= 1);

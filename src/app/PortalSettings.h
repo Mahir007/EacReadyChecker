@@ -21,12 +21,8 @@ inline constexpr auto PortalInterface = QLatin1StringView("org.freedesktop.porta
 inline bool connectSettingChanged(QObject *receiver)
 {
     qRegisterMetaType<QDBusVariant>();
-    return QDBusConnection::sessionBus().connect(PortalService,
-                                                 PortalPath,
-                                                 PortalInterface,
-                                                 QStringLiteral("SettingChanged"),
-                                                 receiver,
-                                                 SLOT(settingChanged(QString, QString, QDBusVariant)));
+    return QDBusConnection::sessionBus().connect(
+        PortalService, PortalPath, PortalInterface, QStringLiteral("SettingChanged"), receiver, SLOT(settingChanged(QString, QString, QDBusVariant)));
 }
 
 // A value inside a variant arrives wrapped once more.

@@ -48,9 +48,9 @@ struct HostEntry {
 enum class PrivilegedState {
     NotRequested, // the user hasn't asked for the full check yet
     Granted,
-    Cancelled,    // the user dismissed the password dialog, or wasn't authorised
-    NoAgent,      // no polkit agent to ask for the password
-    Failed,       // anything else (pkexec missing, spawn failed, ...)
+    Cancelled, // the user dismissed the password dialog, or wasn't authorised
+    NoAgent,   // no polkit agent to ask for the password
+    Failed,    // anything else (pkexec missing, spawn failed, ...)
 };
 
 QString privilegedStateKey(PrivilegedState state);

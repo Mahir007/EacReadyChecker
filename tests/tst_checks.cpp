@@ -143,7 +143,8 @@ private Q_SLOTS:
         QTest::newRow("sb: setup mode") << sb << withSecureBoot({}, 1, 1) << QString() << u"fail"_s << u"Setup Mode"_s;
         QTest::newRow("sb: user mode") << sb << withSecureBoot({}) << u"Not in Setup Mode"_s << u"pass"_s << QString();
         QTest::newRow("sb: legacy boot") << sb << Files{} << QString() << u"fail"_s << u"Not booted in UEFI mode"_s;
-        QTest::newRow("sb: no variable") << sb << Files{{u"/sys/firmware/efi/efivars/"_s, {}}} << u"Enabled"_s << u"unknown"_s << u"SecureBoot variable not found"_s;
+        QTest::newRow("sb: no variable") << sb << Files{{u"/sys/firmware/efi/efivars/"_s, {}}} << u"Enabled"_s << u"unknown"_s
+                                         << u"SecureBoot variable not found"_s;
         QTest::newRow("sb: truncated") << sb << Files{{HostPaths::SecureBoot, kEfiAttr}} << u"Enabled"_s << u"unknown"_s << u"Unexpected SecureBoot value"_s;
         QTest::newRow("sb: value 2") << sb << Files{{HostPaths::SecureBoot, efiByte(2)}} << u"Enabled"_s << u"unknown"_s << u"Unexpected SecureBoot value"_s;
 
@@ -153,7 +154,8 @@ private Q_SLOTS:
         const QString iommu = u"iommu"_s;
         QTest::newRow("iommu: on") << iommu << withIommu({}) << QString() << u"pass"_s << QString();
         QTest::newRow("iommu: no chassis info") << iommu << withIommu({}) << QString() << u"pass"_s << QString();
-        QTest::newRow("iommu: handheld") << iommu << Files{{HostPaths::ChassisType, "11\n"}} << QString() << u"not-required"_s << u"Not required on handhelds"_s;
+        QTest::newRow("iommu: handheld") << iommu << Files{{HostPaths::ChassisType, "11\n"}} << QString() << u"not-required"_s
+                                         << u"Not required on handhelds"_s;
         QTest::newRow("iommu: tablet") << iommu << Files{{HostPaths::ChassisType, "30\n"}} << QString() << u"not-required"_s << u"Not required on tablets"_s;
         QTest::newRow("iommu: notebook, none") << iommu << Files{{HostPaths::ChassisType, "10\n"}} << QString() << u"fail"_s << u"No IOMMU found"_s;
         QTest::newRow("iommu: convertible, none") << iommu << Files{{HostPaths::ChassisType, "31\n"}} << QString() << u"fail"_s << u"No IOMMU found"_s;
@@ -162,8 +164,8 @@ private Q_SLOTS:
             files.insert(u"/sys/kernel/iommu_groups/1/type"_s, "identity\n");
             // One device in identity mode (e.g. an AMD APU's integrated GPU) isn't system-wide passthrough.
             QTest::newRow("iommu: one identity group") << iommu << files << QString() << u"pass"_s << QString();
-            QTest::newRow("iommu: one identity group, sub-check") << iommu << files << u"No passthrough (group types)"_s << u"pass"_s
-                                                                 << u"Only group 1 uses passthrough"_s;
+            QTest::newRow("iommu: one identity group, sub-check")
+                << iommu << files << u"No passthrough (group types)"_s << u"pass"_s << u"Only group 1 uses passthrough"_s;
             files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "identity\n");
             QTest::newRow("iommu: all groups identity") << iommu << files << QString() << u"fail"_s << u"All 2 groups use passthrough"_s;
             files.insert(u"/sys/kernel/iommu_groups/0/type"_s, "DMA-FQ\n");
@@ -193,10 +195,9 @@ private Q_SLOTS:
         QTest::newRow("lockdown: integrity via cmdline")
             << lockdown << Files{{HostPaths::Lockdown, "none [integrity] confidentiality\n"}, {HostPaths::Cmdline, "lockdown=integrity"}} << QString()
             << u"pass"_s << u"Set on the kernel command line"_s;
-        QTest::newRow("lockdown: confidentiality") << lockdown << Files{{HostPaths::Lockdown, "none integrity [confidentiality]\n"}} << QString()
-                                                   << u"fail"_s << u"Lockdown is in confidentiality mode"_s;
-        QTest::newRow("lockdown: none") << lockdown << Files{{HostPaths::Lockdown, "[none] integrity confidentiality\n"}} << QString() << u"fail"_s
-                                        << u"off"_s;
+        QTest::newRow("lockdown: confidentiality") << lockdown << Files{{HostPaths::Lockdown, "none integrity [confidentiality]\n"}} << QString() << u"fail"_s
+                                                   << u"Lockdown is in confidentiality mode"_s;
+        QTest::newRow("lockdown: none") << lockdown << Files{{HostPaths::Lockdown, "[none] integrity confidentiality\n"}} << QString() << u"fail"_s << u"off"_s;
         QTest::newRow("lockdown: LSM not active") << lockdown << Files{{HostPaths::Lsm, lsm}} << QString() << u"fail"_s << u"Lockdown LSM isn't active"_s;
         QTest::newRow("lockdown: no securityfs") << lockdown << Files{} << QString() << u"unknown"_s << u"securityfs"_s;
         QTest::newRow("lockdown: garbage") << lockdown << Files{{HostPaths::Lockdown, "integrity\n"}} << QString() << u"unknown"_s << u"Unexpected"_s;
@@ -219,8 +220,10 @@ private Q_SLOTS:
         QTest::newRow("taint: clean") << signing << Files{{HostPaths::Tainted, "0\n"}} << modules << u"pass"_s << QString();
         // Without /proc/modules there's nothing to name.
         QTest::newRow("taint: out-of-tree") << signing << Files{{HostPaths::Tainted, "4096\n"}} << modules << u"pass"_s << QString();
-        QTest::newRow("taint: unsigned") << signing << Files{{HostPaths::Tainted, "8192\n"}} << modules << u"fail"_s << u"An unsigned module has been loaded since boot"_s;
-        QTest::newRow("taint: unsigned, parent") << signing << Files{{HostPaths::Tainted, "12288\n"}} << QString() << u"fail"_s << u"An unsigned module has been loaded since boot"_s;
+        QTest::newRow("taint: unsigned") << signing << Files{{HostPaths::Tainted, "8192\n"}} << modules << u"fail"_s
+                                         << u"An unsigned module has been loaded since boot"_s;
+        QTest::newRow("taint: unsigned, parent") << signing << Files{{HostPaths::Tainted, "12288\n"}} << QString() << u"fail"_s
+                                                 << u"An unsigned module has been loaded since boot"_s;
         {
             const QByteArray loaded = "vmw_vsock_vmci_transport 45056 1 - Live 0x0000000000000000\n"
                                       "acer_wmi 36864 0 - Live 0x0000000000000000 (OE)\n"
@@ -256,12 +259,13 @@ private Q_SLOTS:
         QTest::newRow("mok: none") << signing << Files{} << moks << u"pass"_s << u"No MOKs enrolled"_s;
         QTest::newRow("mok: empty variable") << signing << mok({}) << moks << u"pass"_s << u"No MOKs enrolled"_s;
         QTest::newRow("mok: shim vendor cert") << signing << mok(known) << moks << u"pass"_s << u"Canonical Ltd. Master Certificate Authority"_s;
-        QTest::newRow("mok: same vendor twice") << signing << mok(known + known) << moks << u"pass"_s
-                                                << u"Canonical Ltd. Master Certificate Authority"_s;
-        QTest::newRow("mok: unknown key") << signing << mok(unknown + known) << moks << u"fail"_s << u"Unrecognised key: CN=EACheck test MOK, O=EACheck tests"_s;
+        QTest::newRow("mok: same vendor twice") << signing << mok(known + known) << moks << u"pass"_s << u"Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("mok: unknown key") << signing << mok(unknown + known) << moks << u"fail"_s
+                                          << u"Unrecognised key: CN=EACheck test MOK, O=EACheck tests"_s;
         QTest::newRow("mok: unknown key, parent") << signing << mok(unknown + known) << QString() << u"fail"_s << u"Unrecognised key: CN=EACheck test MOK"_s;
         QTest::newRow("mok: hash") << signing << mok(hash) << moks << u"fail"_s << u"Unrecognised key: SHA-256 hash 6161616161616161"_s;
-        QTest::newRow("mok: two unknown") << signing << mok(hash + unknown) << moks << u"fail"_s << u"Unrecognised keys: SHA-256 hash 6161616161616161 (+1 more)"_s;
+        QTest::newRow("mok: two unknown") << signing << mok(hash + unknown) << moks << u"fail"_s
+                                          << u"Unrecognised keys: SHA-256 hash 6161616161616161 (+1 more)"_s;
         QTest::newRow("mok: other type") << signing << mok(EfiTestData::list(EfiTestData::ShimLock, {"x"})) << moks << u"fail"_s
                                          << u"605dab50-e046-4300-abb6-3dd810dd8b23 entry"_s;
         {
@@ -338,9 +342,8 @@ private Q_SLOTS:
         }
         {
             // systemd-pcrphase extends PCR 11 after boot, so it no longer matches the log.
-            const QList<Event> events{{4, EfiBootServicesApplication, "uki.efi"},
-                                      {11, Ipl, TcgTestData::utf16(u".linux"_s)},
-                                      {11, Ipl, TcgTestData::utf16(u".osrel"_s)}};
+            const QList<Event> events{
+                {4, EfiBootServicesApplication, "uki.efi"}, {11, Ipl, TcgTestData::utf16(u".linux"_s)}, {11, Ipl, TcgTestData::utf16(u".osrel"_s)}};
             Files files = withEventLog(events);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/11"_s, QByteArray(64, 'A') + '\n');
             QTest::newRow("measured: uki") << measured << files << kernel << u"pass"_s << u"systemd-stub (UKI)"_s;
@@ -364,18 +367,18 @@ private Q_SLOTS:
         const QString usedToBoot = u"Only well-known keys used to boot"_s;
         const QString signing = u"kernel-signing"_s;
         const QString kernelSigned = u"Kernel signed by a well-known key"_s;
-        QTest::newRow("authorities: well-known") << sb << withEventLog(grub) << usedToBoot << u"pass"_s
-                                                 << u"Canonical Ltd. Master Certificate Authority"_s;
-        QTest::newRow("authorities: unknown kernel key") << sb << withEventLog(grubBoot(known, unknown)) << usedToBoot << u"fail"_s
-                                                         << u"Unrecognised key: CN=EACheck test MOK, O=EACheck tests"_s;
-        QTest::newRow("authorities: unknown kernel key, signing") << signing << withEventLog(grubBoot(known, unknown)) << kernelSigned << u"fail"_s
-                                                                  << u"Unrecognised key: CN=EACheck test MOK"_s;
+        QTest::newRow("authorities: well-known") << sb << withEventLog(grub) << usedToBoot << u"pass"_s << u"Canonical Ltd. Master Certificate Authority"_s;
+        QTest::newRow("authorities: unknown kernel key")
+            << sb << withEventLog(grubBoot(known, unknown)) << usedToBoot << u"fail"_s << u"Unrecognised key: CN=EACheck test MOK, O=EACheck tests"_s;
+        QTest::newRow("authorities: unknown kernel key, signing")
+            << signing << withEventLog(grubBoot(known, unknown)) << kernelSigned << u"fail"_s << u"Unrecognised key: CN=EACheck test MOK"_s;
         QTest::newRow("authorities: two unknown") << sb << withEventLog(grubBoot(unknown, unknown)) << usedToBoot << u"fail"_s << u"(+1 more)"_s;
         QTest::newRow("authorities: well-known, signing") << signing << withEventLog(grub) << kernelSigned << u"pass"_s << u"Canonical"_s;
         QTest::newRow("authorities: none") << sb << withEventLog({{4, EfiBootServicesApplication, "grubx64.efi"}}) << usedToBoot << u"fail"_s
                                            << u"no Secure Boot verification"_s;
         QTest::newRow("authorities: sbat only") << sb
-                                                << withEventLog({{7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"SbatLevel"_s, "sbat")}})
+                                                << withEventLog(
+                                                       {{7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"SbatLevel"_s, "sbat")}})
                                                 << usedToBoot << u"fail"_s << u"no Secure Boot verification"_s;
         QTest::newRow("authorities: bare certificate")
             << sb << withEventLog({{7, EfiVariableAuthority, TcgTestData::variable(EfiTestData::ShimLock, u"db"_s, known)}}) << usedToBoot << u"pass"_s
@@ -389,17 +392,17 @@ private Q_SLOTS:
             QTest::newRow("authorities: option rom") << sb << withEventLog(events) << usedToBoot << u"pass"_s
                                                      << u"driver key not counted: CN=EACheck test MOK"_s;
             QTest::newRow("authorities: option rom, signing") << signing << withEventLog(events) << kernelSigned << u"pass"_s << u"Canonical"_s;
-            QTest::newRow("authorities: option rom only") << sb << withEventLog(events.mid(0, 2)) << usedToBoot << u"fail"_s
-                                                          << u"no Secure Boot verification"_s;
+            QTest::newRow("authorities: option rom only")
+                << sb << withEventLog(events.mid(0, 2)) << usedToBoot << u"fail"_s << u"no Secure Boot verification"_s;
             // A well-known driver key adds nothing to the detail.
             events[0] = TcgTestData::authority(u"db"_s, known);
-            QTest::newRow("authorities: well-known option rom") << sb << withEventLog(events) << usedToBoot << u"pass"_s
-                                                                << u"Master Certificate Authority"_s;
+            QTest::newRow("authorities: well-known option rom") << sb << withEventLog(events) << usedToBoot << u"pass"_s << u"Master Certificate Authority"_s;
         }
         {
             // The next image after the authority is an application, so it verified the boot chain
             // even though a driver comes later.
-            const QList<Event> events{TcgTestData::authority(u"db"_s, unknown), {4, EfiBootServicesApplication, "shimx64.efi"}, {2, EfiBootServicesDriver, "x.efi"}};
+            const QList<Event> events{
+                TcgTestData::authority(u"db"_s, unknown), {4, EfiBootServicesApplication, "shimx64.efi"}, {2, EfiBootServicesDriver, "x.efi"}};
             QTest::newRow("authorities: driver after application") << sb << withEventLog(events) << usedToBoot << u"fail"_s << u"Unrecognised key"_s;
         }
         QTest::newRow("authorities: no log") << sb << Files{} << usedToBoot << u"unknown"_s << u"No TPM event log"_s;
@@ -474,7 +477,6 @@ private Q_SLOTS:
         }
         QCOMPARE(::combineStatus(results), expected);
     }
-
 };
 
 QTEST_GUILESS_MAIN(TestChecks)

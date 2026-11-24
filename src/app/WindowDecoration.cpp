@@ -38,8 +38,7 @@ bool sharesPrivateApi(const QString &built, const QString &running)
 {
     const QVersionNumber a = QVersionNumber::fromString(built);
     const QVersionNumber b = QVersionNumber::fromString(running);
-    if (a.segmentCount() != 3 || b.segmentCount() != 3 || a.majorVersion() != 6 || b.majorVersion() != 6
-        || a.minorVersion() != b.minorVersion()) {
+    if (a.segmentCount() != 3 || b.segmentCount() != 3 || a.majorVersion() != 6 || b.majorVersion() != 6 || a.minorVersion() != b.minorVersion()) {
         return false;
     }
     return std::ranges::any_of(samePrivateApi, [&](const PatchReleases &r) {
@@ -49,7 +48,7 @@ bool sharesPrivateApi(const QString &built, const QString &running)
         return in(a) && in(b);
     });
 }
-}
+} // namespace
 
 Decoration chooseDecoration(const DecorationInputs &inputs)
 {
@@ -58,8 +57,7 @@ Decoration chooseDecoration(const DecorationInputs &inputs)
     if (inputs.platformName != "wayland"_L1 || !gnome || inputs.decorationSet || !inputs.pluginInstalled) {
         return Decoration::QtPlugin;
     }
-    if (inputs.runningQtVersion != inputs.builtQtVersion
-        && !sharesPrivateApi(inputs.builtQtVersion, inputs.runningQtVersion)) {
+    if (inputs.runningQtVersion != inputs.builtQtVersion && !sharesPrivateApi(inputs.builtQtVersion, inputs.runningQtVersion)) {
         return Decoration::QtVersionDiffers;
     }
     return Decoration::Bundled;
@@ -96,9 +94,7 @@ void useBundledDecoration([[maybe_unused]] bool decorationSet)
         break;
     }
     case Decoration::QtVersionDiffers:
-        qInfo("Title bar shadow off: built for Qt %s, running on Qt %s. Rebuild or update the app to turn it back on.",
-              QT_VERSION_STR,
-              qVersion());
+        qInfo("Title bar shadow off: built for Qt %s, running on Qt %s. Rebuild or update the app to turn it back on.", QT_VERSION_STR, qVersion());
         break;
     }
 #endif

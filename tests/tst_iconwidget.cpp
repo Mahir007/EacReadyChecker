@@ -32,10 +32,7 @@ private:
         return image;
     }
 
-    static QImage grabbed(QWidget &widget)
-    {
-        return widget.grab().toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    }
+    static QImage grabbed(QWidget &widget) { return widget.grab().toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied); }
 
 private Q_SLOTS:
     void followsScaleChange()

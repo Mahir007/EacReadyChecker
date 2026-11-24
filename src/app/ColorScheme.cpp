@@ -44,7 +44,9 @@ bool hasQtTheme()
     }
     static const QStringList qtDesktops{u"KDE"_s, u"GNOME"_s, u"X-CINNAMON"_s, u"PANTHEON"_s, u"UNITY"_s, u"MATE"_s, u"XFCE"_s, u"LXDE"_s};
     const QStringList names = qEnvironmentVariable("XDG_CURRENT_DESKTOP").split(u':');
-    return std::ranges::any_of(names, [](const QString &name) { return qtDesktops.contains(name, Qt::CaseInsensitive); });
+    return std::ranges::any_of(names, [](const QString &name) {
+        return qtDesktops.contains(name, Qt::CaseInsensitive);
+    });
 }
 
 // Everywhere but KDE, where Qt's KDE theme or Plasma's follows the colour scheme, and where the user
@@ -120,7 +122,9 @@ std::optional<Qt::ColorScheme> readPortalAppearance()
 // libadwaita does.
 QColor accentText(const QColor &accent, bool dark)
 {
-    const auto toLinear = [](float c) { return c <= 0.04045F ? c / 12.92F : std::pow((c + 0.055F) / 1.055F, 2.4F); };
+    const auto toLinear = [](float c) {
+        return c <= 0.04045F ? c / 12.92F : std::pow((c + 0.055F) / 1.055F, 2.4F);
+    };
     const auto toSrgb = [](float c) {
         c = std::clamp(c, 0.0F, 1.0F);
         return c <= 0.0031308F ? c * 12.92F : 1.055F * std::pow(c, 1 / 2.4F) - 0.055F;
@@ -136,7 +140,9 @@ QColor accentText(const QColor &accent, bool dark)
     const float a = 1.9779984951F * l - 2.4285922050F * m + 0.4505937099F * s;
     const float bb = 0.0259040371F * l + 0.7827717662F * m - 0.8086757660F * s;
     lightness = dark ? std::max(lightness, 0.85F) : std::min(lightness, 0.5F);
-    const auto cube = [](float v) { return v * v * v; };
+    const auto cube = [](float v) {
+        return v * v * v;
+    };
     const float l2 = cube(lightness + 0.3963377774F * a + 0.2158037573F * bb);
     const float m2 = cube(lightness - 0.1055613458F * a - 0.0638541728F * bb);
     const float s2 = cube(lightness - 0.0894841775F * a - 1.2914855480F * bb);
@@ -150,7 +156,9 @@ void setAccentLinks(QPalette &palette, const QColor &accent, bool dark)
 {
     const QColor link = accentText(accent, dark);
     const QColor text = palette.color(QPalette::Text);
-    const auto mix = [](float a, float b) { return a * 0.8F + b * 0.2F; };
+    const auto mix = [](float a, float b) {
+        return a * 0.8F + b * 0.2F;
+    };
     palette.setColor(QPalette::Link, link);
     palette.setColor(QPalette::LinkVisited,
                      QColor::fromRgbF(mix(link.redF(), text.redF()), mix(link.greenF(), text.greenF()), mix(link.blueF(), text.blueF())));
@@ -322,7 +330,9 @@ QPalette windowColours(const QPalette &appPalette)
         const QColor highlight = appPalette.color(QPalette::Active, QPalette::Highlight);
         if (appPalette.color(QPalette::Inactive, QPalette::Highlight) == highlight) {
             const QColor window = appPalette.color(QPalette::Inactive, QPalette::Window);
-            const auto mix = [](int a, int b) { return qRound(a + (b - a) * 0.29); };
+            const auto mix = [](int a, int b) {
+                return qRound(a + (b - a) * 0.29);
+            };
             p.setColor(QPalette::Inactive,
                        QPalette::Highlight,
                        QColor(mix(window.red(), highlight.red()), mix(window.green(), highlight.green()), mix(window.blue(), highlight.blue())));

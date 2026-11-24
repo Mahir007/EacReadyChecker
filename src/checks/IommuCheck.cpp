@@ -79,8 +79,7 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
     if (!identity.isEmpty()) {
         return {title,
                 CheckStatus::Pass,
-                identity.size() == 1 ? u"Only group %1 uses passthrough"_s.arg(identity[0])
-                                     : u"Only groups %1 use passthrough"_s.arg(identity.join(u", "_s))};
+                identity.size() == 1 ? u"Only group %1 uses passthrough"_s.arg(identity[0]) : u"Only groups %1 use passthrough"_s.arg(identity.join(u", "_s))};
     }
     return {title, CheckStatus::Pass, {}};
 }

@@ -59,10 +59,7 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent *) override
-    {
-        QPainter(this).fillRect(rect(), colour(palette()));
-    }
+    void paintEvent(QPaintEvent *) override { QPainter(this).fillRect(rect(), colour(palette())); }
 };
 
 QWidget *separator(QWidget *parent)
@@ -435,18 +432,18 @@ void MainWindow::showAbout()
     box->setIconPixmap(appIcon().pixmap(QSize(64, 64), devicePixelRatio()));
     box->setTextFormat(Qt::RichText);
     box->setLinkedText(u"<h3>%1 %2</h3>"
-                 "<p>%3.</p>"
-                 "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5.<br>EAC performs its own verification at game launch.</p>"
-                 "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"
-                 "<p>Qt %9</p>"_s.arg(AppInfo::displayName(),
-                                      AppInfo::version(),
-                                      AppInfo::description(),
-                                      AppInfo::requirementsUrl(),
-                                      requirementsAsOf(),
-                                      AppInfo::copyright(),
-                                      AppInfo::license(),
-                                      AppInfo::homepage(),
-                                      QString::fromLatin1(qVersion())));
+                       "<p>%3.</p>"
+                       "<p>Follows <a href=\"%4\">Epic's published requirements</a> as of %5.<br>EAC performs its own verification at game launch.</p>"
+                       "<p>%6<br>License: %7<br><a href=\"%8\">%8</a></p>"
+                       "<p>Qt %9</p>"_s.arg(AppInfo::displayName(),
+                                            AppInfo::version(),
+                                            AppInfo::description(),
+                                            AppInfo::requirementsUrl(),
+                                            requirementsAsOf(),
+                                            AppInfo::copyright(),
+                                            AppInfo::license(),
+                                            AppInfo::homepage(),
+                                            QString::fromLatin1(qVersion())));
     box->setStandardButtons(QMessageBox::Close);
     box->open();
 }

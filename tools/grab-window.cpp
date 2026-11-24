@@ -37,8 +37,7 @@ int main(int argc, char **argv)
         {u"include-cursor"_s, false},
         {u"native-resolution"_s, true},
     };
-    const QDBusReply<QVariantMap> reply =
-        kwin.call(u"CaptureActiveWindow"_s, options, QVariant::fromValue(QDBusUnixFileDescriptor(fds[1])));
+    const QDBusReply<QVariantMap> reply = kwin.call(u"CaptureActiveWindow"_s, options, QVariant::fromValue(QDBusUnixFileDescriptor(fds[1])));
     close(fds[1]);
     if (!reply.isValid()) {
         std::fprintf(stderr, "%s\n", qPrintable(reply.error().message()));
@@ -49,7 +48,10 @@ int main(int argc, char **argv)
     pipeIn.open(fds[0], QIODevice::ReadOnly, QFile::AutoCloseHandle);
     const QByteArray data = pipeIn.readAll();
     const QVariantMap m = reply.value();
-    const QImage image(reinterpret_cast<const uchar *>(data.constData()), m[u"width"_s].toInt(), m[u"height"_s].toInt(),
-                       m[u"stride"_s].toInt(), QImage::Format(m[u"format"_s].toInt()));
+    const QImage image(reinterpret_cast<const uchar *>(data.constData()),
+                       m[u"width"_s].toInt(),
+                       m[u"height"_s].toInt(),
+                       m[u"stride"_s].toInt(),
+                       QImage::Format(m[u"format"_s].toInt()));
     return image.save(QString::fromLocal8Bit(argv[1])) ? 0 : 1;
 }

@@ -5,4 +5,7 @@
 // compiler cache misses on this file alone.
 #include "eacheck_version.h"
 
-QString AppInfo::version() { return QStringLiteral(EACHECK_VERSION_STRING); }
+QString AppInfo::version()
+{
+    return QStringLiteral(EACHECK_VERSION_STRING);
+}

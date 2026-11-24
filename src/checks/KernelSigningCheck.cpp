@@ -75,8 +75,9 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
         return {title, CheckStatus::Pass, outOfTree.isEmpty() ? QString() : u"Out-of-tree: %1"_s.arg(outOfTree.join(u", "_s))};
     }
     if (!unsignedNames.isEmpty()) {
-        return {title, CheckStatus::Fail, u"%1: %2"_s.arg(unsignedNames.size() == 1 ? u"Unsigned module loaded"_s : u"Unsigned modules loaded"_s,
-                                                          unsignedNames.join(u", "_s))};
+        return {title,
+                CheckStatus::Fail,
+                u"%1: %2"_s.arg(unsignedNames.size() == 1 ? u"Unsigned module loaded"_s : u"Unsigned modules loaded"_s, unsignedNames.join(u", "_s))};
     }
     if (modules.ok()) {
         // The flag can't be cleared, so this still fails until a reboot.
@@ -118,7 +119,7 @@ SubCheckResult moksWellKnown(const HostSnapshot &snapshot, QJsonArray &rawEntrie
                 raw.insert(u"data"_s, QString::fromLatin1(entry.data.toHex()));
                 rawEntries.append(raw);
                 unknown.append(entry.type == EfiSignatureList::CertSha256 ? u"SHA-256 hash %1"_s.arg(QString::fromLatin1(entry.data.toHex().left(16)))
-                                                                           : u"%1 entry"_s.arg(EfiSignatureList::typeName(entry.type)));
+                                                                          : u"%1 entry"_s.arg(EfiSignatureList::typeName(entry.type)));
                 continue;
             }
             const QByteArray sha256 = Certificate::sha256(entry.data);

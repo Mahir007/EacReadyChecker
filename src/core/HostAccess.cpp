@@ -72,8 +72,7 @@ QStringList expand(const QString &root, const QString &pattern)
                 continue;
             }
             const QDir dir(root + (prefix.isEmpty() ? u"/"_s : prefix));
-            const QStringList names = dir.entryList({component},
-                                                    QDir::AllEntries | QDir::System | QDir::NoDotAndDotDot | QDir::CaseSensitive);
+            const QStringList names = dir.entryList({component}, QDir::AllEntries | QDir::System | QDir::NoDotAndDotDot | QDir::CaseSensitive);
             for (const QString &name : names) {
                 next.append(prefix + u'/' + name);
             }
@@ -204,7 +203,8 @@ HostAccess::Result HostAccess::readDirect(const QList<HostRequest> &requests, Ho
     return {};
 }
 
-HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Privilege privilege, HostSnapshot &snapshot, const std::atomic_bool *cancelled) const
+HostAccess::Result HostAccess::readShell(const QList<HostRequest> &requests, Privilege privilege, HostSnapshot &snapshot,
+                                         const std::atomic_bool *cancelled) const
 {
     const bool usePkexec = privilege == Privilege::Admin && m_sysroot.isEmpty();
     // For one exact file (the TPM event log), run plain `cat` as root: least privilege, and the

@@ -140,8 +140,9 @@ private Q_SLOTS:
         const QJsonObject log = elevated.results[0].raw.value(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s).toObject();
         QCOMPARE(log.value(u"size"_s).toInt(), 1024);
         QCOMPARE(log.value(u"sha256"_s).toString().size(), 64);
-        QCOMPARE(elevated.results[2].raw.value(u"/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"_s).toObject().value(u"hex"_s).toString(),
-                 u"0600000001"_s);
+        QCOMPARE(
+            elevated.results[2].raw.value(u"/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"_s).toObject().value(u"hex"_s).toString(),
+            u"0600000001"_s);
     }
 
     void reportJson()

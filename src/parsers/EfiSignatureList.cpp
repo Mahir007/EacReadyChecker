@@ -30,8 +30,8 @@ std::optional<QList<Entry>> parse(const QByteArray &data)
         const quint32 headerSize = qFromLittleEndian<quint32>(list + kGuidSize + 4);
         const quint32 signatureSize = qFromLittleEndian<quint32>(list + kGuidSize + 8);
         // The same checks as the kernel's parse_efi_signature_list().
-        if (listSize < kListHeaderSize || listSize > quint64(remaining) || headerSize > listSize - kListHeaderSize
-            || signatureSize < kGuidSize || (listSize - kListHeaderSize - headerSize) % signatureSize != 0) {
+        if (listSize < kListHeaderSize || listSize > quint64(remaining) || headerSize > listSize - kListHeaderSize || signatureSize < kGuidSize
+            || (listSize - kListHeaderSize - headerSize) % signatureSize != 0) {
             return std::nullopt;
         }
         for (qsizetype p = kListHeaderSize + headerSize; p < qsizetype(listSize); p += signatureSize) {

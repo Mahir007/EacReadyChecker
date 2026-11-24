@@ -310,7 +310,8 @@ private Q_SLOTS:
             cancelled = true;
         });
         thread->start();
-        const HostAccess::Result result = host.read({HostRequest::read(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s)}, Privilege::Admin, s, &cancelled);
+        const HostAccess::Result result
+            = host.read({HostRequest::read(u"/sys/kernel/security/tpm0/binary_bios_measurements"_s)}, Privilege::Admin, s, &cancelled);
         thread->wait();
         delete thread;
         QVERIFY(timer.elapsed() < 5000);

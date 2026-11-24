@@ -29,8 +29,7 @@ protected:
 
         // Upstream's test for its shadow, for the unfocused window instead
         const QWaylandWindow *window = waylandWindow();
-        if (window->windowStates() & (Qt::WindowActive | Qt::WindowMaximized)
-            || window->toplevelWindowTilingStates() != QWaylandWindow::WindowNoState) {
+        if (window->windowStates() & (Qt::WindowActive | Qt::WindowMaximized) || window->toplevelWindowTilingStates() != QWaylandWindow::WindowNoState) {
             return;
         }
         const QRect frame = window->windowContentGeometry();
@@ -71,11 +70,8 @@ class DecorationPlugin : public QWaylandDecorationPlugin
     Q_OBJECT
     Q_PLUGIN_METADATA(IID QWaylandDecorationFactoryInterface_iid FILE "DecorationPlugin.json")
 public:
-    QWaylandAbstractDecoration *create(const QString &, const QStringList &) override
-    {
-        return new ShadowedDecoration;
-    }
+    QWaylandAbstractDecoration *create(const QString &, const QStringList &) override { return new ShadowedDecoration; }
 };
-}
+} // namespace
 
 #include "DecorationPlugin.moc"

@@ -50,7 +50,8 @@ std::optional<WellKnownKeys> WellKnownKeys::fromJson(const QByteArray &json, QSt
     const QJsonArray entries = list.toArray();
     for (const QJsonValue &value : entries) {
         const QJsonObject entry = value.toObject();
-        WellKnownKey key{entry.value(u"vendor"_s).toString(), entry.value(u"subject"_s).toString(),
+        WellKnownKey key{entry.value(u"vendor"_s).toString(),
+                         entry.value(u"subject"_s).toString(),
                          QByteArray::fromHex(entry.value(u"sha256"_s).toString().remove(u':').toLatin1())};
         if (key.vendor.isEmpty() || key.subject.isEmpty()) {
             return fail(u"entry %1 lacks a vendor or subject"_s.arg(result.m_keys.size()));

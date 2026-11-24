@@ -38,10 +38,7 @@ private:
     }
 
 private Q_SLOTS:
-    void initTestCase()
-    {
-        m_root.write(u"/sys/kernel/security/lsm"_s, "capability,bpf");
-    }
+    void initTestCase() { m_root.write(u"/sys/kernel/security/lsm"_s, "capability,bpf"); }
 
     void json()
     {

@@ -78,8 +78,7 @@ quint8 startupLocality(const TcgEventLog::Log &log)
         if (event.pcr != 0) {
             continue;
         }
-        if (event.type == TcgEventLog::NoAction && event.data.size() > kStartupLocalitySignature.size()
-            && event.data.startsWith(kStartupLocalitySignature)) {
+        if (event.type == TcgEventLog::NoAction && event.data.size() > kStartupLocalitySignature.size() && event.data.startsWith(kStartupLocalitySignature)) {
             return quint8(event.data.at(kStartupLocalitySignature.size()));
         }
         hcrtm = hcrtm || event.type == TcgEventLog::EfiHcrtmEvent;
@@ -115,8 +114,7 @@ ParseResult parse(const QByteArray &data)
     Reader spec(specId);
     QByteArray skipped;
     quint32 algorithmCount = 0;
-    if (!spec.bytes(kSpecIdSignature.size() + 4 + 4, skipped) || !spec.read(algorithmCount) || algorithmCount == 0
-        || algorithmCount > kMaxAlgorithms) {
+    if (!spec.bytes(kSpecIdSignature.size() + 4 + 4, skipped) || !spec.read(algorithmCount) || algorithmCount == 0 || algorithmCount > kMaxAlgorithms) {
         return result;
     }
     QHash<quint16, quint16> digestSizes;
