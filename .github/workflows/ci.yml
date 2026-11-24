@@ -73,6 +73,7 @@ jobs:
           restore-keys: ${{ steps.packages.outputs.prefix }}
       # The image deletes downloaded packages after each install.
       - name: Install packages
+        shell: bash
         run: |
           rm -f /etc/apt/apt.conf.d/docker-clean
           apt-get update
@@ -262,6 +263,7 @@ jobs:
           key: ${{ steps.packages.outputs.key }}
           restore-keys: packages-almalinux9-
       - name: Install packages
+        shell: bash
         run: |
           dnf install -y --setopt=install_weak_deps=False --setopt=keepcache=True epel-release dnf-plugins-core
           dnf config-manager --set-enabled crb
@@ -306,6 +308,7 @@ jobs:
           key: qt-${{ env.QT_VERSION }}-aqt-${{ env.AQT_VERSION }}-${{ env.QT_ARCHIVES }}
       - name: Install Qt
         if: steps.cache-qt.outputs.cache-hit != 'true'
+        shell: bash
         run: |
           read -ra archives <<< "$QT_ARCHIVES"
           aqt install-qt linux desktop "$QT_VERSION" gcc_64 --archives "${archives[@]}" --outputdir ~/qt
