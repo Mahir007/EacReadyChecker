@@ -117,7 +117,7 @@ private:
             gotDetail = sub->detail;
         }
         QCOMPARE(statusKey(gotStatus), status);
-        QVERIFY2(gotDetail.contains(detail), qPrintable(u"detail “%1” doesn't contain “%2”"_s.arg(gotDetail, detail)));
+        QVERIFY2(gotDetail.contains(detail), qPrintable(u"detail \"%1\" doesn't contain \"%2\""_s.arg(gotDetail, detail)));
     }
 
 private Q_SLOTS:
@@ -298,14 +298,14 @@ private Q_SLOTS:
         const QString matches = u"Event log matches the TPM"_s;
         const QString kernel = u"Boot manager measured the kernel"_s;
         QTest::newRow("measured: grub") << measured << withEventLog(grub) << kernel << u"pass"_s << u"GRUB"_s;
-        QTest::newRow("measured: pcrs match") << measured << withEventLog(grub) << matches << u"pass"_s << u"PCRs 4, 7–9"_s;
+        QTest::newRow("measured: pcrs match") << measured << withEventLog(grub) << matches << u"pass"_s << u"PCRs 4, 7-9"_s;
         {
             Files files = withEventLog(grub);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, QByteArray(64, '0') + '\n');
             QTest::newRow("measured: pcr mismatch") << measured << files << QString() << u"fail"_s << u"PCR 4 doesn't match the TPM event log"_s;
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/8"_s, QByteArray(64, '0') + '\n');
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s, QByteArray(64, '0') + '\n');
-            QTest::newRow("measured: pcrs mismatch") << measured << files << matches << u"fail"_s << u"PCRs 4, 8–9 don't match"_s;
+            QTest::newRow("measured: pcrs mismatch") << measured << files << matches << u"fail"_s << u"PCRs 4, 8-9 don't match"_s;
             files.remove(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s);
             QTest::newRow("measured: pcr file missing") << measured << files << matches << u"unknown"_s << u"Couldn't read PCR 9"_s;
         }
@@ -322,7 +322,7 @@ private Q_SLOTS:
             Files files = withEventLog(grub);
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator"}));
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/9"_s, extended(9, {"os-separator", "nvpcr-separator"}));
-            QTest::newRow("measured: systemd separators") << measured << files << matches << u"pass"_s << u"PCRs 4, 7–9"_s;
+            QTest::newRow("measured: systemd separators") << measured << files << matches << u"pass"_s << u"PCRs 4, 7-9"_s;
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"os-separator", "something-else"}));
             QTest::newRow("measured: more than the separators") << measured << files << matches << u"fail"_s << u"PCR 4 doesn't match"_s;
             files.insert(u"/sys/class/tpm/tpm0/pcr-sha256/4"_s, extended(4, {"something-else"}));

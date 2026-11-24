@@ -43,7 +43,7 @@ std::optional<QJsonArray> extendedAfterLog(const QByteArray &replayed, const QBy
     return std::nullopt;
 }
 
-// "0–9, 14"
+// "0-9, 14"
 QString pcrRanges(const QList<quint32> &pcrs)
 {
     QStringList parts;
@@ -52,7 +52,7 @@ QString pcrRanges(const QList<quint32> &pcrs)
         while (end + 1 < pcrs.size() && pcrs[end + 1] == pcrs[end] + 1) {
             ++end;
         }
-        parts.append(end == i ? QString::number(pcrs[i]) : u"%1–%2"_s.arg(pcrs[i]).arg(pcrs[end]));
+        parts.append(end == i ? QString::number(pcrs[i]) : u"%1-%2"_s.arg(pcrs[i]).arg(pcrs[end]));
         i = end + 1;
     }
     return parts.join(u", "_s);

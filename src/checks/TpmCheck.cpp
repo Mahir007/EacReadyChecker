@@ -25,7 +25,7 @@ CheckResult TpmCheck::evaluate(const HostSnapshot &snapshot) const
             result.detail = u"TPM 1.2 found, 2.0 required"_s;
         } else {
             result.status = CheckStatus::Unknown;
-            result.detail = u"Unexpected TPM version “%1”"_s.arg(QString::fromUtf8(major));
+            result.detail = u"Unexpected TPM version \"%1\""_s.arg(QString::fromUtf8(major));
         }
     } else if (version.status == HostEntry::Status::Missing && deviceStatus == HostEntry::Status::Missing) {
         result.status = CheckStatus::Fail;

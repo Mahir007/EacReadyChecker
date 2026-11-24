@@ -67,7 +67,7 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
     bool ok = false;
     const quint64 taint = tainted.trimmed().toULongLong(&ok);
     if (!ok) {
-        return {title, CheckStatus::Unknown, u"Unexpected taint value “%1”"_s.arg(QString::fromUtf8(tainted.trimmed()))};
+        return {title, CheckStatus::Unknown, u"Unexpected taint value \"%1\""_s.arg(QString::fromUtf8(tainted.trimmed()))};
     }
     if (!(taint & (quint64(1) << TaintUnsignedModule))) {
         // Out-of-tree modules (O) are fine as long as they're signed. Name them, since they're the

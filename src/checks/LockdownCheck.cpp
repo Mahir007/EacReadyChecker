@@ -44,7 +44,7 @@ CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
     const QRegularExpressionMatch match = active.match(QString::fromUtf8(lockdown.trimmed()));
     if (!match.hasMatch()) {
         result.status = CheckStatus::Unknown;
-        result.detail = u"Unexpected lockdown state “%1”"_s.arg(QString::fromUtf8(lockdown.trimmed()));
+        result.detail = u"Unexpected lockdown state \"%1\""_s.arg(QString::fromUtf8(lockdown.trimmed()));
         return result;
     }
 

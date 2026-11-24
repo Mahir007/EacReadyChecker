@@ -18,7 +18,7 @@ CheckResult KexecCheck::evaluate(const HostSnapshot &snapshot) const
             result.detail = u"Kexec is allowed"_s;
         } else {
             result.status = CheckStatus::Unknown;
-            result.detail = u"Unexpected kexec_load_disabled value “%1”"_s.arg(QString::fromUtf8(value));
+            result.detail = u"Unexpected kexec_load_disabled value \"%1\""_s.arg(QString::fromUtf8(value));
         }
     } else if (disabled.status == HostEntry::Status::Missing) {
         // The sysctl only exists when the kernel is built with kexec (CONFIG_KEXEC_CORE). Without
