@@ -137,7 +137,11 @@ need. The `appstream` and `desktop-file` tests only exist if CMake found `appstr
 `desktop-file-validate`, and `release-notes` if it found Python 3.9 or later and git.
 
 `tst_fixtures` runs every check against every directory in `tests/fixtures`, without and with admin
-access, and compares the statuses to its `expected.json`.
+access, and compares the statuses to `checks` and `checksElevated` in its `expected.json`. Each
+directory holds the host files the checks read, under their real paths, and its `expected.json` says
+what the machine is. Those marked `"synthetic": true` were written by hand. To add a machine,
+capture it with `tools/capture-fixture.sh` (see [Debugging](#debugging)) and write its
+`expected.json` from statuses you've checked by hand.
 
 | Variable | Effect |
 | --- | --- |
