@@ -44,19 +44,19 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/ce0b4d9556e121ed5297aa8d22df4edbd9021da3/docs/screenshots/not-ready.png</image>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/61821adfa7654e4013150dd9cf431792330eec1d/docs/screenshots/not-ready.png</image>
       <caption>A machine that isn't ready, with the failing requirement opened</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/ce0b4d9556e121ed5297aa8d22df4edbd9021da3/docs/screenshots/ready.png</image>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/61821adfa7654e4013150dd9cf431792330eec1d/docs/screenshots/ready.png</image>
       <caption>A machine that meets every requirement</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/ce0b4d9556e121ed5297aa8d22df4edbd9021da3/docs/screenshots/needs-admin.png</image>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/61821adfa7654e4013150dd9cf431792330eec1d/docs/screenshots/needs-admin.png</image>
       <caption>Before admin access, the checks that need it are marked</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/ce0b4d9556e121ed5297aa8d22df4edbd9021da3/docs/screenshots/not-ready-dark.png</image>
+      <image>https://raw.githubusercontent.com/Mahir007/EacReadyChecker/61821adfa7654e4013150dd9cf431792330eec1d/docs/screenshots/not-ready-dark.png</image>
       <caption>The same machine that isn't ready, in a dark colour scheme</caption>
     </screenshot>
   </screenshots>
