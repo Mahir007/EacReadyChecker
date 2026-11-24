@@ -36,6 +36,8 @@ jobs:
         run: git ls-files -z '*.sh' | xargs -0 docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0
       - name: ruff
         run: docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/astral-sh/ruff:0.17.6 check --no-cache .
+      - name: clang-format
+        run: git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run --spec clang-format==23.1.5 clang-format --dry-run --Werror
 
   # The latest Debian release, with the apt packages from CONTRIBUTING.md.
   test-debian:

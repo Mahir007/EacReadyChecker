@@ -227,7 +227,7 @@ alpha and beta builds use `Debug` and keep their debug info. Release candidates 
 
 | Job | What it does |
 | --- | --- |
-| `lint` | actionlint, shellcheck and ruff. |
+| `lint` | actionlint, shellcheck, ruff and clang-format. |
 | `test (Debian)` | The tests on the latest Debian, with the apt packages above. |
 | `test (Homebrew)` | The tests on Ubuntu with Homebrew's Qt and compiler, installed with the brew command above. |
 | `test (minimum)` | The tests with the oldest versions the build accepts: Qt 6.5.0 from qt.io and CMake 3.22, on AlmaLinux 9 with GCC 11 and glibc 2.34. |
@@ -259,7 +259,7 @@ type. A pre-release's AppImage has no update information.
 | The KDE runtime | `runtime-version` in the Flatpak manifest, and the `kde-6.x` container image and cache keys of the `build` job. | When Flathub publishes a new branch and Flathub's `flatpak-github-actions` has an image for it. |
 | The AppImage's Qt | `QT_VERSION` in the `build-appimage` job, and the [AppImage](#appimage) commands. | With the KDE runtime. The AppImage bundles the Qt the Flatpak runs. |
 | QAdwaitaDecorations | `third_party/qadwaitadecorations`, at the commit named in `third_party/CMakeLists.txt`. | When upstream changes. Copy it unchanged, since our own changes go in `src/decoration`. Then run `compare-qt-releases.py` again on every release in `samePrivateApi`, since the private API it uses can change. |
-| Pinned tools | actionlint, shellcheck, ruff and aqtinstall in `ci.yml`, the AppImage runtime and appimagetool in `build-appimage.sh`, and the actions' major versions. | Before a release. |
+| Pinned tools | actionlint, shellcheck, ruff, clang-format and aqtinstall in `ci.yml`, the AppImage runtime and appimagetool in `build-appimage.sh`, and the actions' major versions. | Before a release. |
 | Epic's requirements | The checks in `src/checks`, the README's table of checks, and the date in `requirementsAsOf()` (`src/core/Report.cpp`). | When Epic changes the article, or publishes its key list. |
 | Well-known keys | See [Adding a well-known key](#adding-a-well-known-key). | When a vendor adds a certificate, or a report shows an unrecognised key from one of Epic's vendors. |
 | Screenshots | See [Updating the screenshots](#updating-the-screenshots). | After a UI change. |
@@ -271,5 +271,14 @@ as the scope (`app`, `checks`, `parsers`, `keys`, `host`, `report`, `tools` or `
 
 The build turns on Qt's strict string and keyword macros, so use `u"text"_s`, `Q_SLOTS` and
 `Q_EMIT`.
+
+Format C++ with the version of clang-format that `ci.yml` pins. Other versions format some code
+differently.
+
+```sh
+git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run --spec clang-format==23.1.5 clang-format -i
+```
+
+`third_party` isn't formatted.
 
 Changes to the checks are tested on real machines, and the captures become fixtures.
