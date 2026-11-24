@@ -42,3 +42,10 @@ foreach(test tst_colorscheme tst_motion)
     endif()
     set_tests_properties(${test} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endforeach()
+
+# The release notes script, which the release workflow runs. It needs Python 3.9 and git.
+find_package(Python3 3.9 COMPONENTS Interpreter)
+find_package(Git)
+if(Python3_Interpreter_FOUND AND GIT_FOUND)
+    add_test(NAME release-notes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_release_notes.py)
+endif()

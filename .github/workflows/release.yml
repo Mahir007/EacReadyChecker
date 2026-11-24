@@ -18,8 +18,8 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
-            echo "::error::$TAG isn't a version tag (v1.2.3 or v1.2.3-rc.1)"
+          if ! printf '%s\n' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[1-9][0-9]*)?$'; then
+            echo "::error::$TAG isn't a version tag (v1.2.3, or v1.2.3-alpha.1, -beta.1 or -rc.1)"
             exit 1
           fi
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
@@ -47,6 +47,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # checkout makes the pushed tag a lightweight one, which loses its message.
+      - name: Fetch the tags
+        run: git fetch --force --tags origin
       - uses: actions/download-artifact@v8
         with:
           pattern: release-*
@@ -54,7 +57,7 @@ jobs:
           merge-multiple: true
       - name: Write the release notes
         run: |
-          python3 .github/scripts/release-notes.py "$TAG" > notes.md
+          python3 .github/scripts/release-notes.py "$TAG" "$GITHUB_REPOSITORY" release/*.sha256 > notes.md
           cat notes.md >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/attest@v4
         if: ${{ !github.event.repository.private }}
@@ -71,9 +74,18 @@ jobs:
             gh release upload "$TAG" release/* --clobber
             gh release edit "$TAG" --title "$TAG" --notes-file notes.md --prerelease="$prerelease"
           else
-            gh release create "$TAG" release/* --title "$TAG" --notes-file notes.md \
+            gh release create "$TAG" release/* --draft --title "$TAG" --notes-file notes.md \
               --prerelease="$prerelease" --verify-tag
           fi
+          # The notes link to the files by name, and GitHub renames files with some characters in
+          # their names. A pre-release's names have a "+". The release stays a draft until they're
+          # checked.
+          missing=$(comm -23 <(cd release && printf '%s\n' * | sort) <(gh release view "$TAG" --json assets -q '.assets[].name' | sort))
+          if [ -n "$missing" ]; then
+            echo "::error::GitHub renamed these files, so the notes' links don't work: $missing"
+            exit 1
+          fi
+          gh release edit "$TAG" --draft=false
       - name: Delete the release artifacts
         run: |
           ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \

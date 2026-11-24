@@ -11,7 +11,7 @@
 | `src/app` | The Qt Widgets window (`eacheck_app`). |
 | `src/cli` | `--json` and `--text` output. |
 | `src/decoration` | The GNOME title bar plugin's entry point. It subclasses QAdwaitaDecorations' decoration to add a shadow to unfocused windows. |
-| `tests` | Qt Test binaries. `tests/fixtures` has sysroots captured from real machines or written by hand. |
+| `tests` | Qt Test binaries, and the release notes script's tests. `tests/fixtures` has sysroots captured from real machines or written by hand. |
 | `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
 | `packaging` | Flatpak manifest, AppImage build scripts, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from, screenshots, and the README's download buttons. |
@@ -134,7 +134,7 @@ ctest --test-dir build -R tst_fixtures           # one binary
 
 Run `tst_mainwindow` and `tst_iconwidget` through `ctest`, which sets the offscreen platform they
 need. The `appstream` and `desktop-file` tests only exist if CMake found `appstreamcli` and
-`desktop-file-validate`.
+`desktop-file-validate`, and `release-notes` if it found Python 3.9 or later and git.
 
 `tst_fixtures` runs every check against every directory in `tests/fixtures`, without and with admin
 access, and compares the statuses to its `expected.json`.
@@ -234,14 +234,22 @@ alpha and beta builds use `Debug` and keep their debug info. Release candidates 
 | `build`, `check` | Builds the Flatpak bundle in Flathub's KDE container, installs it on Ubuntu and checks its version. |
 | `build-appimage`, `check-appimage` | Builds the AppImage on AlmaLinux 9, runs it on Ubuntu and opens its window in Weston with GNOME's settings. |
 
-To release, push an annotated tag such as `v1.2.0`. Its message becomes the release's description
-in the metainfo, so write it as paragraphs and `- ` lists, with `` `code` `` for commands.
+To release, push an annotated tag: `v1.2.0`, or `v1.2.0-alpha.1`, `-beta.1` or `-rc.1` for a
+pre-release.
+
+```sh
+git tag -a v1.2.0 -m v1.2.0 -m "A summary of the release."
+```
+
+The message after its first line goes at the top of the release notes and becomes the release's
+description in the metainfo, so write it as paragraphs and `- ` lists, with `` `code` `` for
+commands.
 `packaging/metainfo-releases.py` builds the metainfo's `<releases>` from the tags reachable from the
 commit, and a build without tags, such as a shallow clone, lists only its own version. A
 pre-release is listed as `1.2.0~rc.1`, because AppStream sorts `1.2.0-rc.1` after `1.2.0`.
 `release.yml` builds both packages through `ci.yml` with that version and publishes them with notes
-from `.github/scripts/release-notes.py`. A tag with a hyphen, such as `v1.2.0-rc.1`, makes a
-pre-release, and its AppImage has no update information.
+from `.github/scripts/release-notes.py`, which groups the commits by their Conventional Commits
+type. A pre-release's AppImage has no update information.
 
 ## Upkeep
 
