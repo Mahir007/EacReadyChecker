@@ -40,7 +40,7 @@ public:
 
     // Reads every request into `snapshot`. If the read as a whole fails, the requests are inserted
     // with status NotRead and the error is returned. Setting `cancelled` aborts a pending read,
-    // e.g. one waiting on the password dialog.
+    // such as one waiting on the password dialog.
     Result read(const QList<HostRequest> &requests, Privilege privilege, HostSnapshot &snapshot, const std::atomic_bool *cancelled = nullptr) const;
 
     Transport transport() const { return m_transport; }

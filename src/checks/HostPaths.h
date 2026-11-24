@@ -12,7 +12,7 @@ inline const QString ShimLockGuid = QStringLiteral("605dab50-e046-4300-abb6-3dd8
 inline const QString EfiDir = QStringLiteral("/sys/firmware/efi");
 inline const QString SecureBoot = QStringLiteral("/sys/firmware/efi/efivars/SecureBoot-") + EfiGlobalGuid;
 inline const QString SetupMode = QStringLiteral("/sys/firmware/efi/efivars/SetupMode-") + EfiGlobalGuid;
-// shim splits a long list into MokListRT, MokListRT1, MokListRT2, … The kernel's copy in
+// shim splits a long list into MokListRT, MokListRT1, MokListRT2 and so on. The kernel's copy in
 // /sys/firmware/efi/mok-variables/ is root-only (0400), so it isn't read.
 inline const QString MokListRt = QStringLiteral("/sys/firmware/efi/efivars/MokListRT*-") + ShimLockGuid;
 

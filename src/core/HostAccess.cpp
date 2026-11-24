@@ -146,7 +146,7 @@ HostAccess::HostAccess(Transport transport, const QStringList &hostCommandPrefix
 HostAccess HostAccess::forCurrentEnvironment(const QString &sysroot)
 {
     if (isFlatpak()) {
-        // --watch-bus: the host command dies with us, e.g. a pending pkexec when the window closes.
+        // --watch-bus: the host command dies with the app, as a pending pkexec does when the window closes.
         return HostAccess(Transport::Shell, {u"flatpak-spawn"_s, u"--host"_s, u"--watch-bus"_s}, sysroot);
     }
     return HostAccess(Transport::Direct, {}, sysroot);

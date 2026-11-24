@@ -7,7 +7,7 @@
 #
 #   packaging/appimage/build-appimage.sh <qt-prefix> <output-dir>
 #
-# <qt-prefix> is a qt.io Qt with qtbase, qtwayland, qtsvg and icu, e.g. ~/qt/6.11.3/gcc_64.
+# <qt-prefix> is a qt.io Qt with qtbase, qtwayland, qtsvg and icu, such as ~/qt/6.11.3/gcc_64.
 # VERSION is the version to stamp (default 0.0.0-dev), and BUILD_TYPE the build profile: Release
 # (the default) or Debug, which keeps the debug info. SOURCE_DATE_EPOCH defaults to the commit's
 # time, so the same commit and Qt give the same file. BUILD_DIR defaults to build-appimage in the

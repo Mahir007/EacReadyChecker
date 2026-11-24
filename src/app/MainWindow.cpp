@@ -203,12 +203,11 @@ void MainWindow::createMenuBar()
     m_menuBar->hide();
 
     QMenu *file = m_menuBar->addMenu(u"&File"_s);
-    // No Refresh button: what the checks read rarely changes without a reboot. F5 runs them again,
-    // with admin access once it's been granted.
+    // F5 runs the checks again, with admin access once it's been granted.
     m_runAgainAction = file->addAction(u"Run &Again"_s, this, [this] {
         runChecks(m_report.privilegedState == PrivilegedState::Granted);
     });
-    // Not QKeySequence::Refresh: that keeps only the platform's first binding, Ctrl+R on GNOME.
+    // QKeySequence::Refresh keeps only the platform's first binding, which is Ctrl+R on GNOME.
     m_runAgainAction->setShortcut(Qt::Key_F5);
     m_runFullAction = file->addAction(u"Run &Full Check…"_s, this, [this] {
         runChecks(true);
@@ -416,7 +415,7 @@ void MainWindow::copyReport(bool json)
 
 void MainWindow::showAbout()
 {
-    // Not QMessageBox::about(): that blocks in its own event loop, so the window couldn't be tested.
+    // QMessageBox::about() would block in its own event loop, where the tests can't reach it.
     auto *box = new AboutBox(this);
     box->setAttribute(Qt::WA_DeleteOnClose);
     box->setAttribute(Qt::WA_WindowPropagation); // the window's colours

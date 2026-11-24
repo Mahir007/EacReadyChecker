@@ -59,7 +59,7 @@ inline QByteArray testFile(const QString &name)
     return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
 }
 
-// Not on the list. CN=EACheck test MOK, O=EACheck tests.
+// A certificate that isn't on the list: CN=EACheck test MOK, O=EACheck tests.
 inline QByteArray unknownCertificate()
 {
     return testFile(QStringLiteral("test-mok.der"));

@@ -39,7 +39,7 @@ CheckResult LockdownCheck::evaluate(const HostSnapshot &snapshot) const
         return result;
     }
 
-    // e.g. "none [integrity] confidentiality"
+    // The file reads like "none [integrity] confidentiality".
     static const QRegularExpression active(u"\\[(\\w+)\\]"_s);
     const QRegularExpressionMatch match = active.match(QString::fromUtf8(lockdown.trimmed()));
     if (!match.hasMatch()) {

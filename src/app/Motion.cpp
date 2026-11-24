@@ -137,8 +137,8 @@ void followDesktop()
     QDBusConnection bus = QDBusConnection::sessionBus();
     QDBusMessage message = QDBusMessage::createMethodCall(PortalService, PortalPath, PortalInterface, u"ReadAll"_s);
     message << QStringList{Appearance, GnomeInterface, KdeGroup};
-    // Not blocking, unlike the colour scheme: nothing moves until the checks finish, and starting
-    // a portal that isn't running yet can take a while.
+    // Unlike the colour scheme, this doesn't wait for the reply: nothing moves until the checks
+    // finish, and starting a portal that isn't running yet can take a while.
     auto *watcher = new QDBusPendingCallWatcher(bus.asyncCall(message, PortalTimeoutMs), qApp);
     QObject::connect(watcher, &QDBusPendingCallWatcher::finished, qApp, [](QDBusPendingCallWatcher *call) {
         call->deleteLater();

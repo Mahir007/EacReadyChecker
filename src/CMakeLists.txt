@@ -56,7 +56,7 @@ target_link_libraries(eacheck_app
     PUBLIC eacheck_core Qt6::Widgets
     PRIVATE Qt6::DBus eacheck_settings
 )
-# Fallback icons for themes that lack the status icons (e.g. Adwaita without Breeze installed).
+# Fallback icons for themes that lack the status icons, such as Adwaita without Breeze.
 qt_add_resources(eacheck_app "icons"
     PREFIX "/icons"
     BASE app/icons

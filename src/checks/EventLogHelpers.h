@@ -24,8 +24,7 @@ Loaded load(const HostSnapshot &snapshot);
 
 // Every X.509 certificate in a PCR 7 EV_EFI_VARIABLE_AUTHORITY event must be a well-known key.
 // Those events record which db, shim or MOK certificate verified each stage of the boot chain.
-// Other authority data (e.g. shim's SbatLevel) isn't a key and isn't judged, and neither are
-// the keys that verified firmware drivers such as option ROMs. Each
-// authority is appended to `raw`.
+// Other authority data, such as shim's SbatLevel, isn't a key and isn't judged, and neither are
+// the keys that verified firmware drivers like option ROMs. Each authority is appended to `raw`.
 SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString &title, QJsonArray &raw);
 } // namespace EventLogHelpers

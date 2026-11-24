@@ -15,8 +15,8 @@ class Check
 public:
     virtual ~Check() = default;
 
-    virtual QString id() const = 0;    // stable key used in --json, e.g. "tpm"
-    virtual QString title() const = 0; // UI title, e.g. "TPM 2.0"
+    virtual QString id() const = 0;    // stable key used in --json, such as "tpm"
+    virtual QString title() const = 0; // UI title, such as "TPM 2.0"
 
     virtual QList<HostRequest> requests() const = 0;
     // Reads that need root. Only made after the user asks for the full check.

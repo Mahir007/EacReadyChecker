@@ -10,11 +10,11 @@
 bool hasWildcard(QStringView path);
 
 // One thing a check wants from the host. `pattern` is an absolute host path. Any component may
-// use shell wildcards (* ? [...]), e.g. "/sys/kernel/iommu_groups/*/type".
+// use shell wildcards (* ? [...]), as in "/sys/kernel/iommu_groups/*/type".
 struct HostRequest {
     enum class Kind {
         Read, // read every matching file
-        List, // only report which paths match (e.g. entries of /sys/class/iommu)
+        List, // only report which paths match, such as the entries of /sys/class/iommu
     };
 
     Kind kind = Kind::Read;

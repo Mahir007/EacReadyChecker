@@ -8,7 +8,7 @@
 #include <optional>
 
 struct WellKnownKey {
-    QString vendor;  // name as Epic publishes it, e.g. "Fedora Secure Boot CA"
+    QString vendor;  // name as Epic publishes it, such as "Fedora Secure Boot CA"
     QString subject; // full certificate subject, for display only
     QByteArray sha256;
 };

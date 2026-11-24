@@ -66,9 +66,9 @@ SubCheckResult groupTypes(const HostSnapshot &snapshot)
             other.append(u"%1 (%2)"_s.arg(group, QString::fromUtf8(type)));
         }
     }
-    // Only system-wide passthrough fails. The kernel puts single devices in
-    // identity mode for its own reasons, e.g. the AMD IOMMU driver does it for every APU's
-    // integrated GPU, so some identity groups alongside translated ones are fine.
+    // Only system-wide passthrough fails. The kernel puts single devices in identity mode for its own
+    // reasons: the AMD IOMMU driver does it for every APU's integrated GPU. So some identity groups
+    // alongside translated ones are fine.
     if (identity.size() == types.size()) {
         return {title, CheckStatus::Fail, u"All %1 groups use passthrough (identity)"_s.arg(types.size())};
     }

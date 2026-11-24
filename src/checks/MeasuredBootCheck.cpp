@@ -15,7 +15,7 @@ namespace
 {
 // PCRs the firmware log can reproduce. Userspace extends some PCRs after boot without adding to
 // this log: IMA uses 10, systemd-pcrphase 11, and systemd's other measurements 15. 16 is for
-// debugging, 17–22 for DRTM and 23 for applications.
+// debugging, 17-22 for DRTM and 23 for applications.
 bool replayable(quint32 pcr)
 {
     return pcr <= 14 && pcr != 10 && pcr != 11;
@@ -134,7 +134,7 @@ SubCheckResult kernelMeasured(const EventLogHelpers::Loaded &loaded, QJsonObject
     }
     const QList<TcgEventLog::Event> &events = loaded.log->events;
 
-    // GRUB: the kernel image into PCR 9 (event text is its path), and "kernel_cmdline: <path> …"
+    // GRUB: the kernel image into PCR 9 (event text is its path), and "kernel_cmdline: <path> ..."
     // into PCR 8.
     QSet<QString> grubFiles;
     for (const TcgEventLog::Event &event : events) {

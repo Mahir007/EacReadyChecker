@@ -26,7 +26,7 @@ public:
     // Values of every `name=value` in command-line order.
     QStringList values(QStringView name) const;
 
-    // kstrtobool(): 1/y/Y/on → true, 0/n/N/off → false.
+    // As kstrtobool() reads it: 1, y, Y and on are true, 0, n, N and off are false.
     static std::optional<bool> parseBool(QStringView value);
 
 private:

@@ -301,7 +301,7 @@ private Q_SLOTS:
         QApplication::setStyle(u"Fusion"_s);
         QWidget widget;
 
-        // Not on other desktops.
+        // followPlasmaFont() does nothing on other desktops.
         qputenv("XDG_CURRENT_DESKTOP", "GNOME");
         followPlasmaFont();
         QVERIFY(m_portal.emitChanged(general, u"font"_s, serif));

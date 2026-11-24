@@ -41,7 +41,7 @@ Verdict overallVerdict(const QList<CheckResult> &results);
 // granting access is the one thing the user can do about it.
 CheckStatus combineStatus(const QList<SubCheckResult> &subChecks);
 
-QString statusKey(CheckStatus status);   // stable machine-readable name, e.g. "needs-admin"
-QString statusLabel(CheckStatus status); // UI text, e.g. "Needs admin"
+QString statusKey(CheckStatus status);   // stable machine-readable name, such as "needs-admin"
+QString statusLabel(CheckStatus status); // UI text, such as "Needs admin"
 QString verdictKey(Verdict verdict);
 QString verdictLabel(Verdict verdict);

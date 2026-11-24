@@ -13,7 +13,7 @@ using namespace Qt::StringLiterals;
 // Edge cases for each check, on small hand-made sysroots. Whole-machine scenarios live in
 // tests/fixtures/ (tst_fixtures).
 //
-// Files: host path → contents. A path ending in '/' creates an empty directory.
+// Files: contents by host path. A path ending in '/' creates an empty directory.
 using Files = QMap<QString, QByteArray>;
 
 namespace
@@ -162,7 +162,7 @@ private Q_SLOTS:
         {
             Files files = withIommu({});
             files.insert(u"/sys/kernel/iommu_groups/1/type"_s, "identity\n");
-            // One device in identity mode (e.g. an AMD APU's integrated GPU) isn't system-wide passthrough.
+            // One device in identity mode, such as an AMD APU's integrated GPU, isn't system-wide passthrough.
             QTest::newRow("iommu: one identity group") << iommu << files << QString() << u"pass"_s << QString();
             QTest::newRow("iommu: one identity group, sub-check")
                 << iommu << files << u"No passthrough (group types)"_s << u"pass"_s << u"Only group 1 uses passthrough"_s;

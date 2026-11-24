@@ -46,7 +46,7 @@ public:
 protected:
     void leaveEvent(QEvent *) override { fadeHover(0); }
 
-    // Not enterEvent: an enter doesn't say whether a finger or the pointer caused it. Its move does.
+    // A move says whether a finger or the pointer caused it. An enter event doesn't.
     void mouseMoveEvent(QMouseEvent *event) override
     {
         if (event->pointingDevice()->type() != QInputDevice::DeviceType::TouchScreen) {
@@ -184,7 +184,7 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     , m_subLayout(new QVBoxLayout(m_subChecks))
     , m_reveal(new Revealer(m_subChecks, this))
 {
-    // Not checkable: Breeze draws a checked tool button as pressed, which boxes the arrow.
+    // Breeze draws a checked tool button as pressed, which would box the arrow, so it isn't checkable.
     m_expander->setAutoRaise(true);
     m_expander->setAccessibleName(u"Show details"_s);
     // Keep the arrow's column when hidden so titles line up across rows.
@@ -246,7 +246,7 @@ void CheckRow::setPending()
     m_status.reset();
     m_detail->setText(u"Checking…"_s);
     m_detail->show();
-    // Drop the old sub-checks rather than show stale results under "Checking…". The row stays
+    // Drop the old sub-checks rather than show stale results while it checks. The row stays
     // expanded (or not) for when the result arrives.
     clearSubChecks();
     setExpandable(false);

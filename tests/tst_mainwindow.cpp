@@ -71,7 +71,6 @@ private:
 
     static QString message(const QWidget &window) { return window.findChild<MessageBar *>()->findChild<QLabel *>()->text(); }
 
-    // The message bar's Revealer.
     static Revealer *messageReveal(const QWidget &window) { return qobject_cast<Revealer *>(window.findChild<MessageBar *>()->parentWidget()->parentWidget()); }
 
     static void screenshot(QWidget &window, const QString &name)
@@ -95,7 +94,7 @@ private Q_SLOTS:
 
     void bundledIconsWithoutTheme()
     {
-        // No theme has our icons (e.g. Adwaita without Breeze installed): use the bundled ones.
+        // With no theme that has the app's icons, as with Adwaita and no Breeze, the bundled ones are used.
         const QString theme = QIcon::themeName();
         const QString fallback = QIcon::fallbackThemeName();
         QIcon::setThemeName(u"no-such-theme"_s);
@@ -161,7 +160,7 @@ private Q_SLOTS:
         QCOMPARE(rows[1]->size(), tpmSize);
 
         // A fixture sysroot grants admin reads without pkexec. While it runs, only the rows that
-        // need admin go back to "Checking…".
+        // need admin go back to checking.
         const auto detail = [&rows](int row) {
             return rows[row]->findChild<QLabel *>(u"detail"_s)->text();
         };
@@ -770,7 +769,7 @@ private Q_SLOTS:
             QTRY_VERIFY(!expanded());
             QCOMPARE(header->grab().toImage(), plain);
         }
-        // Not to the tap's spot: Qt drops a move that goes nowhere.
+        // Qt drops a move to the spot the pointer is already at, so move next to it.
         QTest::mouseMove(title, title->rect().center() + QPoint(4, 0));
         QTRY_VERIFY(header->grab().toImage() != plain);
         QTest::mouseMove(&window, QPoint(1, 1));

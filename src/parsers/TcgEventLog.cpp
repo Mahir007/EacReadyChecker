@@ -68,7 +68,7 @@ std::optional<QCryptographicHash::Algorithm> hashAlgorithm(quint16 algorithm)
     }
 }
 
-// PFP §10.4.5.3: the locality the TPM started in, which becomes the last byte of PCR 0.
+// PFP section 10.4.5.3: the locality the TPM started in, which becomes the last byte of PCR 0.
 quint8 startupLocality(const TcgEventLog::Log &log)
 {
     bool hcrtm = false;

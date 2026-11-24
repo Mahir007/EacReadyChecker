@@ -26,7 +26,7 @@ std::optional<QByteArray> authorityCertificate(const QByteArray &data)
 }
 
 // Firmware logs an authority just before it measures the image it verified. If the next image
-// is a driver (e.g. a GPU's option ROM), the key verified firmware, not the boot chain.
+// is a driver, such as a GPU's option ROM, the key verified firmware, not the boot chain.
 bool verifiedDriver(const QList<TcgEventLog::Event> &events, qsizetype authority)
 {
     for (qsizetype i = authority + 1; i < events.size(); ++i) {
@@ -130,7 +130,7 @@ SubCheckResult authoritiesWellKnown(const HostSnapshot &snapshot, const QString 
         return {title, CheckStatus::Fail, CheckHelpers::unrecognisedKeys(unknown)};
     }
     if (certificates == 0) {
-        // Nothing verified the boot chain, e.g. because Secure Boot is off.
+        // Nothing verified the boot chain, as when Secure Boot is off.
         return {title, CheckStatus::Fail, u"TPM event log shows no Secure Boot verification"_s};
     }
     QString detail = vendors.join(u", "_s);

@@ -265,7 +265,7 @@ private Q_SLOTS:
         QCOMPARE(s.file(u"/nonexistent/file"_s).status, Status::Missing);
     }
 
-    // uutils (e.g. Arch with uutils as coreutils) is one multi-call binary. Run both host reads
+    // uutils, as on Arch with uutils as coreutils, is one multi-call binary. Run both host reads
     // with its tools first on PATH, and pkexec emulated the way polkit 127+ runs a program: the
     // symlink-resolved path, with the original argv[0]. Set EACHECK_UUTILS_BIN to a directory of
     // plain-named uutils links; Homebrew's uutils-coreutils is found by default.

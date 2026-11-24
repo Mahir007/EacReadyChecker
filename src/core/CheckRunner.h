@@ -29,7 +29,7 @@ public:
 
     // Runs off the UI thread and emits finished(). Ignored while a run is in progress.
     void start(bool elevate);
-    // Aborts a pending host read (e.g. an unanswered password dialog). The run still finishes.
+    // Aborts a pending host read, such as an unanswered password dialog. The run still finishes.
     void cancel() { m_cancelled = true; }
     bool isRunning() const { return m_watcher.isRunning(); }
 

@@ -11,11 +11,11 @@
 #include <optional>
 
 // The TCG2 crypto-agile event log in /sys/kernel/security/tpm0/binary_bios_measurements (TCG PC
-// Client Platform Firmware Profile, §10). The first event is a SHA-1-format Spec ID event that
+// Client Platform Firmware Profile, section 10). The first event is a SHA-1-format Spec ID event that
 // lists the digest banks. Every later event carries one digest per bank.
 namespace TcgEventLog
 {
-// Event types used by the checks (PFP §10.4.1).
+// Event types used by the checks (PFP section 10.4.1).
 enum EventType : quint32 {
     NoAction = 0x3,
     Separator = 0x4,
@@ -40,7 +40,7 @@ enum Algorithm : quint16 {
 struct Event {
     quint32 pcr = 0;
     quint32 type = 0;
-    QHash<quint16, QByteArray> digests; // TPM_ALG_ID → digest
+    QHash<quint16, QByteArray> digests; // by TPM_ALG_ID
     QByteArray data;
 };
 
@@ -52,7 +52,7 @@ struct Log {
 struct ParseResult {
     enum class Error {
         None,
-        NotCryptoAgile, // no Spec ID Event03, e.g. a TPM 1.2 SHA-1 log
+        NotCryptoAgile, // no Spec ID Event03, as in a TPM 1.2 SHA-1 log
         Malformed,
     };
     Error error = Error::None;
@@ -77,5 +77,5 @@ std::optional<VariableData> variableData(const Event &event);
 // Text of an EV_IPL event without trailing NULs. GRUB writes ASCII, systemd UTF-16LE.
 QString text(const Event &event);
 
-QString algorithmName(quint16 algorithm); // "sha256", or "0x…" for others
+QString algorithmName(quint16 algorithm); // "sha256", or "0x..." for others
 } // namespace TcgEventLog

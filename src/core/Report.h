@@ -24,7 +24,7 @@ struct Report {
 
     Verdict verdict() const { return overallVerdict(results); }
     // Why results may be missing: the host read failed, or admin access wasn't granted. Lowercase
-    // phrases, e.g. "admin access wasn't granted". Empty when neither happened.
+    // phrases, such as "admin access wasn't granted". Empty when neither happened.
     QStringList accessProblems() const;
     QJsonObject toJson() const;
     QString toText() const;
@@ -33,8 +33,8 @@ struct Report {
 // Short "as of" date for the published requirements the checks follow.
 QString requirementsAsOf();
 
-// Raw value for a host entry: trimmed text for small text files, hex for small binaries (e.g. EFI
-// variables), otherwise size + sha256.
+// Raw value for a host entry: trimmed text for small text files, hex for small binaries such as EFI
+// variables, otherwise size + sha256.
 QJsonValue rawValue(const HostEntry &entry);
 
 // Raw values for everything a check requested, keyed by path (or by pattern for List requests and
