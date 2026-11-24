@@ -76,9 +76,8 @@ jobs:
         run: |
           rm -f /etc/apt/apt.conf.d/docker-clean
           apt-get update
-          # PACKAGES is a list, so it's split on purpose.
-          # shellcheck disable=SC2086
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $PACKAGES
+          read -ra packages <<< "$PACKAGES"
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
       # Drops the versions that are no longer installed, so the cache doesn't grow.
       - name: Prune the package cache
         if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
@@ -173,20 +172,18 @@ jobs:
         run: |
           mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
-          # The package lists are split on purpose.
-          # shellcheck disable=SC2086
+          read -ra packages <<< "$PACKAGES"
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            -o Dir::Cache::Archives="$APT_ARCHIVES" -o APT::Keep-Downloaded-Packages=true $PACKAGES
+            -o Dir::Cache::Archives="$APT_ARCHIVES" -o APT::Keep-Downloaded-Packages=true "${packages[@]}"
           # A restored prefix can be up to a week old. This brings it up to date, so the job still
           # tests the newest Qt and GCC, and pours only the bottles that changed.
           if [ "$RESTORED" = true ]; then
             brew upgrade
           fi
-          # shellcheck disable=SC2086
-          brew install $BREW_PACKAGES
+          read -ra formulae <<< "$BREW_PACKAGES"
+          brew install "${formulae[@]}"
           gcc=$(brew list --versions gcc | cut -d' ' -f2 | cut -d. -f1)
           echo "CXX=$(brew --prefix)/bin/g++-$gcc" >> "$GITHUB_ENV"
-      # Drop the versions that are no longer installed, so the caches don't grow.
       - name: Prune the package caches
         if: github.ref == 'refs/heads/main'
         run: |
@@ -268,9 +265,8 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False --setopt=keepcache=True epel-release dnf-plugins-core
           dnf config-manager --set-enabled crb
-          # PACKAGES is a list, so it's split on purpose.
-          # shellcheck disable=SC2086
-          dnf install -y --setopt=install_weak_deps=False --setopt=keepcache=True $PACKAGES
+          read -ra packages <<< "$PACKAGES"
+          dnf install -y --setopt=install_weak_deps=False --setopt=keepcache=True "${packages[@]}"
       - name: Prune the package cache
         if: github.ref == 'refs/heads/main' && steps.restore-packages.outputs.cache-hit != 'true'
         run: |
@@ -311,9 +307,8 @@ jobs:
       - name: Install Qt
         if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
-          # QT_ARCHIVES is a list, so it's split on purpose.
-          # shellcheck disable=SC2086
-          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --archives $QT_ARCHIVES --outputdir ~/qt
+          read -ra archives <<< "$QT_ARCHIVES"
+          aqt install-qt linux desktop "$QT_VERSION" gcc_64 --archives "${archives[@]}" --outputdir ~/qt
       - name: Restore the compiler cache
         uses: actions/cache/restore@v6
         with:
@@ -481,7 +476,6 @@ jobs:
       AQT_VERSION: 3.3.0
       QT_ARCHIVES: qtbase qtwayland qtsvg icu
     steps:
-      # The metainfo's releases come from the tags.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -509,10 +503,9 @@ jobs:
       - name: Install Qt
         if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
-          # QT_ARCHIVES is a list, so it's split on purpose.
-          # shellcheck disable=SC2086
+          read -ra archives <<< "$QT_ARCHIVES"
           pipx run --spec "aqtinstall==$AQT_VERSION" aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 \
-            --archives $QT_ARCHIVES --outputdir ~/qt
+            --archives "${archives[@]}" --outputdir ~/qt
       - name: Cache the AppImage tools
         uses: actions/cache@v6
         with:
