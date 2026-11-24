@@ -735,6 +735,8 @@ private Q_SLOTS:
         static QPointingDevice *screen = QTest::createTouchDevice();
         CheckRow *row = window.findChildren<CheckRow *>().constFirst();
         QLabel *title = row->findChildren<QLabel *>().constFirst();
+        QLabel *detail = row->findChild<QLabel *>(u"detail"_s);
+        QVERIFY(detail->isVisible());
         QWidget *header = title->parentWidget();
         QToolButton *arrow = row->findChild<QToolButton *>();
         const auto expanded = [&] {
@@ -761,7 +763,7 @@ private Q_SLOTS:
         // A tap on the row or its arrow expands and collapses it, as a click does. It leaves no
         // hover behind, which the mouse does.
         const QImage plain = header->grab().toImage();
-        for (QWidget *target : {static_cast<QWidget *>(title), static_cast<QWidget *>(arrow)}) {
+        for (QWidget *target : {static_cast<QWidget *>(title), static_cast<QWidget *>(detail), static_cast<QWidget *>(arrow)}) {
             tap(at(target));
             QTRY_VERIFY(expanded());
             tap(at(target));

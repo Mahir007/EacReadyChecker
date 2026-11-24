@@ -57,6 +57,11 @@ protected:
 
     void mousePressEvent(QMouseEvent *event) override
     {
+        // Up to Qt 6.7.2, the move Qt sends to where a finger presses, just before the press, says
+        // the mouse made it. The hover hasn't had time to fade in, so it goes without being drawn.
+        if (event->pointingDevice()->type() == QInputDevice::DeviceType::TouchScreen) {
+            fadeHover(0);
+        }
         // Labels pass clicks on to here. Accepting the press keeps the release here too.
         event->setAccepted(toggle && event->button() == Qt::LeftButton);
     }
