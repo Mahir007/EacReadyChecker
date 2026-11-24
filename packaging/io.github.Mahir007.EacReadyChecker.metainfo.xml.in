@@ -68,9 +68,15 @@
 
   <content_rating type="oars-1.1"/>
 
+  <!-- PCs, handhelds and tablets, not phones. Phones are about 360 to 430 logical pixels on their
+       short side, and PC handhelds 540 (a 1080p screen at 200%) or more. -->
+  <requires>
+    <display_length compare="ge">500</display_length>
+  </requires>
   <supports>
     <control>pointing</control>
     <control>keyboard</control>
+    <control>touch</control>
   </supports>
 
 @EACHECK_RELEASES@
