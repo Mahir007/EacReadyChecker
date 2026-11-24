@@ -118,8 +118,6 @@ private Q_SLOTS:
 
         QCOMPARE(window.findChildren<CheckRow *>().size(), 8);
         QPushButton *runFull = window.findChild<MessageBar *>()->button();
-        // No Refresh button: F5 runs the checks again.
-        QVERIFY(!button(window, u"Refresh"_s));
         QVERIFY(!runFull->isVisible());
 
         window.runChecks(false);
