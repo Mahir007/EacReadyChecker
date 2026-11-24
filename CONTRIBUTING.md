@@ -219,8 +219,11 @@ URLs.
 
 ## CI and releases
 
-`ci.yml` runs on every push. Compiler warnings are errors in the test jobs, except in the vendored
-title bar plugin.
+`ci.yml` runs on every push. The test jobs build with `Debug`, and compiler warnings are errors
+there, except in the vendored title bar plugin. A build is version `0.0.0-dev+<commit>`, or the
+tag's version when `release.yml` calls `ci.yml`, with `+<commit>` added for a pre-release. Dev,
+alpha and beta builds use `Debug` and keep their debug info. Release candidates and releases use
+`Release`.
 
 | Job | What it does |
 | --- | --- |

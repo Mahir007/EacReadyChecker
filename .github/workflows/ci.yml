@@ -45,11 +45,12 @@ jobs:
     container: debian:latest
     env:
       # dbus-daemon gives the colour scheme and motion tests a private session bus, and the checkout
-      # needs ca-certificates, which git only recommends.
+      # needs ca-certificates, which git only recommends. python3 runs the release notes tests, and
+      # mold is the fast profile's linker.
       PACKAGES: >-
         g++ git cmake ninja-build qt6-base-dev qt6-wayland qt6-svg-plugins breeze-icon-theme appstream desktop-file-utils
         qt6-base-private-dev qt6-wayland-private-dev qt6-svg-dev
-        dbus-daemon ca-certificates ccache
+        dbus-daemon ca-certificates ccache python3 mold
       CCACHE_MAXSIZE: 500M
     steps:
       # A new package cache each week, for each Debian release, and when the package list changes.
@@ -95,7 +96,7 @@ jobs:
           restore-keys: ccache-debian-
       - name: Configure
         run: >-
-          cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
         run: |
@@ -119,7 +120,7 @@ jobs:
     timeout-minutes: 45
     env:
       BREW_PACKAGES: glibc gcc cmake ninja qtbase qtsvg
-      PACKAGES: breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache
+      PACKAGES: breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache mold
       CCACHE_MAXSIZE: 500M
       # Homebrew rewrites the compiler when it installs it, so the mtime ccache checks by default is
       # new on every run.
@@ -210,8 +211,9 @@ jobs:
           restore-keys: ccache-homebrew-
       - name: Configure
         run: >-
-          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DCMAKE_CXX_COMPILER="$CXX"
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+          -DCMAKE_CXX_COMPILER="$CXX" -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DEACHECK_DECORATIONS=ON
+          -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
         run: |
           ccache --zero-stats
@@ -239,10 +241,11 @@ jobs:
       CMAKE_VERSION: 3.22.6
       AQT_VERSION: 3.3.0
       QT_ARCHIVES: qtbase qtwayland qtsvg icu
-      # The Qt private header check needs fontconfig-devel. Breeze and ccache are in EPEL.
+      # The Qt private header check needs fontconfig-devel. Breeze and ccache are in EPEL. lld is the
+      # fast profile's linker, as GCC 11 can't use mold.
       PACKAGES: >-
         gcc-c++ git ninja-build python3-pip libglvnd-devel libxkbcommon-devel wayland-devel fontconfig-devel
-        breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache
+        breeze-icon-theme appstream desktop-file-utils dbus-daemon ccache lld
       CCACHE_MAXSIZE: 500M
     steps:
       # As in the Debian job.
@@ -317,7 +320,7 @@ jobs:
           restore-keys: ccache-minimum-
       - name: Configure
         run: >-
-          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$HOME/qt/$QT_VERSION/gcc_64"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$HOME/qt/$QT_VERSION/gcc_64"
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DEACHECK_DECORATIONS=ON -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
       - name: Build
         run: |
@@ -339,6 +342,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.11
       # bubblewrap, which flatpak-builder runs the build in, needs it.
@@ -348,13 +353,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # A dev build is 0.0.0-dev+<commit>, and a pre-release has the commit too. Dev, alpha and beta
+      # builds use the fast build profile, release candidates and releases the release profile.
       - name: Version
+        id: version
         env:
           VERSION: ${{ inputs.version }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          echo "VERSION=${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" >> "$GITHUB_ENV"
-          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+          version=${VERSION:-0.0.0-dev}
+          case $version in *-*) version=$version+${GITHUB_SHA::7} ;; esac
+          case $version in *-dev+* | *-alpha.* | *-beta.*) build_type=Debug ;; *) build_type=Release ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          {
+            echo "VERSION=$version"
+            echo "BUILD_TYPE=$build_type"
+            echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_ENV"
       - name: Restore the build cache
         uses: actions/cache/restore@v6
         with:
@@ -367,10 +382,22 @@ jobs:
           stamped=packaging/flatpak/stamped.yml
           # flatpak-builder leaves out .git, so the metainfo's releases are made here.
           python3 packaging/metainfo-releases.py "$VERSION" > packaging/flatpak/releases.xml
-          sed "s/^\(      - -DBUILD_TESTING=OFF\)$/\1\n      - -DEACHECK_VERSION=$VERSION\n      - -DEACHECK_METAINFO_RELEASES=packaging\/flatpak\/releases.xml/" \
-            "$manifest" > "$stamped"
+          edits=(
+            -e "s/^\(      - -DCMAKE_BUILD_TYPE=\)Release$/\1$BUILD_TYPE/"
+            -e "s/^\(      - -DBUILD_TESTING=OFF\)$/\1\n      - -DEACHECK_VERSION=$VERSION\n      - -DEACHECK_METAINFO_RELEASES=packaging\/flatpak\/releases.xml/"
+          )
+          # The fast profile keeps the debug info in the app, rather than in a debug extension, which
+          # the bundle leaves out.
+          if [ "$BUILD_TYPE" = Debug ]; then
+            edits+=(-e 's/^\(    buildsystem: cmake-ninja\)$/\1\n    build-options:\n      no-debuginfo: true/')
+          fi
+          sed "${edits[@]}" "$manifest" > "$stamped"
+          grep -q -- "-DCMAKE_BUILD_TYPE=$BUILD_TYPE$" "$stamped"
           grep -q -- "-DEACHECK_VERSION=$VERSION$" "$stamped"
           grep -q -- "-DEACHECK_METAINFO_RELEASES=packaging/flatpak/releases.xml$" "$stamped"
+          if [ "$BUILD_TYPE" = Debug ]; then
+            grep -qx '      no-debuginfo: true' "$stamped"
+          fi
           flatpak-builder --disable-rofiles-fuse --ccache --force-clean --default-branch=stable \
             --override-source-date-epoch="$SOURCE_DATE_EPOCH" "$RUNNER_TEMP/build" "$stamped"
       # The build leaves out screenshots it can't download, and still succeeds. A private
@@ -431,24 +458,22 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends flatpak dbus-daemon
       - name: Check the bundle
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           sha256sum -c ./*.flatpak.sha256
           flatpak install --user -y --noninteractive ./*.flatpak
           # The runner has no session bus, and flatpak needs one for the app's D-Bus proxy.
           out=$(dbus-run-session -- flatpak run "$APP_ID" --version)
           echo "$out"
-          if [ -n "$VERSION" ]; then
-            [ "$out" = "eac-ready-checker $VERSION" ]
-          else
-            [ "$out" = "eac-ready-checker 0.0.0-dev+${GITHUB_SHA::7}" ]
-          fi
+          [ "$out" = "eac-ready-checker $VERSION" ]
 
   # The AppImage, with Qt from qt.io, built on AlmaLinux 9 so it runs on glibc 2.34 or later.
   # Like the bundle, the same commit gives the same file.
   build-appimage:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     env:
       QT_VERSION: 6.11.3
       AQT_VERSION: 3.3.0
@@ -458,12 +483,21 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # As in the build job. build-in-container.sh passes VERSION and BUILD_TYPE on.
       - name: Version
+        id: version
         env:
           VERSION: ${{ inputs.version }}
         run: |
-          echo "VERSION=${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" >> "$GITHUB_ENV"
-          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+          version=${VERSION:-0.0.0-dev}
+          case $version in *-*) version=$version+${GITHUB_SHA::7} ;; esac
+          case $version in *-dev+* | *-alpha.* | *-beta.*) build_type=Debug ;; *) build_type=Release ;; esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          {
+            echo "VERSION=$version"
+            echo "BUILD_TYPE=$build_type"
+            echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_ENV"
       - name: Cache Qt
         id: cache-qt
         uses: actions/cache@v6
@@ -549,7 +583,7 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends fuse3 weston dbus-daemon
       - name: Check the version
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.build-appimage.outputs.version }}
         run: |
           sha256sum -c ./*.AppImage.sha256
           files=(*.AppImage)
@@ -558,11 +592,11 @@ jobs:
           chmod +x "$app"
           out=$("$app" --version)
           echo "$out"
-          [ "$out" = "eac-ready-checker ${VERSION:-0.0.0-dev+${GITHUB_SHA::7}}" ]
+          [ "$out" = "eac-ready-checker $VERSION" ]
       # Only a release has it (build-appimage.sh). Its .zsync file has to describe this AppImage.
       - name: Check the update information
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ needs.build-appimage.outputs.version }}
         run: |
           info=$("$APP" --appimage-updateinformation)
           echo "$info"

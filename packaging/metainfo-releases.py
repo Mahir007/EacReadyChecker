@@ -6,7 +6,8 @@ Each v* tag reachable from HEAD gives a release, newest first, with the tag's da
 as the description. A message is plain paragraphs and "- " lists, with `code` spans. A pre-release
 is written with "~" in place of its first "-" (1.0.0~rc.1), because AppStream sorts 1.0.0-rc.1
 after 1.0.0. Without any tags, as in a shallow clone or outside git, the release is VERSION, dated
-SOURCE_DATE_EPOCH or the HEAD commit.
+SOURCE_DATE_EPOCH or the HEAD commit. VERSION's build metadata, such as the commit in
+1.2.0-beta.1+abc1234, is left out.
 
 Usage: metainfo-releases.py VERSION
 """
@@ -19,7 +20,7 @@ import sys
 from xml.sax.saxutils import escape
 
 REPO_URL = "https://github.com/Mahir007/EacReadyChecker"
-TAG = re.compile(r"^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.]+)?)$")
+TAG = re.compile(r"^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:-(?:alpha|beta|rc)\.[1-9][0-9]*)?)$")
 
 
 def git(*args):
@@ -97,7 +98,7 @@ def tagged_releases():
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__.strip().splitlines()[-1])
-    version = sys.argv[1]
+    version = sys.argv[1].split("+")[0]
     versions, entries = tagged_releases()
     if versions and TAG.match(f"v{version}") and version not in versions:
         sys.exit(f"metainfo-releases.py: {version} looks like a release, but HEAD has no v{version} tag")
