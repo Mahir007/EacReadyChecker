@@ -279,6 +279,7 @@ differently.
 git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run --spec clang-format==23.1.5 clang-format -i
 ```
 
-`third_party` isn't formatted.
+`third_party` isn't formatted. To leave the formatting commit out of `git blame`, run
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
 
 Changes to the checks are tested on real machines, and the captures become fixtures.
