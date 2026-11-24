@@ -373,6 +373,20 @@ jobs:
           grep -q -- "-DEACHECK_METAINFO_RELEASES=packaging/flatpak/releases.xml$" "$stamped"
           flatpak-builder --disable-rofiles-fuse --ccache --force-clean --default-branch=stable \
             --override-source-date-epoch="$SOURCE_DATE_EPOCH" "$RUNNER_TEMP/build" "$stamped"
+      # The build leaves out screenshots it can't download, and still succeeds. A private
+      # repository's screenshots can't be downloaded.
+      - name: Check the screenshots
+        env:
+          PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if ! zcat "$RUNNER_TEMP/build/files/share/app-info/xmls/$APP_ID.xml.gz" | grep '<screenshots>' > /dev/null; then
+            if [ "$PRIVATE" = true ]; then
+              echo "::warning::The bundle has no screenshots, because the repository is private"
+            else
+              echo "::error::The bundle has no screenshots: the build couldn't download them"
+              exit 1
+            fi
+          fi
       - name: Save the build cache
         if: github.ref == 'refs/heads/main'
         uses: actions/cache/save@v6
