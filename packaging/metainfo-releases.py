@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Print the metainfo's <releases> element, built from the repository's version tags.
 
-Each v* tag reachable from HEAD gives a release, newest first, with the tag's date and its message
-as the description. A message is plain paragraphs and "- " lists, with `code` spans. A pre-release
-is written with "~" in place of its first "-" (1.0.0~rc.1), because AppStream sorts 1.0.0-rc.1
-after 1.0.0. Without any tags, as in a shallow clone or outside git, the release is VERSION, dated
+Each v* tag reachable from HEAD gives a release, newest first, with the tag's date. Its description
+is the tag's message after the first paragraph, which is the tag's name. A message is plain
+paragraphs and "- " lists, with `code` spans. A pre-release is written with "~" in place of its
+first "-" (1.0.0~rc.1), because AppStream sorts 1.0.0-rc.1 after 1.0.0.
+
+Without any tags, as in a shallow clone or outside git, the release is VERSION, dated
 SOURCE_DATE_EPOCH or the HEAD commit. VERSION's build metadata, such as the commit in
 1.2.0-beta.1+abc1234, is left out.
 
@@ -77,19 +79,19 @@ def tagged_releases():
     # versionsort.suffix puts 1.0.0-rc.1 before 1.0.0, so the newest is first.
     out = git(
         "-c", "versionsort.suffix=-", "for-each-ref", "--merged", "HEAD", "--sort=-v:refname",
-        "--format=%(refname:strip=2)%1f%(objecttype)%1f%(creatordate:unix)%1f%(contents:subject)%1f%(contents:body)%1e",
+        "--format=%(refname:strip=2)%1f%(objecttype)%1f%(creatordate:unix)%1f%(contents:body)%1e",
         "refs/tags/v*",
     )
     versions, entries = [], []
     for record in (out or "").split("\x1e"):
         if not record.strip():
             continue
-        name, kind, epoch, subject, body = record.lstrip("\n").split("\x1f")
+        name, kind, epoch, body = record.lstrip("\n").split("\x1f")
         m = TAG.match(name)
         if not m:
             continue
         # A lightweight tag's contents are the commit's message, not release notes.
-        message = f"{subject}\n\n{body}" if kind == "tag" else None
+        message = body if kind == "tag" else None
         versions.append(m["version"])
         entries += release(m["version"], date(epoch), message)
     return versions, entries
