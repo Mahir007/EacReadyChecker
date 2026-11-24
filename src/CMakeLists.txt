@@ -49,6 +49,7 @@ add_library(eacheck_app STATIC
     app/Motion.cpp
     app/Revealer.cpp
     app/SummaryBanner.cpp
+    app/TouchScroll.cpp
     app/WindowDecoration.cpp
 )
 target_link_libraries(eacheck_app

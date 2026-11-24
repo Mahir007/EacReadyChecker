@@ -9,6 +9,7 @@
 #include "Motion.h"
 #include "Revealer.h"
 #include "SummaryBanner.h"
+#include "TouchScroll.h"
 #include "checks/AllChecks.h"
 #include "core/AppInfo.h"
 
@@ -146,6 +147,7 @@ MainWindow::MainWindow(const HostAccess &host, QWidget *parent)
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     updateScrollBar();
+    enableTouchScrolling(m_scroll);
     connect(qApp, &QApplication::focusChanged, this, [this](QWidget *old, QWidget *now) {
         if ((old == m_scroll || now == m_scroll) && isFusionOnPlasma(this)) {
             updateScrollBar();

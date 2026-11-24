@@ -29,6 +29,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QScroller>
 #include <QSet>
 #include <QStandardPaths>
 #include <QToolButton>
@@ -722,6 +723,106 @@ private Q_SLOTS:
         QVERIFY(bar->sizeHint().width() != 12);
 
         QApplication::setStyle(style);
+    }
+
+    void touch()
+    {
+        MainWindow window(HostAccess(HostAccess::Transport::Direct, {}, m_fixture));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.runChecks(false);
+        QTRY_VERIFY(finished(window));
+        window.resize(window.width(), 300);
+        QWidget *viewport = window.findChild<QScrollArea *>()->viewport();
+        QScrollBar *bar = window.findChild<QScrollArea *>()->verticalScrollBar();
+        QTRY_VERIFY(bar->isVisible());
+        static QPointingDevice *screen = QTest::createTouchDevice();
+        CheckRow *row = window.findChildren<CheckRow *>().constFirst();
+        QLabel *title = row->findChildren<QLabel *>().constFirst();
+        QWidget *header = title->parentWidget();
+        QToolButton *arrow = row->findChild<QToolButton *>();
+        const auto expanded = [&] {
+            return row->findChildren<QLabel *>().constLast()->isVisible();
+        };
+        const auto at = [&](QWidget *widget) {
+            return widget->mapTo(&window, widget->rect().center());
+        };
+        const auto tap = [&](QPoint point) {
+            QTest::touchEvent(&window, screen).press(0, point);
+            QTest::touchEvent(&window, screen).release(0, point);
+        };
+        // 150 px in 150 ms, then the finger lifts.
+        const auto drag = [&](QPoint point, int dy) {
+            QTest::touchEvent(&window, screen).press(0, point);
+            for (int i = 0; i < 15; ++i) {
+                QTest::qWait(10);
+                point.ry() += dy / 15;
+                QTest::touchEvent(&window, screen).move(0, point);
+            }
+            QTest::touchEvent(&window, screen).release(0, point);
+        };
+
+        // A tap on the row or its arrow expands and collapses it, as a click does. It leaves no
+        // hover behind, which the mouse does.
+        const QImage plain = header->grab().toImage();
+        for (QWidget *target : {static_cast<QWidget *>(title), static_cast<QWidget *>(arrow)}) {
+            tap(at(target));
+            QTRY_VERIFY(expanded());
+            tap(at(target));
+            QTRY_VERIFY(!expanded());
+            QCOMPARE(header->grab().toImage(), plain);
+        }
+        // Not to the tap's spot: Qt drops a move that goes nowhere.
+        QTest::mouseMove(title, title->rect().center() + QPoint(4, 0));
+        QTRY_VERIFY(header->grab().toImage() != plain);
+        QTest::mouseMove(&window, QPoint(1, 1));
+        QTRY_COMPARE(header->grab().toImage(), plain);
+
+        // A finger drags the list. Starting on a row or its arrow doesn't toggle the row, though the
+        // finger lifts over the same spot.
+        for (QWidget *start : {static_cast<QWidget *>(title), static_cast<QWidget *>(arrow)}) {
+            bar->setValue(0);
+            drag(at(start), -150);
+            QTRY_VERIFY(bar->value() >= 140);
+            QVERIFY(!expanded());
+            QTRY_COMPARE(QScroller::scroller(viewport)->state(), QScroller::Inactive);
+        }
+
+        // A tap while the list still moves stops it and does nothing else. QScroller stops it for
+        // a tap held 100 ms. A quicker one only slows it.
+        bar->setValue(0);
+        drag(at(title), -150);
+        QCOMPARE(QScroller::scroller(viewport)->state(), QScroller::Scrolling);
+        const QPoint middle = at(viewport);
+        QTest::touchEvent(&window, screen).press(0, middle);
+        const int stopped = bar->value();
+        QVERIFY(stopped < bar->maximum());
+        QTest::qWait(150);
+        QTest::touchEvent(&window, screen).release(0, middle);
+        QTest::qWait(100);
+        QCOMPARE(bar->value(), stopped);
+        const auto rowAt = [&](QPoint point) {
+            QWidget *widget = window.childAt(point);
+            while (widget && !qobject_cast<CheckRow *>(widget)) {
+                widget = widget->parentWidget();
+            }
+            return qobject_cast<CheckRow *>(widget);
+        };
+        CheckRow *tapped = rowAt(middle);
+        QVERIFY(tapped && tapped->findChild<QToolButton *>()->isVisible());
+        QVERIFY(!tapped->findChildren<QLabel *>().constLast()->isVisible());
+
+        // The mouse doesn't drag it.
+        bar->setValue(0);
+        QPoint point = at(title);
+        QTest::mousePress(&window, Qt::LeftButton, {}, point);
+        for (int i = 0; i < 15; ++i) {
+            point.ry() -= 10;
+            QTest::mouseMove(&window, point, 10);
+        }
+        QTest::mouseRelease(&window, Qt::LeftButton, {}, point);
+        QTest::qWait(100);
+        QCOMPARE(bar->value(), 0);
     }
 
     void fusionOnPlasmaLooksLikeBreeze()

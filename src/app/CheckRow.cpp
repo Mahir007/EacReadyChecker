@@ -25,7 +25,8 @@
 using namespace Qt::StringLiterals;
 
 // The part of a row above its sub-checks. While the row can expand, a click anywhere on it
-// toggles them, and it shows a hover like an item view's. The hover fades in and out.
+// toggles them, and it shows a hover like an item view's. The hover fades in and out. Only the
+// mouse or touchpad hovers: Qt also moves the pointer to where a finger taps, and leaves it there.
 class CheckRowHeader : public QWidget
 {
 public:
@@ -33,6 +34,7 @@ public:
         : QWidget(parent)
         , m_hover(new QVariantAnimation(this))
     {
+        setMouseTracking(true);
         connect(m_hover, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
             m_level = value.toReal();
             update();
@@ -42,8 +44,16 @@ public:
     std::function<void()> toggle; // empty while the row can't expand
 
 protected:
-    void enterEvent(QEnterEvent *) override { fadeHover(1); }
     void leaveEvent(QEvent *) override { fadeHover(0); }
+
+    // Not enterEvent: an enter doesn't say whether a finger or the pointer caused it. Its move does.
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (event->pointingDevice()->type() != QInputDevice::DeviceType::TouchScreen) {
+            fadeHover(1);
+        }
+        QWidget::mouseMoveEvent(event);
+    }
 
     void mousePressEvent(QMouseEvent *event) override
     {
@@ -101,6 +111,10 @@ private:
     // From where it is, so a quick pass over the row doesn't flash.
     void fadeHover(qreal target)
     {
+        if (target == m_target) {
+            return;
+        }
+        m_target = target;
         m_hover->stop();
         const int ms = Motion::duration(int(std::lround(Motion::Short * std::abs(target - m_level))));
         if (ms == 0) {
@@ -116,6 +130,7 @@ private:
 
     QVariantAnimation *m_hover;
     qreal m_level = 0; // 0 no hover, 1 full
+    qreal m_target = 0;
 };
 
 namespace
@@ -174,6 +189,10 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
     connect(m_expander, &QToolButton::clicked, this, [this] {
         setExpanded(!m_expanded, true);
     });
+    // Clicks and taps on the arrow go to the row, which toggles it, so the arrow has no hover of
+    // its own. Under Fusion a tap would leave it raised, as Qt keeps the pointer where the finger
+    // was. The keyboard still works it.
+    m_expander->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     m_detail->setObjectName(u"detail"_s);
 
@@ -192,6 +211,12 @@ CheckRow::CheckRow(const QString &title, QWidget *parent)
         updateGeometry();
         Q_EMIT heightChanged();
     });
+
+    // Qt drops a move with no button held at a widget that doesn't track the mouse. These pass
+    // moves on to the header, for its hover.
+    for (QWidget *child : std::initializer_list<QWidget *>{m_icon, m_title, m_detail}) {
+        child->setMouseTracking(true);
+    }
 
     auto *header = new QGridLayout(m_header);
     header->setHorizontalSpacing(kSpacing);
