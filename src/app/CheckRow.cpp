@@ -94,7 +94,7 @@ protected:
             painter.drawRoundedRect(QRectF(rect()).adjusted(2.5, 1.5, -2.5, -1.5), 4.5, 4.5);
             return;
         }
-        if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) == 0) {
+        if (hasStyle(this, u"fusion")) {
             // Elsewhere, shade the row like GNOME's lists do.
             QColor colour = palette().color(foregroundRole());
             colour.setAlphaF(0.06);

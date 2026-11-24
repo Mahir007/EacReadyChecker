@@ -3,17 +3,23 @@
 
 #include <algorithm>
 
+namespace
+{
+template<typename Results>
+bool hasStatus(const Results &results, CheckStatus status)
+{
+    return std::any_of(results.begin(), results.end(), [status](const auto &result) {
+        return result.status == status;
+    });
+}
+} // namespace
+
 Verdict overallVerdict(const QList<CheckResult> &results)
 {
-    const auto has = [&results](CheckStatus s) {
-        return std::any_of(results.begin(), results.end(), [s](const CheckResult &r) {
-            return r.status == s;
-        });
-    };
-    if (has(CheckStatus::Fail)) {
+    if (hasStatus(results, CheckStatus::Fail)) {
         return Verdict::NotReady;
     }
-    if (has(CheckStatus::NeedsAdmin) || has(CheckStatus::Unknown)) {
+    if (hasStatus(results, CheckStatus::NeedsAdmin) || hasStatus(results, CheckStatus::Unknown)) {
         return Verdict::Incomplete;
     }
     return Verdict::Ready;
@@ -21,13 +27,8 @@ Verdict overallVerdict(const QList<CheckResult> &results)
 
 CheckStatus combineStatus(const QList<SubCheckResult> &subChecks)
 {
-    const auto has = [&subChecks](CheckStatus s) {
-        return std::any_of(subChecks.begin(), subChecks.end(), [s](const SubCheckResult &r) {
-            return r.status == s;
-        });
-    };
     for (CheckStatus s : {CheckStatus::Fail, CheckStatus::NeedsAdmin, CheckStatus::Unknown, CheckStatus::Pass}) {
-        if (has(s)) {
+        if (hasStatus(subChecks, s)) {
             return s;
         }
     }

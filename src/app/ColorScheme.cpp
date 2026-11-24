@@ -155,13 +155,8 @@ QColor accentText(const QColor &accent, bool dark)
 void setAccentLinks(QPalette &palette, const QColor &accent, bool dark)
 {
     const QColor link = accentText(accent, dark);
-    const QColor text = palette.color(QPalette::Text);
-    const auto mix = [](float a, float b) {
-        return a * 0.8F + b * 0.2F;
-    };
     palette.setColor(QPalette::Link, link);
-    palette.setColor(QPalette::LinkVisited,
-                     QColor::fromRgbF(mix(link.redF(), text.redF()), mix(link.greenF(), text.greenF()), mix(link.blueF(), text.blueF())));
+    palette.setColor(QPalette::LinkVisited, mixColours(palette.color(QPalette::Text), link, 0.8));
 }
 
 QPalette darkPalette();
@@ -290,6 +285,14 @@ QPalette lightPalette()
 }
 } // namespace
 
+QColor mixColours(const QColor &from, const QColor &to, qreal amount)
+{
+    const auto mix = [amount](int a, int b) {
+        return qRound(a + (b - a) * amount);
+    };
+    return QColor(mix(from.red(), to.red()), mix(from.green(), to.green()), mix(from.blue(), to.blue()));
+}
+
 void applyColorScheme(Qt::ColorScheme scheme)
 {
     // Without a Qt theme, both palettes are set here. In the Flatpak, Qt's portal theme reports the
@@ -329,13 +332,7 @@ QPalette windowColours(const QPalette &appPalette)
         // the highlight comes within a few shades of that.
         const QColor highlight = appPalette.color(QPalette::Active, QPalette::Highlight);
         if (appPalette.color(QPalette::Inactive, QPalette::Highlight) == highlight) {
-            const QColor window = appPalette.color(QPalette::Inactive, QPalette::Window);
-            const auto mix = [](int a, int b) {
-                return qRound(a + (b - a) * 0.29);
-            };
-            p.setColor(QPalette::Inactive,
-                       QPalette::Highlight,
-                       QColor(mix(window.red(), highlight.red()), mix(window.green(), highlight.green()), mix(window.blue(), highlight.blue())));
+            p.setColor(QPalette::Inactive, QPalette::Highlight, mixColours(appPalette.color(QPalette::Inactive, QPalette::Window), highlight, 0.29));
             p.setColor(QPalette::Inactive, QPalette::HighlightedText, appPalette.color(QPalette::Inactive, QPalette::WindowText));
         }
         return p;

@@ -6,6 +6,9 @@
 #include <QList>
 #include <QString>
 
+// True if `path` has a shell wildcard: *, ? or [.
+bool hasWildcard(QStringView path);
+
 // One thing a check wants from the host. `pattern` is an absolute host path. Any component may
 // use shell wildcards (* ? [...]), e.g. "/sys/kernel/iommu_groups/*/type".
 struct HostRequest {

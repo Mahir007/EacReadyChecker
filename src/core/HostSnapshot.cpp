@@ -3,9 +3,14 @@
 
 #include <algorithm>
 
+bool hasWildcard(QStringView path)
+{
+    return path.contains(u'*') || path.contains(u'?') || path.contains(u'[');
+}
+
 bool HostRequest::isGlob() const
 {
-    return pattern.contains(QLatin1Char('*')) || pattern.contains(QLatin1Char('?')) || pattern.contains(QLatin1Char('['));
+    return hasWildcard(pattern);
 }
 
 QString HostRequest::key() const

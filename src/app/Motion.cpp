@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "Motion.h"
 
+#include "Desktop.h"
 #include "PortalSettings.h"
 
 #include <QApplication>
@@ -120,9 +121,8 @@ qreal factor()
         return *s_desktop.kdeFactor;
     }
     // Breeze reads KDE's setting itself, also where there's no portal.
-    const QStyle *style = QApplication::style();
-    if (style && style->name().compare(u"breeze"_s, Qt::CaseInsensitive) == 0) {
-        return qreal(style->styleHint(QStyle::SH_Widget_Animation_Duration)) / BreezeDurationMs;
+    if (isBreezeStyle()) {
+        return qreal(QApplication::style()->styleHint(QStyle::SH_Widget_Animation_Duration)) / BreezeDurationMs;
     }
     return 1;
 }

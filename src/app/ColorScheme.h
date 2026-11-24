@@ -32,3 +32,6 @@ void applyColorScheme(Qt::ColorScheme scheme);
 // nothing. Set it on the window, not the app: an app palette replaces the plugin's palettes for labels
 // and buttons.
 QPalette windowColours(const QPalette &appPalette);
+
+// `from` with `amount` (0 to 1) of `to` mixed in, channel by channel.
+QColor mixColours(const QColor &from, const QColor &to, qreal amount);

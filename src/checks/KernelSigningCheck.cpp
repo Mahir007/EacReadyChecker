@@ -86,12 +86,6 @@ SubCheckResult unsignedModules(const HostSnapshot &snapshot, QJsonArray &rawModu
     return {title, CheckStatus::Fail, u"An unsigned module has been loaded since boot"_s};
 }
 
-// "MokListRT", "MokListRT1", … from an efivars path.
-QString variableName(const QString &path)
-{
-    return path.section(u'/', -1).section(u'-', 0, 0);
-}
-
 // Every MOK must be a well-known certificate. shim also copies its built-in vendor certificates
 // into MokListRT, so a stock Fedora or Ubuntu lists its own CA here. Any other entry, including a
 // hash, isn't a well-known key and fails.
@@ -111,10 +105,10 @@ SubCheckResult moksWellKnown(const HostSnapshot &snapshot, QJsonArray &rawEntrie
         const auto data = EfiVariable::data(variable.data);
         const auto entries = data ? EfiSignatureList::parse(*data) : std::nullopt;
         if (!entries) {
-            return {title, CheckStatus::Unknown, u"Couldn't parse %1"_s.arg(variableName(variable.path))};
+            return {title, CheckStatus::Unknown, u"Couldn't parse %1"_s.arg(EfiVariable::nameFromPath(variable.path))};
         }
         for (const EfiSignatureList::Entry &entry : *entries) {
-            QJsonObject raw{{u"variable"_s, variableName(variable.path)}, {u"type"_s, EfiSignatureList::typeName(entry.type)}};
+            QJsonObject raw{{u"variable"_s, EfiVariable::nameFromPath(variable.path)}, {u"type"_s, EfiSignatureList::typeName(entry.type)}};
             if (entry.type != EfiSignatureList::CertX509) {
                 raw.insert(u"data"_s, QString::fromLatin1(entry.data.toHex()));
                 rawEntries.append(raw);

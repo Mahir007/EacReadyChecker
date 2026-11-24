@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include "Desktop.h"
 #include "core/AppInfo.h"
 #include "core/CheckResult.h"
 
@@ -34,11 +35,6 @@ inline bool isBreezeInstalled()
         }
     }
     return false;
-}
-
-inline bool isBreezeStyle()
-{
-    return QApplication::style()->name().compare(QStringLiteral("breeze"), Qt::CaseInsensitive) == 0;
 }
 
 // Icons the current theme lacks come from Breeze. Breeze's glyphs are drawn for one background, so

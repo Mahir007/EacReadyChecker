@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QString>
 
 #include <optional>
 
@@ -24,5 +25,12 @@ inline std::optional<quint8> byteValue(const QByteArray &file)
         return std::nullopt;
     }
     return quint8(d->at(0));
+}
+
+// The variable's name from its efivarfs path: "MokListRT1" from
+// /sys/firmware/efi/efivars/MokListRT1-605dab50-e046-4300-abb6-3dd810dd8b23.
+inline QString nameFromPath(const QString &path)
+{
+    return path.section(u'/', -1).section(u'-', 0, 0);
 }
 } // namespace EfiVariable

@@ -19,7 +19,7 @@ bool bootedWithUefi(const HostSnapshot &snapshot)
 std::optional<SubCheckResult> readFlag(const HostSnapshot &snapshot, const QString &title, const QString &path, std::optional<quint8> &value)
 {
     const HostEntry entry = snapshot.file(path);
-    const QString name = path.section(u'/', -1).section(u'-', 0, 0); // "SecureBoot"
+    const QString name = EfiVariable::nameFromPath(path);
     if (entry.status == HostEntry::Status::Missing) {
         if (!bootedWithUefi(snapshot)) {
             return SubCheckResult{title, CheckStatus::Fail, u"Not booted in UEFI mode"_s};

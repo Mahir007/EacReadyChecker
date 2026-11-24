@@ -48,15 +48,7 @@ public:
         setFixedHeight(1);
     }
 
-    static QColor colour(const QPalette &palette)
-    {
-        const QColor window = palette.color(QPalette::Window);
-        const QColor text = palette.color(QPalette::WindowText);
-        constexpr float textShare = 0.2F;
-        return QColor::fromRgbF(window.redF() + (text.redF() - window.redF()) * textShare,
-                                window.greenF() + (text.greenF() - window.greenF()) * textShare,
-                                window.blueF() + (text.blueF() - window.blueF()) * textShare);
-    }
+    static QColor colour(const QPalette &palette) { return mixColours(palette.color(QPalette::Window), palette.color(QPalette::WindowText), 0.2); }
 
 protected:
     void paintEvent(QPaintEvent *) override { QPainter(this).fillRect(rect(), colour(palette())); }
@@ -308,7 +300,7 @@ void MainWindow::updateScrollBar()
     // Fusion's scroll bar has arrows and, with GNOME's light colours, a handle lighter than its
     // groove. Under Fusion, draw a thin handle like GNOME's own apps. Other styles keep theirs.
     QScrollBar *bar = m_scroll->verticalScrollBar();
-    if (style()->name().compare(u"fusion"_s, Qt::CaseInsensitive) != 0) {
+    if (!hasStyle(this, u"fusion")) {
         bar->setStyleSheet({});
         return;
     }

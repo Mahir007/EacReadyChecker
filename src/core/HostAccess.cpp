@@ -49,11 +49,6 @@ exit 0
 constexpr int kUserReadTimeoutMs = 30'000;
 constexpr int kPollIntervalMs = 100;
 
-bool hasWildcard(QStringView s)
-{
-    return s.contains(u'*') || s.contains(u'?') || s.contains(u'[');
-}
-
 // Expands `pattern` (absolute host path) below `root` the way sh would: wildcard components don't
 // match dotfiles, and a pattern without wildcards is returned as-is even if it doesn't exist.
 QStringList expand(const QString &root, const QString &pattern)
