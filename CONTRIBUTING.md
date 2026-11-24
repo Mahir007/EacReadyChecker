@@ -78,9 +78,10 @@ cmake --build build
 ./build/bin/eac-ready-checker --text   # report, no display needed
 ```
 
-The default build type is `RelWithDebInfo`. Add `-DCMAKE_BUILD_TYPE=Debug` for a debug build, or
-`-DBUILD_TESTING=OFF` to skip the tests. The app reports version `0.0.0-dev` unless
-`-DEACHECK_VERSION=1.2.3` sets one.
+There are two build types. `Debug`, the default, is the fast one: no optimisation, full debug
+info, and mold or lld if the compiler can use them. `-DCMAKE_BUILD_TYPE=Release` optimises, with
+link-time optimisation, and strips the binaries. Add `-DBUILD_TESTING=OFF` to skip the tests. The
+app reports version `0.0.0-dev` unless `-DEACHECK_VERSION=1.2.3` sets one.
 
 CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app.
 The app uses it on that Qt release and on the patch releases checked to share its build (see
@@ -116,7 +117,8 @@ packaging/appimage/build-in-container.sh ~/qt/6.11.3/gcc_64 dist
 ./dist/eac-ready-checker-0.0.0-dev-x86_64.AppImage
 ```
 
-The same commit gives the same file. `VERSION` sets the version it reports. With a release version
+The same commit gives the same file. `VERSION` sets the version it reports, and `BUILD_TYPE=Debug`
+builds it with the fast build type instead of `Release`. With a release version
 such as `1.2.0`, the build also writes a `.zsync` file and embeds update information, so
 AppImageUpdate, Gear Lever and AppImageLauncher can update it from the latest GitHub release.
 

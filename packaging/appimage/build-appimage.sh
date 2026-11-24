@@ -8,7 +8,8 @@
 #   packaging/appimage/build-appimage.sh <qt-prefix> <output-dir>
 #
 # <qt-prefix> is a qt.io Qt with qtbase, qtwayland, qtsvg and icu, e.g. ~/qt/6.11.3/gcc_64.
-# VERSION is the version to stamp (default 0.0.0-dev). SOURCE_DATE_EPOCH defaults to the commit's
+# VERSION is the version to stamp (default 0.0.0-dev), and BUILD_TYPE the build profile: Release
+# (the default) or Debug, which keeps the debug info. SOURCE_DATE_EPOCH defaults to the commit's
 # time, so the same commit and Qt give the same file. BUILD_DIR defaults to build-appimage in the
 # checkout, and CACHE_DIR, where the AppImage tools are downloaded, to ~/.cache/eacheck-appimage.
 # METAINFO_RELEASES is a file from packaging/metainfo-releases.py, for a build without git.
@@ -47,6 +48,7 @@ src=$(cd "$here/../.." && pwd)
 mkdir -p "$2"
 out=$(realpath "$2")
 version=${VERSION:-0.0.0-dev}
+build_type=${BUILD_TYPE:-Release}
 SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$src" log -1 --format=%ct)}
 export SOURCE_DATE_EPOCH
 build=${BUILD_DIR:-$src/build-appimage}
@@ -87,7 +89,7 @@ cmake -S "$src" -B "$build/cmake" -G Ninja \
     -DCMAKE_PREFIX_PATH="$qt" \
     -DCMAKE_SKIP_RPATH=ON \
     -DOpenGL_GL_PREFERENCE=LEGACY \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE="$build_type" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DBUILD_TESTING=OFF \

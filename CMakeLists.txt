@@ -16,8 +16,40 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Two build profiles. Debug is the fast one, for development, the tests, and dev, alpha and beta
+# builds: no optimisation, full debug info and the fastest linker found. Release is for release
+# candidates and releases: optimised, with link-time optimisation across all our code, unused code
+# removed, and stripped.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # After any -O in CXXFLAGS, such as the Flatpak SDK's -O2. Fortify needs optimisation, and glibc
+    # warns on every file when CXXFLAGS turn it on at -O0.
+    add_compile_options("$<$<CONFIG:Debug>:-O0;-Wp,-U_FORTIFY_SOURCE>")
+    include(CheckLinkerFlag)
+    foreach(linker mold lld)
+        check_linker_flag(CXX -fuse-ld=${linker} EACHECK_LINKER_${linker})
+        if(EACHECK_LINKER_${linker})
+            add_link_options("$<$<CONFIG:Debug>:-fuse-ld=${linker}>")
+            break()
+        endif()
+    endforeach()
+
+    add_compile_options("$<$<CONFIG:Release>:-ffunction-sections;-fdata-sections>")
+    add_link_options("$<$<CONFIG:Release>:-Wl,--gc-sections;-s>")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC's counterpart of one codegen unit.
+        add_link_options("$<$<CONFIG:Release>:-flto-partition=one>")
+    endif()
+endif()
+include(CheckIPOSupported)
+check_ipo_supported(RESULT EACHECK_IPO OUTPUT ipo_error LANGUAGES CXX)
+if(EACHECK_IPO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+else()
+    message(WARNING "No link-time optimisation in Release builds: ${ipo_error}")
 endif()
 
 find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core DBus Gui Widgets Concurrent Network)
