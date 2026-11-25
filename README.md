@@ -20,23 +20,15 @@ Checks whether a Linux machine meets the
 
 </div>
 
-EACheck only reads system state. It asks for an admin password once, to read the TPM event log.
-
-## Requirements
-
-- Linux on x86_64.
-- A Wayland session for the window. The command-line reports work without one.
-- For the AppImage, glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 or newer).
-  libfuse2 isn't needed.
-- For the Flatpak, the Flathub remote.
-- For the full check, a polkit authentication agent. See
-  [Troubleshooting](#no-polkit-authentication-agent-is-running).
+EACheck only reads system state. It runs on x86_64, and the window needs a Wayland session.
 
 ## Install
 
 Get either file from the [latest release](https://github.com/Mahir007/EacReadyChecker/releases/latest).
 
-AppImage:
+### AppImage
+
+Needs glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 or newer), but not libfuse2.
 
 ```sh
 chmod +x eac-ready-checker-*-x86_64.AppImage
@@ -45,7 +37,9 @@ chmod +x eac-ready-checker-*-x86_64.AppImage
 
 AppImageUpdate, Gear Lever and AppImageLauncher can update it.
 
-Flatpak:
+### Flatpak
+
+Needs the Flathub remote, for the KDE runtime.
 
 ```sh
 flatpak install --user eac-ready-checker-*-x86_64.flatpak
@@ -54,26 +48,12 @@ flatpak run io.github.Mahir007.EacReadyChecker
 
 To build from source, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Usage
-
-The checks run when the window opens. Parts of Signed kernel & kernel modules, Secure Boot and
-Measured boot need the TPM event log, which only root can read. Until you click "Run Full Check"
-and enter the admin password, those parts show "Needs admin".
-
-| Verdict | Meaning |
-| --- | --- |
-| Ready for EAC Linux v2 | Every requirement passes or doesn't apply. |
-| Not ready | At least one requirement fails. |
-| Incomplete | Nothing fails, but at least one requirement needs admin access or couldn't be checked. |
-
-"Copy Report" copies the results as text or JSON. F5 runs the checks again.
-
-### What it checks
+## What it checks
 
 | Requirement | Passes when |
 | --- | --- |
 | Signed kernel & kernel modules | The keys that verified the boot chain are well-known, no unsigned module has been loaded, and every enrolled Machine Owner Key (MOK) is well-known. |
-| TPM 2.0 | The TPM is version 2.0. |
+| TPM 2.0 | There is a TPM and it's version 2.0. |
 | Secure Boot | Secure Boot is on, the firmware isn't in setup mode, and only well-known keys were used to boot. |
 | Measured boot | Replaying the TPM event log gives the TPM's PCR values, and the boot manager measured the kernel. |
 | IOMMU | The IOMMU is on and passthrough is off. Machines whose firmware reports a handheld or tablet chassis don't need it. |
@@ -86,29 +66,41 @@ EACheck matches them by fingerprint against its own list, taken from the vendors
 repositories. [docs/well-known-keys.md](docs/well-known-keys.md) lists each certificate and its
 source.
 
-The results are what EACheck can see on the machine. EAC does its own verification when a game
-starts.
+| Verdict | Meaning | Exit status |
+| --- | --- | --- |
+| Ready for EAC Linux v2 | Every requirement passes or doesn't apply. | 0 |
+| Not ready | At least one requirement fails. | 2 |
+| Incomplete | Nothing fails, but at least one requirement needs admin access or couldn't be checked. | 3 |
+
+## Usage
+
+The checks run when the window opens. Parts of Signed kernel & kernel modules, Secure Boot and
+Measured boot read the TPM event log, which only root can read, and show "Needs admin" until you
+click "Run Full Check". It asks for the admin password once, through polkit.
+
+"Copy Report" copies the results as text or JSON. F5 runs the checks again.
 
 ## Command line
 
-Run the AppImage file, `flatpak run io.github.Mahir007.EacReadyChecker`, or `eac-ready-checker` from
-a source build, with these options:
-
-```
---text      print the report
---json      print the report as JSON, with the values each check read
---elevate   also run the checks that need admin access; on its own, open the window and run them
+```sh
+./eac-ready-checker-*-x86_64.AppImage --text
+flatpak run io.github.Mahir007.EacReadyChecker --text
 ```
 
-The reports don't need a display. The exit status is 0 for ready, 2 for not ready, 3 for incomplete and 1 for a usage error.
+| Option | |
+| --- | --- |
+| `--text` | Print the report. |
+| `--json` | Print the report as JSON, with the values each check read. |
+| `--elevate` | Also run the checks that need admin access. Without `--text` or `--json`, open the window and run them. |
+
+The exit status is the verdict's, or 1 for a usage error.
 
 ## Troubleshooting
 
 ### "No polkit authentication agent is running"
 
 Plasma, GNOME and most other desktops start a polkit agent. Standalone compositors such as Sway and
-Hyprland don't, so start one yourself, for example `hyprpolkitagent`, `lxqt-policykit` or
-`polkit-gnome`.
+Hyprland don't. Start one yourself, such as `hyprpolkitagent`, `lxqt-policykit` or `polkit-gnome`.
 
 ### A result looks wrong
 
