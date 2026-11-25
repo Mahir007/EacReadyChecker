@@ -4,14 +4,14 @@
 
 | Path | What it is |
 | --- | --- |
-| `src/core` | Host access, the check runner and reports. Part of `eacheck_core`, which has no widgets, so the CLI and tests run headless. |
+| `src/core` | Host access, the check runner and reports, in the `eacheck_core` library, which doesn't link Qt Widgets. |
 | `src/checks` | One class per requirement. A check declares the files it needs and evaluates a snapshot of them. |
 | `src/parsers` | EFI signature lists, the TCG2 event log and the kernel command line. |
 | `src/data` | `well-known-keys.json`, compiled in as a Qt resource. |
 | `src/app` | The Qt Widgets window (`eacheck_app`). |
 | `src/cli` | `--json` and `--text` output. |
 | `src/decoration` | The GNOME title bar plugin's entry point. It subclasses QAdwaitaDecorations' decoration to add a shadow to unfocused windows. |
-| `tests` | Qt Test binaries, and the release notes script's tests. `tests/fixtures` has sysroots captured from real machines or written by hand. |
+| `tests` | Qt Test binaries, the release notes script's tests, and the [fixtures](#tests). |
 | `tools` | `capture-fixture.sh`, `shim-vendor-certs.py`, `compare-qt-releases.py` and `take-screenshots.sh`. |
 | `packaging` | Flatpak manifest, AppImage build scripts, desktop file, metainfo and icon. |
 | `docs` | Where each well-known key came from, screenshots, and the README's download buttons. |
@@ -23,8 +23,7 @@
 - Qt 6.5 or later with its Wayland and SVG plugins.
 - For the title bar on GNOME: Qt's private headers and Qt SVG's development files. Without them
   the window gets Qt's own title bar, which has no shadow.
-- Breeze icons. `tst_mainwindow` fails without them. The app runs without them and uses its bundled
-  status icons.
+- Breeze icons, for `tst_mainwindow`. The app falls back to its bundled status icons.
 - `pkexec`, for "Run Full Check" and `--elevate`.
 
 ## Linux setup
@@ -51,8 +50,8 @@ sudo pacman -S --needed gcc git cmake ninja qt6-base qt6-svg breeze-icons appstr
 
 ### Homebrew
 
-Use Homebrew if your distribution ships a Qt older than 6.5. Homebrew's Qt needs glibc 2.38, and
-a compiler on an older glibc can't link it, so this installs Homebrew's compiler and glibc too.
+Use Homebrew if your distribution ships a Qt older than 6.5. Homebrew's Qt needs glibc 2.38, so
+this also installs Homebrew's glibc and GCC.
 
 ```sh
 brew install glibc gcc cmake ninja qtbase qtsvg
@@ -74,20 +73,19 @@ git clone https://github.com/Mahir007/EacReadyChecker.git
 cd EacReadyChecker
 cmake -S . -B build -G Ninja
 cmake --build build
-./build/bin/eac-ready-checker          # window
-./build/bin/eac-ready-checker --text   # report, no display needed
+./build/bin/eac-ready-checker
 ```
 
-There are two build types. `Debug`, the default, is the fast one: no optimisation, full debug
-info, and mold or lld if the compiler can use them. `-DCMAKE_BUILD_TYPE=Release` optimises, with
-link-time optimisation, and strips the binaries. Add `-DBUILD_TESTING=OFF` to skip the tests. The
-app reports version `0.0.0-dev` unless `-DEACHECK_VERSION=1.2.3` sets one.
+The default build type, `Debug`, has no optimisation and full debug info, and links with mold or
+lld if it finds one. `-DCMAKE_BUILD_TYPE=Release` optimises with link-time optimisation and strips
+the binaries. `-DBUILD_TESTING=OFF` leaves out the tests, and `-DEACHECK_VERSION=1.2.3` sets the
+version, which is `0.0.0-dev` otherwise.
 
-CMake says whether it builds the GNOME title bar plugin. It's built against the same Qt as the app.
-The app uses it on that Qt release and on the patch releases checked to share its build (see
-[Adding a Qt release](#adding-a-qt-release)). If a Qt update turns it off, the app says so when it
-starts, and rebuilding turns it back on.
-`-DEACHECK_DECORATIONS=ON` makes missing dependencies an error, and `OFF` leaves the plugin out.
+CMake says whether it builds the GNOME title bar plugin. `-DEACHECK_DECORATIONS=ON` makes missing
+dependencies an error, and `OFF` leaves the plugin out. The app uses the plugin only on the Qt
+release it was built with and on patch releases known to match it (see
+[Adding a Qt release](#adding-a-qt-release)). After any other Qt update it says so when it starts,
+and a rebuild turns the plugin back on.
 
 ## Flatpak
 
@@ -108,8 +106,8 @@ natively.
 
 ## AppImage
 
-The AppImage runs on distributions with glibc 2.34 or later. It's built in an AlmaLinux 9 container
-with Qt from qt.io, and needs podman or docker, and `aqtinstall` from pip:
+The AppImage is built in an AlmaLinux 9 container with Qt from qt.io, so it runs on glibc 2.34 or
+later. The build needs podman or docker, and `aqtinstall` from pip:
 
 ```sh
 aqt install-qt linux desktop 6.11.3 linux_gcc_64 --archives qtbase qtwayland qtsvg icu --outputdir ~/qt
@@ -118,9 +116,9 @@ packaging/appimage/build-in-container.sh ~/qt/6.11.3/gcc_64 dist
 ```
 
 The same commit gives the same file. `VERSION` sets the version it reports, and `BUILD_TYPE=Debug`
-builds it with the fast build type instead of `Release`. With a release version
-such as `1.2.0`, the build also writes a `.zsync` file and embeds update information, so
-AppImageUpdate, Gear Lever and AppImageLauncher can update it from the latest GitHub release.
+uses the fast build type instead of `Release`. A release version such as `1.2.0` also gets a
+`.zsync` file and update information that points at the latest GitHub release. Pre-releases and
+dev builds don't, because the latest release can be older than them.
 
 ## Tests
 
@@ -139,9 +137,9 @@ need. The `appstream` and `desktop-file` tests only exist if CMake found `appstr
 `tst_fixtures` runs every check against every directory in `tests/fixtures`, without and with admin
 access, and compares the statuses to `checks` and `checksElevated` in its `expected.json`. Each
 directory holds the host files the checks read, under their real paths, and its `expected.json` says
-what the machine is. Those marked `"synthetic": true` were written by hand. To add a machine,
-capture it with `tools/capture-fixture.sh` (see [Debugging](#debugging)) and write its
-`expected.json` from statuses you've checked by hand.
+what the machine is. Those marked `"synthetic": true` were written by hand. Changes to the checks
+are tested on real machines. To add a machine, capture it with `tools/capture-fixture.sh` (see
+[Debugging](#debugging)) and write its `expected.json` from statuses you've checked by hand.
 
 | Variable | Effect |
 | --- | --- |
@@ -217,10 +215,9 @@ change:
 tools/take-screenshots.sh build
 ```
 
-Each one runs the window on a fixture in a KWin session on Xvfb, with Plasma's default settings, so
-it needs no desktop or GPU. The packages it needs are listed at the top of the script. The metainfo
-links to the images at a commit, so after committing new ones, update that commit in its screenshot
-URLs.
+The script runs the window on fixtures in a KWin session on Xvfb with Plasma's default settings, so
+it needs no desktop or GPU. It lists the packages it needs at the top. The metainfo links to the
+images at a commit, so after committing new ones, update that commit in its screenshot URLs.
 
 ## CI and releases
 
@@ -248,13 +245,12 @@ git tag -a v1.2.0 -m v1.2.0 -m "A summary of the release."
 
 The message after its first line goes at the top of the release notes and becomes the release's
 description in the metainfo, so write it as paragraphs and `- ` lists, with `` `code` `` for
-commands.
-`packaging/metainfo-releases.py` builds the metainfo's `<releases>` from the tags reachable from the
-commit, and a build without tags, such as a shallow clone, lists only its own version. A
-pre-release is listed as `1.2.0~rc.1`, because AppStream sorts `1.2.0-rc.1` after `1.2.0`.
-`release.yml` builds both packages through `ci.yml` with that version and publishes them with notes
-from `.github/scripts/release-notes.py`, which groups the commits by their Conventional Commits
-type. A pre-release's AppImage has no update information.
+commands. `packaging/metainfo-releases.py` builds the metainfo's `<releases>` from the tags
+reachable from the commit, and a build without tags, such as a shallow clone, lists only its own
+version. A pre-release is listed as `1.2.0~rc.1`, because AppStream sorts `1.2.0-rc.1` after
+`1.2.0`. `release.yml` builds both packages through `ci.yml` with the tag's version and publishes
+them with notes from `.github/scripts/release-notes.py`, which groups the commits by their
+Conventional Commits type.
 
 ## Upkeep
 
@@ -277,8 +273,7 @@ as the scope (`app`, `checks`, `parsers`, `keys`, `host`, `report`, `tools` or `
 The build turns on Qt's strict string and keyword macros, so use `u"text"_s`, `Q_SLOTS` and
 `Q_EMIT`.
 
-Format C++ with the version of clang-format that `ci.yml` pins. Other versions format some code
-differently.
+Format C++ with the version of clang-format that `ci.yml` pins.
 
 ```sh
 git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run --spec clang-format==23.1.5 clang-format -i
@@ -286,5 +281,3 @@ git ls-files -z '*.cpp' '*.h' | xargs -0 pipx run --spec clang-format==23.1.5 cl
 
 `third_party` isn't formatted. To leave the formatting commit out of `git blame`, run
 `git config blame.ignoreRevsFile .git-blame-ignore-revs` once.
-
-Changes to the checks are tested on real machines, and the captures become fixtures.
