@@ -11,9 +11,9 @@ Checks whether a Linux machine meets the
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 ![Platform: Linux x86_64](https://img.shields.io/badge/platform-Linux%20x86__64-informational)
 
-[![Download the AppImage](docs/assets/download-appimage.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
+[![Get it as an AppImage](docs/assets/appimage-badge.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
 &nbsp;
-[![Download the Flatpak](docs/assets/download-flatpak.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
+[![Get it as a Flatpak](docs/assets/flatpak-badge.svg)](https://github.com/Mahir007/EacReadyChecker/releases/latest)
 
 <img src="docs/screenshots/needs-admin.png" width="390" alt="EACheck in light mode on Plasma: Incomplete, with three checks that need admin access">
 <img src="docs/screenshots/ready-dark.png" width="390" alt="EACheck in dark mode on Plasma: Ready for EAC Linux v2">
